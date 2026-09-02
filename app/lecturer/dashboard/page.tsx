@@ -8,12 +8,13 @@ import {
   ArrowRight, LogOut, Sparkles, FolderPlus, Search 
 } from 'lucide-react';
 import { ClassModule, UserProfile } from '@/types/database';
-import { getStoredClasses, addStoredClass } from '@/lib/classStore';
+import { listClasses, listQuizzes, createClass, getCurrentUser, signOut } from '@/lib/data';
 
 export default function LecturerDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [classes, setClasses] = useState<ClassModule[]>([]);
+  const [quizCount, setQuizCount] = useState(0);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCode, setNewCode] = useState('');
@@ -22,47 +23,41 @@ export default function LecturerDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // Load session
-    const sessionStr = localStorage.getItem('user_session');
-    if (sessionStr) {
-      try {
-        const u = JSON.parse(sessionStr);
-        if (u.role === 'lecturer') {
-          setUser(u);
-        }
-      } catch (e) {}
-    }
+    (async () => {
+      const u = await getCurrentUser();
+      if (u?.role === 'lecturer') setUser(u);
 
-    // Load classes from unified store
-    setClasses(getStoredClasses());
+      try {
+        setClasses(await listClasses());
+        setQuizCount((await listQuizzes()).length);
+      } catch (err) {
+        console.error('Không tải được dữ liệu lớp học phần', err);
+      }
+    })();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user_session');
+  const handleLogout = async () => {
+    await signOut();
     router.push('/');
   };
 
-  const handleCreateClass = (e: React.FormEvent) => {
+  const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCode.trim() || !newName.trim()) return;
 
-    const created: ClassModule = {
-      id: `class-${Date.now()}`,
-      code: newCode.trim().toUpperCase(),
-      name: newName.trim(),
-      semester: newSemester,
-      lecturer_id: user?.id || 'lecturer-id',
-      created_at: new Date().toISOString(),
-      students_count: 0,
-    };
-
-    // Save to unified persistent store
-    const updated = addStoredClass(created);
-    setClasses(updated);
-
-    setNewCode('');
-    setNewName('');
-    setShowCreateModal(false);
+    try {
+      const updated = await createClass({
+        code: newCode.trim().toUpperCase(),
+        name: newName.trim(),
+        semester: newSemester,
+      });
+      setClasses(updated);
+      setNewCode('');
+      setNewName('');
+      setShowCreateModal(false);
+    } catch (err: any) {
+      alert(`Không tạo được lớp: ${err?.message || err}`);
+    }
   };
 
   const filteredClasses = classes.filter(
@@ -142,7 +137,7 @@ export default function LecturerDashboard() {
           <div className="glass-card p-6 rounded-2xl border border-slate-800 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bài Quiz Đã Khởi Tạo</p>
-              <h2 className="text-3xl font-extrabold text-white mt-1">5</h2>
+              <h2 className="text-3xl font-extrabold text-white mt-1">{quizCount}</h2>
             </div>
             <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400">
               <FileCheck2 className="w-7 h-7" />
@@ -211,7 +206,7 @@ export default function LecturerDashboard() {
                   </Link>
 
                   <Link
-                    href="/lecturer/quizzes/quiz-1/analytics"
+                    href="/lecturer/quizzes"
                     className="px-3 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-xs font-semibold text-purple-300 border border-purple-500/20 flex items-center space-x-1"
                   >
                     <FileCheck2 className="w-3.5 h-3.5" />

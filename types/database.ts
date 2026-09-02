@@ -7,6 +7,7 @@ export interface UserProfile {
   full_name: string;
   role: UserRole;
   avatar_url?: string | null;
+  date_of_birth?: string | null; // yyyy-mm-dd — mật khẩu đăng nhập của sinh viên (DDMMYYYY)
   created_at: string;
 }
 
@@ -56,6 +57,9 @@ export interface Quiz {
   shuffle_options: boolean; // Trộn thứ tự đáp án (A, B, C, D)
   prevent_previous: boolean; // Khóa không cho quay lại câu hỏi trước
   questions_per_student?: number | null; // Số câu hỏi rút ngẫu nhiên cho mỗi sinh viên (VD: 5 câu từ ngân hàng đề)
+  questions?: Question[]; // Ngân hàng câu hỏi của đề thi (được lưu kèm khi Giảng viên tạo đề)
+  passcode?: string | null; // Mã phòng thi (Room Passcode) - giảng viên đọc tại lớp
+  passcode_expires_at?: string | null; // Hạn hiệu lực của mã phòng thi
   created_at: string;
   // Joined fields
   class_name?: string;

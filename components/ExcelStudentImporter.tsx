@@ -17,6 +17,29 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
   const [uploading, setUploading] = useState(false);
   const [successCount, setSuccessCount] = useState<number | null>(null);
 
+  // Chuẩn hoá ô "Ngày sinh" trong Excel (chấp nhận DD/MM/YYYY, D-M-YYYY, hoặc
+  // ngày serial của Excel) về ISO yyyy-mm-dd để gửi lên server làm mật khẩu.
+  const parseDobToIso = (raw: string): string | undefined => {
+    if (!raw) return undefined;
+    const trimmed = raw.trim();
+
+    const m = trimmed.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+    if (m) {
+      const [, dd, mm, yyyy] = m;
+      return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+    }
+
+    // Excel đôi khi trả về số serial ngày tháng thay vì chuỗi
+    if (/^\d{4,6}$/.test(trimmed)) {
+      const parsed = XLSX.SSF.parse_date_code(Number(trimmed));
+      if (parsed) {
+        return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+      }
+    }
+
+    return undefined;
+  };
+
   // Helper to normalize column names
   const normalizeKey = (key: any): string => {
     if (!key) return '';
@@ -84,6 +107,7 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
           let fullName = '';
           let hoDem = '';
           let ten = '';
+          let dob = '';
 
           // 1. Try matching by header name
           headerRow.forEach((colName, colIdx) => {
@@ -111,6 +135,13 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
               hoDem = val;
             } else if (normKey === 'ten' || normKey === 'name') {
               ten = val;
+            } else if (
+              normKey.includes('ngaysinh') ||
+              normKey.includes('namsinh') ||
+              normKey.includes('dateofbirth') ||
+              normKey === 'dob'
+            ) {
+              dob = val;
             }
           });
 
@@ -145,6 +176,7 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
               student_code: finalCode,
               full_name: finalName,
               role: 'student',
+              date_of_birth: parseDobToIso(dob),
               created_at: new Date().toISOString(),
             });
           }
@@ -166,10 +198,10 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
   // Generate Sample Excel Template for Teacher
   const downloadSampleTemplate = () => {
     const sampleData = [
-      { 'Mã SV': '20120001', 'Họ và Tên': 'Nguyễn Văn An' },
-      { 'Mã SV': '20120002', 'Họ và Tên': 'Lê Thị Bình' },
-      { 'Mã SV': '20120003', 'Họ và Tên': 'Phạm Hoàng Cường' },
-      { 'Mã SV': '20120004', 'Họ và Tên': 'Tran Thi Dung' },
+      { 'Mã SV': '20120001', 'Họ và Tên': 'Nguyễn Văn An', 'Ngày sinh': '15/01/2004' },
+      { 'Mã SV': '20120002', 'Họ và Tên': 'Lê Thị Bình', 'Ngày sinh': '22/03/2004' },
+      { 'Mã SV': '20120003', 'Họ và Tên': 'Phạm Hoàng Cường', 'Ngày sinh': '05/11/2003' },
+      { 'Mã SV': '20120004', 'Họ và Tên': 'Tran Thi Dung', 'Ngày sinh': '30/07/2004' },
     ];
     const ws = XLSX.utils.json_to_sheet(sampleData);
     const wb = XLSX.utils.book_new();
@@ -241,7 +273,7 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
             Nhấp vào đây để chọn file Excel từ máy tính của bạn (.xlsx, .xls, .csv)
           </span>
           <span className="text-xs text-slate-400 mt-2">
-            * Tự động nhận diện mọi tiêu đề cột: <code className="text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded">Mã SV / MSSV / Mã sinh viên</code> và <code className="text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded">Họ và Tên / Tên SV</code>
+            * Tự động nhận diện mọi tiêu đề cột: <code className="text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded">Mã SV / MSSV</code>, <code className="text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded">Họ và Tên</code>, <code className="text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded">Ngày sinh</code> (DD/MM/YYYY — dùng làm mật khẩu đăng nhập)
           </span>
           <input
             type="file"
@@ -277,6 +309,7 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
                   <th className="p-3">#</th>
                   <th className="p-3">Mã Sinh Viên</th>
                   <th className="p-3">Họ và Tên</th>
+                  <th className="p-3">Ngày Sinh</th>
                   <th className="p-3">Email Trường</th>
                 </tr>
               </thead>
@@ -286,6 +319,13 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
                     <td className="p-3 text-slate-500">{idx + 1}</td>
                     <td className="p-3 font-mono font-semibold text-indigo-400">{st.student_code}</td>
                     <td className="p-3 text-white font-medium">{st.full_name}</td>
+                    <td className="p-3 font-mono text-[11px]">
+                      {st.date_of_birth ? (
+                        new Date(st.date_of_birth).toLocaleDateString('vi-VN')
+                      ) : (
+                        <span className="text-amber-400">Thiếu — không đăng nhập được</span>
+                      )}
+                    </td>
                     <td className="p-3 text-slate-400 font-mono text-[11px]">{st.email}</td>
                   </tr>
                 ))}

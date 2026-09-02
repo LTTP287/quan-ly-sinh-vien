@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { GraduationCap, ArrowLeft, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 import { loginLecturer } from '@/app/actions/auth';
+import { isRemote } from '@/lib/data';
 
 export default function LecturerLoginPage() {
   const router = useRouter();
@@ -20,9 +21,10 @@ export default function LecturerLoginPage() {
 
     try {
       const res = await loginLecturer(email, password);
-      if (res.success && res.user) {
-        localStorage.setItem('user_session', JSON.stringify(res.user));
-        router.push('/lecturer/dashboard');
+      if (res.success) {
+        const next = new URLSearchParams(window.location.search).get('next');
+        router.push(next && next.startsWith('/lecturer') ? next : res.redirect || '/lecturer/dashboard');
+        router.refresh();
       } else {
         setError(res.error || 'Đăng nhập thất bại.');
       }
@@ -94,6 +96,7 @@ export default function LecturerLoginPage() {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="password"
+                  required={isRemote}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -118,12 +121,15 @@ export default function LecturerLoginPage() {
             </button>
           </form>
 
-          {/* Quick Demo Hint */}
-          <div className="mt-6 pt-6 border-t border-slate-800/80 text-center">
-            <p className="text-xs text-slate-400">
-              💡 Thử nghiệm nhanh: <button type="button" onClick={() => setEmail('giangvien@edu.vn')} className="text-indigo-400 underline">giangvien@edu.vn</button>
-            </p>
-          </div>
+          {/* Gợi ý chỉ dành cho chế độ demo — ẩn hoàn toàn khi đã nối Supabase */}
+          {!isRemote && (
+            <div className="mt-6 pt-6 border-t border-slate-800/80 text-center">
+              <p className="text-xs text-amber-400/80">
+                ⚠️ Chế độ demo (chưa cấu hình Supabase): mật khẩu không được kiểm tra. Thử{' '}
+                <button type="button" onClick={() => setEmail('giangvien@edu.vn')} className="text-indigo-400 underline">giangvien@edu.vn</button>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

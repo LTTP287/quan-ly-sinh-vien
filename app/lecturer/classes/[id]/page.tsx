@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import ExcelStudentImporter from '@/components/ExcelStudentImporter';
 import { UserProfile, ClassModule } from '@/types/database';
-import { getStoredClassById, getStoredStudents, saveStoredStudents, deleteStoredStudent } from '@/lib/classStore';
+import { getClass, listStudents, importStudents, removeStudent } from '@/lib/data';
 
 export default function ClassDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -28,30 +28,53 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
   const [students, setStudents] = useState<UserProfile[]>([]);
 
   useEffect(() => {
-    // Read class info
-    const storedCls = getStoredClassById(params.id);
-    if (storedCls) {
-      setClassInfo(storedCls);
-    }
-
-    // Read stored students for this class
-    const storedSts = getStoredStudents(params.id);
-    setStudents(storedSts);
+    (async () => {
+      try {
+        const cls = await getClass(params.id);
+        if (cls) setClassInfo(cls);
+        setStudents(await listStudents(params.id));
+      } catch (err) {
+        console.error('Không tải được dữ liệu lớp', err);
+      }
+    })();
   }, [params.id]);
 
-  const handleImportSuccess = (imported: UserProfile[]) => {
-    // Save to persistent storage
-    const updated = saveStoredStudents(params.id, imported);
-    setStudents(updated);
-    
-    // Also update classInfo student count
-    setClassInfo((prev) => ({ ...prev, students_count: updated.length }));
+  const handleImportSuccess = async (imported: UserProfile[]) => {
+    try {
+      // Ở chế độ Supabase, hàm này gọi /api/students/import để TẠO TÀI KHOẢN
+      // sinh viên bằng service-role key rồi ghi danh vào lớp.
+      const result = await importStudents(
+        params.id,
+        imported.map((s) => ({
+          student_code: s.student_code || '',
+          full_name: s.full_name,
+          email: s.email,
+          date_of_birth: s.date_of_birth || undefined,
+        }))
+      );
+
+      const updated = await listStudents(params.id);
+      setStudents(updated);
+      setClassInfo((prev) => ({ ...prev, students_count: updated.length }));
+
+      if (result.errors?.length) {
+        alert([`Import xong nhưng có ${result.errors.length} cảnh báo/lỗi:`, ...result.errors.slice(0, 5)].join('\n'));
+      } else if (result.created > 0) {
+        alert(`Đã tạo ${result.created} hồ sơ sinh viên. Mật khẩu đăng nhập là ngày sinh (định dạng DD/MM/YYYY).`);
+      }
+    } catch (err: any) {
+      alert(`Import thất bại: ${err?.message || err}`);
+    }
   };
 
-  const handleDeleteStudent = (stId: string) => {
-    const updated = deleteStoredStudent(params.id, stId);
-    setStudents(updated);
-    setClassInfo((prev) => ({ ...prev, students_count: updated.length }));
+  const handleDeleteStudent = async (stId: string) => {
+    try {
+      const updated = await removeStudent(params.id, stId);
+      setStudents(updated);
+      setClassInfo((prev) => ({ ...prev, students_count: updated.length }));
+    } catch (err: any) {
+      alert(`Không xóa được sinh viên: ${err?.message || err}`);
+    }
   };
 
   const filteredStudents = students.filter(
@@ -142,6 +165,7 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
                   <th className="p-4">STT</th>
                   <th className="p-4">Mã Sinh Viên</th>
                   <th className="p-4">Họ và Tên</th>
+                  <th className="p-4">Ngày Sinh (Mật khẩu)</th>
                   <th className="p-4">Email Trường</th>
                   <th className="p-4">Trạng Thái Đăng Nhập</th>
                   <th className="p-4 text-right">Thao Tác</th>
@@ -150,7 +174,7 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
               <tbody className="divide-y divide-slate-800/60 bg-slate-950/40">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-slate-500 text-sm">
+                    <td colSpan={7} className="p-8 text-center text-slate-500 text-sm">
                       Chưa có sinh viên nào. Bấm nút <strong>Import Danh Sách Excel</strong> ở trên để nạp sinh viên.
                     </td>
                   </tr>
@@ -160,6 +184,13 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
                       <td className="p-4 text-slate-500 font-mono text-xs">{idx + 1}</td>
                       <td className="p-4 font-mono font-semibold text-indigo-400">{st.student_code}</td>
                       <td className="p-4 font-medium text-white">{st.full_name}</td>
+                      <td className="p-4 font-mono text-xs">
+                        {st.date_of_birth ? (
+                          new Date(st.date_of_birth).toLocaleDateString('vi-VN')
+                        ) : (
+                          <span className="text-amber-400">Thiếu — không đăng nhập được</span>
+                        )}
+                      </td>
                       <td className="p-4 text-slate-400 text-xs">{st.email}</td>
                       <td className="p-4">
                         <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">

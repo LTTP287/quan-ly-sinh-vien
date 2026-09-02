@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { 
@@ -8,84 +8,37 @@ import {
   Award, TrendingUp, Users, ShieldAlert, CheckCircle2, Lock 
 } from 'lucide-react';
 import { Quiz, Submission } from '@/types/database';
+import { getQuiz, listSubmissions, setShowResults } from '@/lib/data';
 
 export default function QuizAnalyticsPage({ params }: { params: { id: string } }) {
-  const [quiz, setQuiz] = useState<Quiz>({
-    id: params.id,
-    class_id: 'class-1',
-    title: 'Bài Kiểm Tra Giữa Kỳ - React & Next.js App Router',
-    description: 'Báo cáo điểm số bài thi giữa kỳ học phần INT3306',
-    time_limit_minutes: 45,
-    start_at: new Date().toISOString(),
-    end_at: new Date().toISOString(),
-    is_published: true,
-    show_results: false, // Default locked
-    shuffle_questions: true,
-    created_at: new Date().toISOString(),
-  });
+  // Dữ liệu thật lấy từ Test Bank + bài nộp của sinh viên (không còn dữ liệu mẫu)
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  const [submissions] = useState<Submission[]>([
-    {
-      id: 'sub-1',
-      quiz_id: params.id,
-      student_id: 'st-1',
-      started_at: new Date(Date.now() - 3000000).toISOString(),
-      submitted_at: new Date(Date.now() - 600000).toISOString(),
-      total_score: 9.0,
-      status: 'submitted',
-      tab_violations_count: 0,
-      student: {
-        id: 'st-1',
-        email: '20120001@student.edu.vn',
-        student_code: '20120001',
-        full_name: 'Nguyễn Văn An',
-        role: 'student',
-        created_at: new Date().toISOString(),
-      },
-    },
-    {
-      id: 'sub-2',
-      quiz_id: params.id,
-      student_id: 'st-2',
-      started_at: new Date(Date.now() - 3000000).toISOString(),
-      submitted_at: new Date(Date.now() - 400000).toISOString(),
-      total_score: 8.0,
-      status: 'submitted',
-      tab_violations_count: 1,
-      student: {
-        id: 'st-2',
-        email: '20120002@student.edu.vn',
-        student_code: '20120002',
-        full_name: 'Lê Thị Bình',
-        role: 'student',
-        created_at: new Date().toISOString(),
-      },
-    },
-    {
-      id: 'sub-3',
-      quiz_id: params.id,
-      student_id: 'st-3',
-      started_at: new Date(Date.now() - 3000000).toISOString(),
-      submitted_at: new Date(Date.now() - 100000).toISOString(),
-      total_score: 6.5,
-      status: 'submitted',
-      tab_violations_count: 2,
-      student: {
-        id: 'st-3',
-        email: '20120003@student.edu.vn',
-        student_code: '20120003',
-        full_name: 'Phạm Hoàng Cường',
-        role: 'student',
-        created_at: new Date().toISOString(),
-      },
-    },
-  ]);
+  useEffect(() => {
+    (async () => {
+      try {
+        setQuiz(await getQuiz(params.id));
+        setSubmissions(await listSubmissions(params.id));
+      } catch (err) {
+        console.error('Không tải được dữ liệu bài nộp', err);
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, [params.id]);
 
-  const handleToggleShowResults = () => {
-    setQuiz((prev) => ({
-      ...prev,
-      show_results: !prev.show_results,
-    }));
+  // Công bố / khóa điểm và LƯU LẠI vào Test Bank để sinh viên nhìn thấy
+  const handleToggleShowResults = async () => {
+    if (!quiz) return;
+    const next = !quiz.show_results;
+    try {
+      await setShowResults(quiz.id, next);
+      setQuiz({ ...quiz, show_results: next });
+    } catch (err: any) {
+      alert(`Không cập nhật được trạng thái công bố điểm: ${err?.message || err}`);
+    }
   };
 
   const handleExportExcel = () => {
@@ -103,12 +56,32 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Bảng Điểm Quiz');
-    XLSX.writeFile(workbook, `Bang_Diem_${quiz.title.replace(/\s+/g, '_')}.xlsx`);
+    XLSX.writeFile(workbook, `Bang_Diem_${(quiz?.title || 'Quiz').replace(/[\/:*?"<>|\s]+/g, '_')}.xlsx`);
   };
 
-  const avgScore = (
-    submissions.reduce((acc, s) => acc + (s.total_score || 0), 0) / submissions.length
-  ).toFixed(1);
+  const avgScore =
+    submissions.length > 0
+      ? (submissions.reduce((acc, s) => acc + (s.total_score || 0), 0) / submissions.length).toFixed(1)
+      : '0.0';
+
+  const passRate =
+    submissions.length > 0
+      ? Math.round((submissions.filter((s) => (s.total_score || 0) >= 5).length / submissions.length) * 100)
+      : 0;
+
+  if (loaded && !quiz) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
+        <div className="glass-card p-8 rounded-2xl border border-slate-800 max-w-md text-center space-y-4">
+          <h1 className="text-lg font-bold">Không tìm thấy bài quiz này</h1>
+          <p className="text-sm text-slate-400">Đề thi có thể đã bị xóa khỏi Test Bank.</p>
+          <Link href="/lecturer/quizzes" className="gradient-button inline-block px-5 py-2.5 rounded-xl text-sm font-bold">
+            Về danh sách đề thi
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -124,7 +97,7 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
             </Link>
             <div>
               <h1 className="font-bold text-lg text-white">Thống Kê Điểm Số Bài Quiz</h1>
-              <p className="text-xs text-slate-400 mt-0.5">{quiz.title}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{quiz?.title || 'Đang tải...'}</p>
             </div>
           </div>
 
@@ -133,13 +106,13 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
             <button
               onClick={handleToggleShowResults}
               className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 border transition-all ${
-                quiz.show_results
+                quiz?.show_results
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
               }`}
             >
-              {quiz.show_results ? <Eye className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-              <span>{quiz.show_results ? 'Đã Công Bố Điểm Cho Sinh Viên' : 'Mở Đã Khóa Điểm (Bấm Để Công Bố)'}</span>
+              {quiz?.show_results ? <Eye className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              <span>{quiz?.show_results ? 'Đã Công Bố Điểm Cho Sinh Viên' : 'Mở Đã Khóa Điểm (Bấm Để Công Bố)'}</span>
             </button>
 
             {/* Export Excel Button */}
@@ -181,7 +154,7 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
           <div className="glass-card p-6 rounded-2xl border border-slate-800 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tỷ Lệ Đạt (&ge; 5.0)</p>
-              <h2 className="text-3xl font-extrabold text-emerald-400 mt-1">100%</h2>
+              <h2 className="text-3xl font-extrabold text-emerald-400 mt-1">{passRate}%</h2>
             </div>
             <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400">
               <Award className="w-7 h-7" />
@@ -224,6 +197,13 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 bg-slate-950/40">
+                {submissions.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-sm text-slate-500">
+                      Chưa có sinh viên nào nộp bài cho đề thi này.
+                    </td>
+                  </tr>
+                )}
                 {submissions.map((s, idx) => (
                   <tr key={s.id} className="hover:bg-slate-900/50 transition-colors">
                     <td className="p-4 text-slate-500 font-mono text-xs">{idx + 1}</td>

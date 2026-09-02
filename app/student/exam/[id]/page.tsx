@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Clock, ShieldAlert, AlertTriangle, CheckCircle2, 
-  ArrowRight, ArrowLeft, Send, Sparkles, AlertCircle, Lock, ShieldBan, Dice5 
+import {
+  Clock, ShieldAlert, AlertTriangle, ArrowRight, ArrowLeft, Send,
+  AlertCircle, Lock, ShieldBan, Dice5,
 } from 'lucide-react';
-import { Question, Quiz } from '@/types/database';
+import { Question, Quiz, Submission, UserProfile } from '@/types/database';
+import { getQuiz, getCurrentUser, saveSubmissionLocal } from '@/lib/data';
+import { gradeSubmission } from '@/lib/grading';
 
-// Helper to shuffle array (Fisher-Yates)
 function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -18,224 +19,306 @@ function shuffleArray<T>(array: T[]): T[] {
   return arr;
 }
 
+type LoadState = 'loading' | 'ready' | 'error';
+type LoadReason =
+  | 'NO_TICKET'
+  | 'ALREADY_SUBMITTED'
+  | 'NOT_FOUND'
+  | 'NO_QUESTIONS'
+  | 'SESSION_EXPIRED'
+  | 'UNKNOWN';
+
+const ERROR_MESSAGES: Record<LoadReason, string> = {
+  NO_TICKET: 'Bạn cần quay lại Bảng điều khiển và nhập Mã phòng thi trước khi vào làm bài.',
+  ALREADY_SUBMITTED: 'Bạn đã nộp bài thi này rồi.',
+  NOT_FOUND: 'Không tìm thấy bài thi này.',
+  NO_QUESTIONS: 'Đề thi chưa có câu hỏi nào trong Ngân hàng đề.',
+  SESSION_EXPIRED: 'Phiên đăng nhập đã hết hạn hoặc bị thay thế ở thiết bị khác.',
+  UNKNOWN: 'Không mở được phòng thi. Vui lòng thử lại.',
+};
+
 export default function StudentExamRoomPage({ params }: { params: { id: string } }) {
   const router = useRouter();
 
-  // Exam Meta State
-  const [quiz] = useState<Quiz>({
-    id: params.id,
-    class_id: 'class-1',
-    title: 'Bài Kiểm Tra Giữa Kỳ - React & Next.js App Router',
-    description: 'Bài kiểm tra rút ngẫu nhiên 5 câu hỏi từ ngân hàng đề.',
-    time_limit_minutes: 45,
-    start_at: new Date().toISOString(),
-    end_at: new Date(Date.now() + 86400000).toISOString(),
-    is_published: true,
-    show_results: false, // Hidden until Lecturer releases grades
-    shuffle_questions: true,
-    shuffle_options: true, // Trộn đáp án A, B, C, D
-    prevent_previous: true, // Khóa không cho quay lại câu trước
-    questions_per_student: 5, // Mỗi SV rút ngẫu nhiên 5 câu từ ngân hàng đề
-    created_at: new Date().toISOString(),
-  });
-
-  // Raw Unshuffled Questions Mock Bank (6 câu trong ngân hàng đề)
-  const rawQuestionBank = useMemo<Question[]>(
-    () => [
-      {
-        id: 'q-1',
-        quiz_id: params.id,
-        question_text: 'Đâu là đặc điểm chính của Server-Side Rendering (SSR) trong Next.js App Router?',
-        question_type: 'multiple_choice',
-        points: 2.0,
-        order_index: 0,
-        options: [
-          { id: 'opt-1', question_id: 'q-1', option_text: 'Tạo sẵn HTML trên Server cho mỗi request từ Client', is_correct: true, order_index: 0 },
-          { id: 'opt-2', question_id: 'q-1', option_text: 'Chỉ tạo HTML một lần duy nhất ở thời điểm build code', is_correct: false, order_index: 1 },
-          { id: 'opt-3', question_id: 'q-1', option_text: 'Chạy toàn bộ logic ở phía Browser người dùng', is_correct: false, order_index: 2 },
-          { id: 'opt-4', question_id: 'q-1', option_text: 'Không cho phép truy vấn cơ sở dữ liệu', is_correct: false, order_index: 3 },
-        ],
-      },
-      {
-        id: 'q-2',
-        quiz_id: params.id,
-        question_text: 'Cơ chế Row Level Security (RLS) của Supabase bảo mật dữ liệu ở cấp độ bảng PostgreSQL.',
-        question_type: 'true_false',
-        points: 2.0,
-        order_index: 1,
-        options: [
-          { id: 'opt-tf-1', question_id: 'q-2', option_text: 'Đúng', is_correct: true, order_index: 0 },
-          { id: 'opt-tf-2', question_id: 'q-2', option_text: 'Sai', is_correct: false, order_index: 1 },
-        ],
-      },
-      {
-        id: 'q-3',
-        quiz_id: params.id,
-        question_text: 'Hook nào trong React được sử dụng để quản lý Side Effects như gọi API hoặc đăng ký event listener?',
-        question_type: 'multiple_choice',
-        points: 2.0,
-        order_index: 2,
-        options: [
-          { id: 'opt-3-1', question_id: 'q-3', option_text: 'useState', is_correct: false, order_index: 0 },
-          { id: 'opt-3-2', question_id: 'q-3', option_text: 'useEffect', is_correct: true, order_index: 1 },
-          { id: 'opt-3-3', question_id: 'q-3', option_text: 'useContext', is_correct: false, order_index: 2 },
-          { id: 'opt-3-4', question_id: 'q-3', option_text: 'useMemo', is_correct: false, order_index: 3 },
-        ],
-      },
-      {
-        id: 'q-4',
-        quiz_id: params.id,
-        question_text: 'Giao thức HTTP/2 hoặc HTTP/3 giúp tối ưu hóa ứng dụng nhờ khả năng truyền nhiều request đồng thời trên 1 kết nối.',
-        question_type: 'true_false',
-        points: 2.0,
-        order_index: 3,
-        options: [
-          { id: 'opt-4-1', question_id: 'q-4', option_text: 'Đúng', is_correct: true, order_index: 0 },
-          { id: 'opt-4-2', question_id: 'q-4', option_text: 'Sai', is_correct: false, order_index: 1 },
-        ],
-      },
-      {
-        id: 'q-5',
-        quiz_id: params.id,
-        question_text: 'Thư viện nào thường được dùng để quản lý Form state và validate dữ liệu mượt mà trong React?',
-        question_type: 'multiple_choice',
-        points: 2.0,
-        order_index: 4,
-        options: [
-          { id: 'opt-5-1', question_id: 'q-5', option_text: 'React Hook Form', is_correct: true, order_index: 0 },
-          { id: 'opt-5-2', question_id: 'q-5', option_text: 'Redux Toolkit', is_correct: false, order_index: 1 },
-          { id: 'opt-5-3', question_id: 'q-5', option_text: 'Axios', is_correct: false, order_index: 2 },
-          { id: 'opt-5-4', question_id: 'q-5', option_text: 'TailwindCSS', is_correct: false, order_index: 3 },
-        ],
-      },
-      {
-        id: 'q-6',
-        quiz_id: params.id,
-        question_text: 'Thuộc tính CSS nào định nghĩa số cột và kích thước các cột trong CSS Grid Layout?',
-        question_type: 'multiple_choice',
-        points: 2.0,
-        order_index: 5,
-        options: [
-          { id: 'opt-6-1', question_id: 'q-6', option_text: 'grid-template-columns', is_correct: true, order_index: 0 },
-          { id: 'opt-6-2', question_id: 'q-6', option_text: 'flex-direction', is_correct: false, order_index: 1 },
-          { id: 'opt-6-3', question_id: 'q-6', option_text: 'align-items', is_correct: false, order_index: 2 },
-          { id: 'opt-6-4', question_id: 'q-6', option_text: 'grid-auto-flow', is_correct: false, order_index: 3 },
-        ],
-      },
-    ],
-    [params.id]
-  );
-
-  // Shuffled and Randomly Sampled Questions per Student
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [loadState, setLoadState] = useState<LoadState>('loading');
+  const [loadReason, setLoadReason] = useState<LoadReason>('UNKNOWN');
+  const [student, setStudent] = useState<UserProfile | null>(null);
+  const [startedAt] = useState(() => new Date().toISOString());
+  const [isRemoteExam, setIsRemoteExam] = useState(false);
+  const [submissionId, setSubmissionId] = useState<string>('');
 
-  useEffect(() => {
-    // 1. Rút ngẫu nhiên N câu hỏi từ ngân hàng đề cho sinh viên này
-    let sampled = [...rawQuestionBank];
-    if (quiz.questions_per_student && quiz.questions_per_student < rawQuestionBank.length) {
-      sampled = shuffleArray(rawQuestionBank).slice(0, quiz.questions_per_student);
-    } else if (quiz.shuffle_questions) {
-      sampled = shuffleArray(rawQuestionBank);
-    }
-
-    // 2. Trộn thứ tự các phương án lựa chọn (A, B, C, D) cho từng câu
-    if (quiz.shuffle_options) {
-      sampled = sampled.map((q) => ({
-        ...q,
-        options: q.options ? shuffleArray(q.options) : [],
-      }));
-    }
-
-    setQuestions(sampled);
-  }, [rawQuestionBank, quiz.questions_per_student, quiz.shuffle_questions, quiz.shuffle_options]);
-
-  // Exam Interactive State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [maxVisitedIndex, setMaxVisitedIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState(quiz.time_limit_minutes * 60);
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Anti-Cheat Violation Engine
   const [violationsCount, setViolationsCount] = useState(0);
   const [showWarningModal, setShowWarningModal] = useState(false);
 
-  // Timer Countdown Effect
+  const violationKey = `exam_violations_${params.id}`;
+
+  // Đổi "vé vào phòng thi" (được cấp sau khi xác thực Mã phòng thi ở Dashboard)
+  // lấy đề. Không có vé hợp lệ -> không lấy được đề, kể cả gõ thẳng URL.
   useEffect(() => {
+    (async () => {
+      setStudent(await getCurrentUser());
+
+      const res = await fetch('/api/exam/paper', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quiz_id: params.id }),
+      });
+
+      if (res.status === 401) {
+        setLoadReason('SESSION_EXPIRED');
+        setLoadState('error');
+        return;
+      }
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLoadReason((json.reason as LoadReason) || 'UNKNOWN');
+        setLoadState('error');
+        return;
+      }
+
+      if (json.mode === 'remote' && json.paper) {
+        const p = json.paper;
+        setIsRemoteExam(true);
+        setSubmissionId(p.submission_id);
+        setQuiz({
+          id: p.quiz.id,
+          title: p.quiz.title,
+          description: p.quiz.description,
+          time_limit_minutes: p.quiz.time_limit_minutes,
+          prevent_previous: p.quiz.prevent_previous,
+          show_results: p.quiz.show_results,
+          start_at: '',
+          end_at: '',
+          is_published: true,
+          shuffle_questions: false,
+          shuffle_options: false,
+          created_at: '',
+        });
+        setQuestions(
+          (p.questions as any[]).map((q, idx) => ({
+            id: q.id,
+            quiz_id: params.id,
+            question_text: q.question_text,
+            question_type: q.question_type,
+            points: q.points,
+            order_index: idx,
+            options: (q.options || []).map((o: any, oi: number) => ({
+              id: o.id,
+              question_id: q.id,
+              option_text: o.option_text,
+              is_correct: false,
+              order_index: oi,
+            })),
+          }))
+        );
+        setTimeLeftSeconds(p.quiz.time_limit_minutes * 60);
+        setViolationsCount(Math.max(p.tab_violations_count || 0, Number(localStorage.getItem(violationKey) || 0)));
+        setLoadState('ready');
+        return;
+      }
+
+      // Chế độ demo: đề thi vẫn nằm trong Test Bank ở localStorage (được
+      // Giảng viên tạo qua /lecturer/quizzes/new). Vé chỉ xác nhận sinh viên
+      // đã qua bước nhập Mã phòng thi hợp lệ.
+      const found = await getQuiz(params.id);
+      const bank = found?.questions || [];
+      if (!found) {
+        setLoadReason('NOT_FOUND');
+        setLoadState('error');
+        return;
+      }
+      if (bank.length === 0) {
+        setLoadReason('NO_QUESTIONS');
+        setLoadState('error');
+        return;
+      }
+
+      let sampled = [...bank];
+      if (found.questions_per_student && found.questions_per_student < bank.length) {
+        sampled = shuffleArray(bank).slice(0, found.questions_per_student);
+      } else if (found.shuffle_questions) {
+        sampled = shuffleArray(bank);
+      }
+      if (found.shuffle_options) {
+        sampled = sampled.map((q) => ({ ...q, options: q.options ? shuffleArray(q.options) : [] }));
+      }
+
+      setQuiz(found);
+      setQuestions(sampled);
+      setTimeLeftSeconds(found.time_limit_minutes * 60);
+      setViolationsCount(Number(localStorage.getItem(violationKey) || 0));
+      setLoadState('ready');
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
+
+  useEffect(() => {
+    if (loadState !== 'ready' || isSubmitting) return;
     if (timeLeftSeconds <= 0) {
       handleAutoSubmit('Hết giờ làm bài thi!');
       return;
     }
-    const timer = setInterval(() => {
-      setTimeLeftSeconds((prev) => prev - 1);
-    }, 1000);
+    const timer = setInterval(() => setTimeLeftSeconds((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
-  }, [timeLeftSeconds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeftSeconds, loadState, isSubmitting]);
 
-  // Anti-Cheat Tab Switching Detection Effect
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        triggerViolation('Phát hiện chuyển tab hoặc thu nhỏ cửa sổ làm bài!');
-      }
+      if (document.hidden) triggerViolation('Phát hiện chuyển tab hoặc thu nhỏ cửa sổ làm bài!');
     };
-
-    const handleBlur = () => {
-      triggerViolation('Phát hiện chuột rời khỏi màn hình bài thi!');
-    };
+    const handleBlur = () => triggerViolation('Phát hiện chuột rời khỏi màn hình bài thi!');
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleBlur);
-
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [violationsCount]);
 
   const triggerViolation = (reason: string) => {
     const newCount = violationsCount + 1;
     setViolationsCount(newCount);
     setShowWarningModal(true);
+    localStorage.setItem(violationKey, String(newCount));
 
-    if (newCount >= 3) {
-      handleAutoSubmit('Tự động nộp bài do vi phạm chuyển tab quá 3 lần!');
-    }
+    fetch('/api/exam/violation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quiz_id: params.id, message: reason }),
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (typeof json.count === 'number' && json.count > newCount) setViolationsCount(json.count);
+      })
+      .catch(() => {});
+
+    if (newCount >= 3) handleAutoSubmit('Tự động nộp bài do vi phạm chuyển tab quá 3 lần!');
   };
 
   const handleSelectOption = (questionId: string, optionId: string) => {
-    setSelectedAnswers((prev) => ({
-      ...prev,
-      [questionId]: optionId,
-    }));
+    setSelectedAnswers((prev) => ({ ...prev, [questionId]: optionId }));
   };
 
   const goToNextQuestion = () => {
     const nextIdx = currentQuestionIndex + 1;
     if (nextIdx < questions.length) {
       setCurrentQuestionIndex(nextIdx);
-      if (nextIdx > maxVisitedIndex) {
-        setMaxVisitedIndex(nextIdx);
-      }
+      if (nextIdx > maxVisitedIndex) setMaxVisitedIndex(nextIdx);
     }
   };
 
-  const handleAutoSubmit = (reason?: string) => {
+  const handleAutoSubmit = async (reason?: string) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
-    setTimeout(() => {
-      router.push(`/student/exam/${params.id}/result?violations=${violationsCount}&reason=${encodeURIComponent(reason || '')}`);
-    }, 1000);
+    const timedOut = !!reason && reason.includes('Hết giờ');
+
+    try {
+      const answers = questions.map((q) => ({
+        question_id: q.id,
+        option_id: selectedAnswers[q.id] || null,
+      }));
+
+      const res = await fetch('/api/exam/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quiz_id: params.id, answers, violations: violationsCount, timed_out: timedOut }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Nộp bài thất bại.');
+
+      let showResults = false;
+      let score: number | null = null;
+      let correctCount: number | null = null;
+      let totalQuestions = questions.length;
+
+      if (json.mode === 'remote' && json.result) {
+        showResults = json.result.show_results;
+        score = json.result.score;
+        correctCount = json.result.correct_count;
+        totalQuestions = json.result.total_questions;
+      } else {
+        // Demo: chấm tại chỗ và lưu vào Test Bank để trang Thống kê điểm đọc được
+        const result = gradeSubmission(questions, selectedAnswers, `sub-${params.id}-${student?.id || 'guest'}`);
+        const submission: Submission = {
+          id: `sub-${params.id}-${student?.id || 'guest'}`,
+          quiz_id: params.id,
+          student_id: student?.id || 'guest',
+          started_at: startedAt,
+          submitted_at: new Date().toISOString(),
+          total_score: result.score10,
+          status: timedOut ? 'timed_out' : 'submitted',
+          tab_violations_count: violationsCount,
+          answers: result.answers,
+          student: student || undefined,
+        };
+        saveSubmissionLocal(submission);
+        showResults = !!quiz?.show_results;
+        score = result.score10;
+        correctCount = result.correctCount;
+        totalQuestions = result.totalQuestions;
+      }
+
+      localStorage.removeItem(violationKey);
+
+      const query = new URLSearchParams({ violations: String(violationsCount), reason: reason || '' });
+      if (showResults && score !== null) {
+        query.set('score', String(score));
+        query.set('correct', String(correctCount ?? ''));
+        query.set('total', String(totalQuestions));
+      }
+      router.push(`/student/exam/${params.id}/result?${query.toString()}`);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      alert(`Nộp bài thất bại: ${err?.message || err}`);
+    }
   };
 
   const minutes = Math.floor(timeLeftSeconds / 60);
   const seconds = timeLeftSeconds % 60;
   const currentQ = questions[currentQuestionIndex];
 
-  if (!currentQ) return null;
+  if (loadState === 'loading') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-300 flex items-center justify-center">
+        <p className="text-sm">Đang tải đề thi...</p>
+      </div>
+    );
+  }
+
+  if (loadState === 'error' || !quiz || !currentQ) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
+        <div className="glass-card p-8 rounded-2xl border border-slate-800 max-w-md text-center space-y-4">
+          <AlertCircle className="w-10 h-10 text-amber-400 mx-auto" />
+          <h1 className="text-lg font-bold">Không mở được phòng thi</h1>
+          <p className="text-sm text-slate-400">{ERROR_MESSAGES[loadReason]}</p>
+          <button
+            onClick={() =>
+              router.push(loadReason === 'SESSION_EXPIRED' ? '/login/student' : '/student/dashboard')
+            }
+            className="gradient-button px-5 py-2.5 rounded-xl text-sm font-bold"
+          >
+            {loadReason === 'SESSION_EXPIRED' ? 'Đăng nhập lại' : 'Quay lại Bảng điều khiển'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between select-none">
-      {/* Top Fixed Header with Timer */}
       <header className="border-b border-slate-800 glass-panel sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div>
@@ -254,9 +337,7 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
             </div>
           </div>
 
-          {/* Countdown Timer Display */}
           <div className="flex items-center space-x-6">
-            {/* Violations Counter */}
             {violationsCount > 0 && (
               <div className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center space-x-1 animate-pulse">
                 <AlertTriangle className="w-4 h-4" />
@@ -266,9 +347,7 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
 
             <div className="flex items-center space-x-2 bg-slate-900/90 border border-purple-500/40 px-4 py-2 rounded-xl text-purple-400 font-mono font-bold text-lg shadow-lg">
               <Clock className="w-5 h-5 text-purple-400 animate-pulse" />
-              <span>
-                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-              </span>
+              <span>{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</span>
             </div>
 
             <button
@@ -283,9 +362,7 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
         </div>
       </header>
 
-      {/* Main Exam Body */}
       <main className="max-w-7xl mx-auto px-6 py-10 flex-1 w-full grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Question Content (Left Column - 3 cols) */}
         <div className="lg:col-span-3 space-y-6">
           <div className="glass-card p-8 rounded-2xl border border-slate-800 space-y-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
@@ -297,15 +374,11 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
               </span>
             </div>
 
-            {/* Question Text */}
-            <h2 className="text-lg font-semibold text-white leading-relaxed">
-              {currentQ.question_text}
-            </h2>
+            <h2 className="text-lg font-semibold text-white leading-relaxed">{currentQ.question_text}</h2>
 
-            {/* Options List (Shuffled Options A, B, C, D) */}
             <div className="space-y-3 pt-4">
               {currentQ.options?.map((opt, optIdx) => {
-                const optionLabel = String.fromCharCode(65 + optIdx); // A, B, C, D
+                const optionLabel = String.fromCharCode(65 + optIdx);
                 const isSelected = selectedAnswers[currentQ.id] === opt.id;
                 return (
                   <button
@@ -318,14 +391,15 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <span className={`w-7 h-7 rounded-lg font-mono font-bold text-xs flex items-center justify-center border ${
-                        isSelected ? 'bg-purple-500 text-white border-purple-400' : 'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}>
+                      <span
+                        className={`w-7 h-7 rounded-lg font-mono font-bold text-xs flex items-center justify-center border ${
+                          isSelected ? 'bg-purple-500 text-white border-purple-400' : 'bg-slate-800 text-slate-400 border-slate-700'
+                        }`}
+                      >
                         {optionLabel}
                       </span>
                       <span className="text-sm font-medium">{opt.option_text}</span>
                     </div>
-
                     <div
                       className={`w-5 h-5 rounded-full border flex items-center justify-center ${
                         isSelected ? 'border-purple-400 bg-purple-500' : 'border-slate-700'
@@ -339,9 +413,7 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
             </div>
           </div>
 
-          {/* Navigation Controls */}
           <div className="flex items-center justify-between">
-            {/* Previous Question Button */}
             <button
               disabled={quiz.prevent_previous || currentQuestionIndex === 0}
               onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
@@ -372,7 +444,6 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
           </div>
         </div>
 
-        {/* Sidebar Question Palette (Right Column - 1 col) */}
         <div className="lg:col-span-1 space-y-6">
           <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -431,14 +502,12 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
         </div>
       </main>
 
-      {/* ANTI-CHEAT VIOLATION WARNING MODAL */}
       {showWarningModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="glass-card p-8 rounded-2xl border border-amber-500/40 w-full max-w-md text-center space-y-6 animate-pulse-warning">
+          <div className="glass-card p-8 rounded-2xl border border-amber-500/40 w-full max-w-md text-center space-y-6">
             <div className="p-4 w-fit mx-auto rounded-full bg-amber-500/20 text-amber-400">
               <ShieldAlert className="w-10 h-10" />
             </div>
-
             <div>
               <h3 className="text-xl font-extrabold text-amber-400">CẢNH BÁO VI PHẠM THI</h3>
               <p className="text-sm text-slate-300 mt-2 leading-relaxed">
@@ -448,11 +517,9 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
                 Số lần vi phạm: {violationsCount} / 3
               </div>
             </div>
-
             <p className="text-xs text-slate-400">
               * Nếu tiếp tục vi phạm quá 3 lần, bài thi của bạn sẽ <strong>tự động nộp ngay lập tức</strong>.
             </p>
-
             <button
               onClick={() => setShowWarningModal(false)}
               className="w-full gradient-button py-3 rounded-xl text-sm font-semibold"

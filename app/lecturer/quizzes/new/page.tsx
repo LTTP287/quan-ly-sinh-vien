@@ -8,10 +8,10 @@ import {
   ArrowLeft, FilePlus2, Plus, Trash2, CheckCircle2, 
   HelpCircle, Lock, Eye, EyeOff, Sparkles, Clock, Calendar, 
   Shuffle, ArrowRightLeft, ShieldBan, Dice5, FileSpreadsheet, 
-  FileText, Upload, Download, CopyCheck, Wand2, Star, BookOpen, CheckSquare, Square 
+  FileText, Upload, Download, CopyCheck, Wand2, Star, BookOpen, CheckSquare, Square, KeyRound 
 } from 'lucide-react';
 import { Question, QuestionOption, Quiz, ClassModule } from '@/types/database';
-import { getStoredClasses, saveStoredQuiz } from '@/lib/classStore';
+import { listClasses, createQuiz } from '@/lib/data';
 
 export default function NewQuizPage() {
   const router = useRouter();
@@ -32,13 +32,24 @@ export default function NewQuizPage() {
   const [shuffleQuestions, setShuffleQuestions] = useState(true);
   const [shuffleOptions, setShuffleOptions] = useState(true);
   const [preventPrevious, setPreventPrevious] = useState(true);
+  const [accessCode, setAccessCode] = useState('');
+  const [passcodeExpiresAt, setPasscodeExpiresAt] = useState(() => {
+    const d = new Date(Date.now() + 86400000 * 7);
+    return d.toISOString().slice(0, 16);
+  });
 
   // Load Classes for Assignment
   useEffect(() => {
-    const loadedClasses = getStoredClasses();
-    setAvailableClasses(loadedClasses);
-    // Select all classes by default for fast multi-class assignment
-    setSelectedClassIds(loadedClasses.map((c) => c.id));
+    (async () => {
+      try {
+        const loadedClasses = await listClasses();
+        setAvailableClasses(loadedClasses);
+        // Select all classes by default for fast multi-class assignment
+        setSelectedClassIds(loadedClasses.map((c) => c.id));
+      } catch (err) {
+        console.error('Không tải được danh sách lớp', err);
+      }
+    })();
   }, []);
 
   const toggleClassSelection = (classId: string) => {
@@ -222,9 +233,12 @@ B. Sai`);
             return;
           }
 
-          const hasAsterisk = line.startsWith('*') || line.includes('*');
-          let cleanLine = line.replace(/\*/g, '').trim();
-          cleanLine = cleanLine.replace(/^[A-D][\.:\s]\s*/i, '').trim();
+          // Dấu * chỉ đánh dấu đáp án đúng khi đứng ở ĐẦU dòng ("*A. ..." hoặc "A.* ...").
+          // Dấu * nằm giữa nội dung (công thức, chú thích) KHÔNG được coi là đánh dấu.
+          const hasAsterisk = /^\s*\*/.test(line) || /^\s*[A-D][\.:\)]?\s*\*/i.test(line);
+          let cleanLine = hasAsterisk ? line.replace(/\*/, '').trim() : line.trim();
+          cleanLine = cleanLine.replace(/^[A-D][\.:\)\s]\s*/i, '').trim();
+          cleanLine = cleanLine.replace(/^\*/, '').trim();
 
           if (cleanLine) {
             rawOptions.push({
@@ -344,7 +358,7 @@ B. Sai`);
     setQuestions(questions.filter((q) => q.id !== qId));
   };
 
-  const handleSaveQuiz = () => {
+  const handleSaveQuiz = async () => {
     if (!title.trim()) {
       alert('Vui lòng nhập Tiêu đề Bài Quiz');
       return;
@@ -355,28 +369,50 @@ B. Sai`);
       return;
     }
 
-    const createdQuiz: Quiz = {
-      id: `quiz-tb-${Date.now()}`,
-      assigned_class_ids: selectedClassIds,
-      title: title.trim(),
-      description: description.trim(),
-      time_limit_minutes: timeLimit,
-      start_at: new Date().toISOString(),
-      end_at: new Date(Date.now() + 86400000 * 7).toISOString(),
-      is_published: true,
-      show_results: showResults,
-      shuffle_questions: shuffleQuestions,
-      shuffle_options: shuffleOptions,
-      prevent_previous: preventPrevious,
-      questions_per_student: questionsPerStudent,
-      created_at: new Date().toISOString(),
-      questions_count: questions.length,
-      assigned_classes_count: selectedClassIds.length,
-    };
+    if (questions.length === 0) {
+      alert('Ngân hàng đề đang trống. Vui lòng thêm ít nhất 1 câu hỏi trước khi lưu.');
+      return;
+    }
 
-    saveStoredQuiz(createdQuiz);
-    alert(`Đã lưu Đề thi vào Test Bank và Gán thành công cho ${selectedClassIds.length} lớp học phần!`);
-    router.push('/lecturer/dashboard');
+    if (questionsPerStudent > questions.length) {
+      alert(`Số câu rút ngẫu nhiên (${questionsPerStudent}) đang lớn hơn số câu trong ngân hàng đề (${questions.length}).`);
+      return;
+    }
+
+    const now = new Date();
+    const end = new Date(Date.now() + 86400000 * 7);
+
+    try {
+      await createQuiz(
+        {
+          title: title.trim(),
+          description: description.trim(),
+          time_limit_minutes: timeLimit,
+          start_at: now.toISOString(),
+          end_at: end.toISOString(),
+          is_published: true,
+          show_results: showResults,
+          shuffle_questions: shuffleQuestions,
+          shuffle_options: shuffleOptions,
+          prevent_previous: preventPrevious,
+          questions_per_student: questionsPerStudent,
+          passcode: accessCode.trim().toUpperCase() || null,
+          passcode_expires_at: passcodeExpiresAt ? new Date(passcodeExpiresAt).toISOString() : null,
+        },
+        questions,
+        selectedClassIds.map((classId) => ({
+          class_id: classId,
+          start_at: now.toISOString(),
+          end_at: end.toISOString(),
+          access_code: accessCode.trim().toUpperCase() || null,
+        }))
+      );
+
+      alert(`Đã lưu Đề thi vào Test Bank và Gán thành công cho ${selectedClassIds.length} lớp học phần!`);
+      router.push('/lecturer/quizzes');
+    } catch (err: any) {
+      alert(`Không lưu được đề thi: ${err?.message || err}`);
+    }
   };
 
   return (
@@ -530,6 +566,40 @@ B. Sai`);
                 onChange={(e) => setTimeLimit(Number(e.target.value))}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
               />
+            </div>
+
+            {/* Mã Phòng Thi (Room Passcode) — được kiểm tra trên server, không lộ xuống client */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center space-x-1">
+                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                <span>Mã Phòng Thi (Room Passcode)</span>
+              </label>
+              <input
+                type="text"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
+                placeholder="Để trống nếu không yêu cầu mã phòng thi"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white uppercase font-mono focus:outline-none focus:border-amber-500"
+              />
+              <p className="text-[11px] text-slate-500 mt-2">
+                Đọc mã này tại lớp để sinh viên không mở bài thi từ nhà. Mã được đối chiếu trên server.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center space-x-1">
+                <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                <span>Mã Phòng Thi Hết Hiệu Lực Lúc</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={passcodeExpiresAt}
+                onChange={(e) => setPasscodeExpiresAt(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+              />
+              <p className="text-[11px] text-slate-500 mt-2">
+                Sau thời điểm này, mã phòng thi không còn dùng được kể cả khi gõ đúng.
+              </p>
             </div>
 
             {/* Random Question Sampling Setting */}

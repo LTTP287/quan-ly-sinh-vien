@@ -9,7 +9,7 @@ import {
   Calendar, KeyRound, Power, ShieldCheck, Lock, AlertCircle 
 } from 'lucide-react';
 import { Quiz, ClassModule, ClassQuizSchedule } from '@/types/database';
-import { getStoredQuizzes, getStoredClasses, saveStoredQuiz } from '@/lib/classStore';
+import { listQuizzes, listClasses, saveQuizSchedules, isRemote } from '@/lib/data';
 
 export default function LecturerTestBankPage() {
   const router = useRouter();
@@ -18,11 +18,17 @@ export default function LecturerTestBankPage() {
   const [activeQuizForSchedule, setActiveQuizForSchedule] = useState<Quiz | null>(null);
 
   useEffect(() => {
-    setQuizzes(getStoredQuizzes());
-    setClasses(getStoredClasses());
+    (async () => {
+      try {
+        setQuizzes(await listQuizzes());
+        setClasses(await listClasses());
+      } catch (err) {
+        console.error('Không tải được Test Bank', err);
+      }
+    })();
   }, []);
 
-  const handleToggleAssignClass = (quizId: string, classId: string) => {
+  const handleToggleAssignClass = async (quizId: string, classId: string) => {
     const targetQuiz = quizzes.find((q) => q.id === quizId);
     if (!targetQuiz) return;
 
@@ -38,23 +44,19 @@ export default function LecturerTestBankPage() {
         class_id: classId,
         start_at: new Date().toISOString().slice(0, 16),
         end_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
-        access_code: 'LOG888',
+        access_code: '',
         is_active: true,
       };
     }
 
-    const updatedQuiz: Quiz = {
-      ...targetQuiz,
-      assigned_class_ids: assigned,
-      assigned_classes_count: assigned.length,
-      class_schedules: schedules,
-    };
-
-    const updatedList = saveStoredQuiz(updatedQuiz);
-    setQuizzes(updatedList);
+    try {
+      setQuizzes(await saveQuizSchedules(quizId, schedules));
+    } catch (err: any) {
+      alert(`Không lưu được phân công lớp: ${err?.message || err}`);
+    }
   };
 
-  const handleUpdateSchedule = (quizId: string, classId: string, updates: Partial<ClassQuizSchedule>) => {
+  const handleUpdateSchedule = async (quizId: string, classId: string, updates: Partial<ClassQuizSchedule>) => {
     const targetQuiz = quizzes.find((q) => q.id === quizId);
     if (!targetQuiz) return;
 
@@ -64,19 +66,17 @@ export default function LecturerTestBankPage() {
         class_id: classId,
         start_at: new Date().toISOString().slice(0, 16),
         end_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
-        access_code: 'LOG888',
+        access_code: '',
         is_active: true,
       }),
       ...updates,
     };
 
-    const updatedQuiz: Quiz = {
-      ...targetQuiz,
-      class_schedules: schedules,
-    };
-
-    const updatedList = saveStoredQuiz(updatedQuiz);
-    setQuizzes(updatedList);
+    try {
+      setQuizzes(await saveQuizSchedules(quizId, schedules));
+    } catch (err: any) {
+      alert(`Không lưu được lịch thi: ${err?.message || err}`);
+    }
   };
 
   return (
@@ -161,7 +161,7 @@ export default function LecturerTestBankPage() {
                       class_id: cls.id,
                       start_at: new Date().toISOString().slice(0, 16),
                       end_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
-                      access_code: 'LOG888',
+                      access_code: '',
                       is_active: true,
                     };
 
