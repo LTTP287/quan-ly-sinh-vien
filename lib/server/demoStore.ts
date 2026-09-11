@@ -79,10 +79,26 @@ function seed(): DemoDb {
 
   const lecturers: DemoUser[] = [
     {
+      id: 'lecturer-phuong-dtu',
+      email: 'letthanhphuong3@dtu.edu.vn',
+      student_code: null,
+      full_name: 'ThS. Lê Thị Thanh Phương',
+      role: 'lecturer',
+      password: 'LeminhPhuc@2512',
+    },
+    {
+      id: 'lecturer-phuong-gmail',
+      email: 'phuong.lethanh797@gmail.com',
+      student_code: null,
+      full_name: 'ThS. Lê Thị Thanh Phương',
+      role: 'lecturer',
+      password: 'LeminhPhuc@2512',
+    },
+    {
       id: 'lecturer-uuid-1',
       email: 'giangvien@edu.vn',
       student_code: null,
-      full_name: 'TS. Nguyễn Văn A',
+      full_name: 'ThS. Lê Thị Thanh Phương',
       role: 'lecturer',
       password: 'GiangVien@2026',
     },
@@ -90,14 +106,21 @@ function seed(): DemoDb {
 
   // Nếu Giảng viên / Chủ hệ thống cấu hình tài khoản riêng trong file .env.local
   if (process.env.OWNER_EMAIL) {
-    lecturers.unshift({
-      id: 'owner-uuid-custom',
-      email: process.env.OWNER_EMAIL.trim().toLowerCase(),
-      student_code: null,
-      full_name: process.env.OWNER_NAME || 'Giảng Viên Quản Trị',
-      role: 'lecturer',
-      password: process.env.OWNER_PASSWORD || 'GiangVien@2026',
-    });
+    const ownerEmail = process.env.OWNER_EMAIL.trim().toLowerCase();
+    const existing = lecturers.find((l) => l.email === ownerEmail);
+    if (existing) {
+      existing.password = process.env.OWNER_PASSWORD || existing.password;
+      existing.full_name = process.env.OWNER_NAME || existing.full_name;
+    } else {
+      lecturers.unshift({
+        id: 'owner-uuid-custom',
+        email: ownerEmail,
+        student_code: null,
+        full_name: process.env.OWNER_NAME || 'ThS. Lê Thị Thanh Phương',
+        role: 'lecturer',
+        password: process.env.OWNER_PASSWORD || 'LeminhPhuc@2512',
+      });
+    }
   }
 
   return {

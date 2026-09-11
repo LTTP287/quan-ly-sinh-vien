@@ -83,18 +83,30 @@ export default function Home() {
       <div className="h-6"></div>
 
       {/* Hero Section */}
-      <section className="text-center px-4 max-w-4xl mx-auto space-y-4 pt-10">
+      <section className="text-center px-4 max-w-4xl mx-auto space-y-4 pt-8">
         <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-tight">
-          Squeeze The Quizzes like Squeeze the Lemon <br />
-          <span className="text-emerald-400 block mt-2">-&gt; make it lemonade</span>
+          When School Gives You Quizzes... <br />
+          <span className="text-amber-400 block mt-2">Make Lemonade! 🍋</span>
         </h1>
         <p className="text-lg md:text-xl text-slate-400 font-medium">
           Học + Hỏi + Hiểu = <span className="text-rose-400 font-bold">10 điểm!.</span>
         </p>
+
+        {/* Lemonade & Squeezing Lemon Illustration */}
+        <div className="pt-2 flex justify-center">
+          <div className="relative group">
+            <div className="absolute -inset-1.5 bg-gradient-to-r from-amber-500/30 to-emerald-500/30 rounded-3xl blur-md group-hover:opacity-100 transition duration-500"></div>
+            <img
+              src="/lemonade.jpg"
+              alt="Squeeze the lemon and make lemonade illustration"
+              className="relative w-52 sm:w-64 md:w-72 h-auto rounded-2xl shadow-2xl border border-amber-500/30 object-cover"
+            />
+          </div>
+        </div>
       </section>
 
       {/* Main Interaction Area: 2-Tab Switching Area */}
-      <section className="my-8 w-full max-w-md mx-auto px-4 z-10">
+      <section className="my-6 w-full max-w-md mx-auto px-4 z-10">
         <div className="glass-card p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
           {/* Tab Switch Buttons */}
           <div className="grid grid-cols-2 p-1 bg-slate-900/90 rounded-2xl border border-slate-800">
@@ -186,6 +198,24 @@ export default function Home() {
                   </>
                 )}
               </button>
+
+              {/* Helpful hint for student */}
+              <div className="pt-1 text-left bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1 text-[11px] text-slate-400">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-emerald-400">💡 Tài khoản sinh viên mẫu:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentCode('20120001');
+                      setDob('15/01/2004');
+                    }}
+                    className="text-xs text-emerald-400 hover:underline font-medium"
+                  >
+                    [Tự điền]
+                  </button>
+                </div>
+                <p>MSSV: <code className="text-white font-mono">20120001</code> | Ngày sinh: <code className="text-amber-300 font-mono">15/01/2004</code></p>
+              </div>
             </form>
           )}
 
@@ -211,7 +241,7 @@ export default function Home() {
                   <input
                     type="email"
                     required
-                    placeholder="giangvien@edu.vn"
+                    placeholder="letthanhphuong3@dtu.edu.vn"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
@@ -248,6 +278,40 @@ export default function Home() {
                   </>
                 )}
               </button>
+
+              {/* Helpful hint with quick fill */}
+              <div className="pt-1 text-left bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1.5 text-[11px] text-slate-400">
+                <p className="font-semibold text-indigo-300">💡 Tài khoản Giảng viên truy cập:</p>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span>Email: <code className="text-white font-mono">letthanhphuong3@dtu.edu.vn</code></span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail('letthanhphuong3@dtu.edu.vn');
+                        setPassword('LeminhPhuc@2512');
+                      }}
+                      className="text-xs text-indigo-400 hover:underline font-medium"
+                    >
+                      [Tự điền]
+                    </button>
+                  </div>
+                  <p>Mật khẩu: <code className="text-amber-300 font-mono">LeminhPhuc@2512</code></p>
+                </div>
+                <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-slate-500">
+                  <span>Hoặc: <code className="text-slate-300">giangvien@edu.vn</code> / <code className="text-slate-300">GiangVien@2026</code></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('giangvien@edu.vn');
+                      setPassword('GiangVien@2026');
+                    }}
+                    className="text-xs text-slate-400 hover:underline"
+                  >
+                    [Tự điền]
+                  </button>
+                </div>
+              </div>
             </form>
           )}
         </div>
