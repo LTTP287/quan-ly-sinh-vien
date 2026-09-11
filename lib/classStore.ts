@@ -7,66 +7,44 @@ const STORAGE_KEYS = {
   SUBMISSIONS: 'uniquiz_submissions',
 };
 
-// Initial default classes for 2026 - 2027
-const DEFAULT_CLASSES: ClassModule[] = [
-  {
-    id: 'class-1',
-    code: 'LOG101',
-    name: 'Introduction to Logistics & SCM - Nhóm 01',
-    semester: 'HKI (2026 - 2027)',
-    lecturer_id: 'lecturer-uuid-1',
-    created_at: new Date().toISOString(),
-    students_count: 3,
-  },
-  {
-    id: 'class-2',
-    code: 'LOG101',
-    name: 'Introduction to Logistics & SCM - Nhóm 02',
-    semester: 'HKI (2026 - 2027)',
-    lecturer_id: 'lecturer-uuid-1',
-    created_at: new Date().toISOString(),
-    students_count: 2,
-  },
-];
+// Initial default classes for 2026 - 2027 (empty by default, user-created only)
+const DEFAULT_CLASSES: ClassModule[] = [];
 
-const DEFAULT_STUDENTS: Record<string, UserProfile[]> = {
-  'class-1': [
-    { id: 'st-1', student_code: '20120001', full_name: 'Nguyễn Văn An', email: '20120001@student.university.edu.vn', role: 'student', date_of_birth: '2004-01-15', created_at: new Date().toISOString() },
-    { id: 'st-2', student_code: '20120002', full_name: 'Lê Thị Bình', email: '20120002@student.university.edu.vn', role: 'student', date_of_birth: '2004-03-22', created_at: new Date().toISOString() },
-    { id: 'st-3', student_code: '20120003', full_name: 'Phạm Hoàng Cường', email: '20120003@student.university.edu.vn', role: 'student', date_of_birth: '2003-11-05', created_at: new Date().toISOString() },
-  ],
-  'class-2': [
-    { id: 'st-4', student_code: '20120004', full_name: 'Trần Thị Dung', email: '20120004@student.university.edu.vn', role: 'student', date_of_birth: '2004-07-30', created_at: new Date().toISOString() },
-    { id: 'st-5', student_code: '20120005', full_name: 'Hoàng Văn Em', email: '20120005@student.university.edu.vn', role: 'student', date_of_birth: '2003-09-12', created_at: new Date().toISOString() },
-  ],
-};
+const DEFAULT_STUDENTS: Record<string, UserProfile[]> = {};
 
 // Dọn dẹp key cũ và đọc danh sách lớp học phần
 export function getStoredClasses(): ClassModule[] {
-  if (typeof window === 'undefined') return DEFAULT_CLASSES;
+  if (typeof window === 'undefined') return [];
 
   const raw = localStorage.getItem(STORAGE_KEYS.CLASSES);
+  let list: ClassModule[] = [];
   if (raw) {
     try {
-      return JSON.parse(raw);
+      list = JSON.parse(raw);
     } catch {}
   }
 
   // Tự động dọn dẹp và chuyển đổi dữ liệu từ phiên bản v1/v2 cũ (nếu có)
   const legacyV2 = localStorage.getItem('uni_quiz_classes_v2');
   const legacyV1 = localStorage.getItem('uni_quiz_classes_v1');
-  let list: ClassModule[] = [];
-  if (legacyV2) {
-    try { list = JSON.parse(legacyV2); } catch {}
-  } else if (legacyV1) {
-    try { list = JSON.parse(legacyV1); } catch {}
+  if (list.length === 0) {
+    if (legacyV2) {
+      try { list = JSON.parse(legacyV2); } catch {}
+    } else if (legacyV1) {
+      try { list = JSON.parse(legacyV1); } catch {}
+    }
   }
 
   // Xóa các key thừa cũ
   localStorage.removeItem('uni_quiz_classes_v1');
   localStorage.removeItem('uni_quiz_classes_v2');
 
-  const finalClasses = (list.length > 0 ? list : DEFAULT_CLASSES).map((c) => ({
+  // Loại bỏ các lớp mẫu mock (LOG101 - class-1, class-2) nếu người dùng đã tạo lớp thật (như SCM201 I)
+  if (list.some((c) => c.id !== 'class-1' && c.id !== 'class-2')) {
+    list = list.filter((c) => c.id !== 'class-1' && c.id !== 'class-2');
+  }
+
+  const finalClasses = list.map((c) => ({
     ...c,
     semester: !c.semester || c.semester.includes('2025') ? 'HKI (2026 - 2027)' : c.semester,
   }));
@@ -251,48 +229,27 @@ const DEFAULT_QUESTION_BANK: Question[] = [
   },
 ];
 
-const DEFAULT_QUIZZES: Quiz[] = [
-  {
-    id: 'quiz-logistics-1',
-    assigned_class_ids: ['class-1', 'class-2'],
-    title: 'Bài Kiểm Tra Giữa Kỳ - Introduction to Logistics & SCM',
-    description: 'Đề thi trắc nghiệm rút ngẫu nhiên 5 câu từ Ngân hàng đề thi chung.',
-    time_limit_minutes: 45,
-    start_at: new Date().toISOString(),
-    end_at: new Date(Date.now() + 86400000 * 7).toISOString(),
-    is_published: true,
-    show_results: false,
-    shuffle_questions: true,
-    shuffle_options: true,
-    prevent_previous: true,
-    questions_per_student: 5,
-    created_at: new Date().toISOString(),
-    questions: DEFAULT_QUESTION_BANK,
-    questions_count: DEFAULT_QUESTION_BANK.length,
-    assigned_classes_count: 2,
-  },
-];
+const DEFAULT_QUIZZES: Quiz[] = [];
 
 export function getStoredQuizzes(): Quiz[] {
-  if (typeof window === 'undefined') return DEFAULT_QUIZZES;
+  if (typeof window === 'undefined') return [];
   const stored = localStorage.getItem(STORAGE_KEYS.QUIZZES) || localStorage.getItem('uni_quiz_testbank_v1');
   if (!stored) {
-    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(DEFAULT_QUIZZES));
-    return DEFAULT_QUIZZES;
+    return [];
   }
   try {
-    const parsed: Quiz[] = JSON.parse(stored);
-    // Migration: đề mẫu được lưu từ phiên bản cũ chưa có ngân hàng câu hỏi
-    const migrated = parsed.map((q) =>
-      !q.questions || q.questions.length === 0
-        ? { ...q, questions: DEFAULT_QUESTION_BANK, questions_count: DEFAULT_QUESTION_BANK.length }
-        : q
-    );
+    let parsed: Quiz[] = JSON.parse(stored);
     localStorage.removeItem('uni_quiz_testbank_v1');
-    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(migrated));
-    return migrated;
+
+    // Tự động loại bỏ đề thi mẫu (quiz-logistics-*) nếu người dùng đã tạo đề thật
+    if (parsed.some((q) => !q.id.startsWith('quiz-logistics-'))) {
+      parsed = parsed.filter((q) => !q.id.startsWith('quiz-logistics-'));
+    }
+
+    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(parsed));
+    return parsed;
   } catch (e) {
-    return DEFAULT_QUIZZES;
+    return [];
   }
 }
 
@@ -319,6 +276,16 @@ export function getStoredQuizById(quizId: string): Quiz | undefined {
   return getStoredQuizzes().find((q) => q.id === quizId);
 }
 
+// Xóa 1 đề thi
+export function deleteStoredQuiz(quizId: string): Quiz[] {
+  const quizzes = getStoredQuizzes();
+  const updated = quizzes.filter((q) => q.id !== quizId);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(updated));
+  }
+  return updated;
+}
+
 // Toàn bộ sinh viên của mọi lớp (dùng để đối chiếu bài nộp)
 export function getAllStoredStudents(): UserProfile[] {
   const all: UserProfile[] = [];
@@ -328,6 +295,32 @@ export function getAllStoredStudents(): UserProfile[] {
     });
   });
   return all;
+}
+
+// Lấy danh sách ghi danh sinh viên theo từng lớp
+export function getAllStoredClassStudents(): Record<string, UserProfile[]> {
+  const result: Record<string, UserProfile[]> = {};
+  getStoredClasses().forEach((c) => {
+    result[c.id] = getStoredStudents(c.id);
+  });
+  return result;
+}
+
+// Lấy toàn bộ ánh xạ ghi danh (student_code <-> class_id)
+export function getAllStoredEnrollments(): { class_id: string; student_id: string; student_code: string }[] {
+  const list: { class_id: string; student_id: string; student_code: string }[] = [];
+  getStoredClasses().forEach((c) => {
+    getStoredStudents(c.id).forEach((st) => {
+      if (st.student_code) {
+        list.push({
+          class_id: c.id,
+          student_id: st.id,
+          student_code: st.student_code.trim().toUpperCase(),
+        });
+      }
+    });
+  });
+  return list;
 }
 
 // --------------------------------------------------------------------

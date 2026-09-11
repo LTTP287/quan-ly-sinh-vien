@@ -27,6 +27,28 @@ export interface DemoSession {
   user_agent?: string | null;
 }
 
+import fs from 'fs';
+import path from 'path';
+
+export interface DemoQuestionOption {
+  id: string;
+  question_id: string;
+  option_text: string;
+  is_correct: boolean;
+  order_index: number;
+}
+
+export interface DemoQuestion {
+  id: string;
+  quiz_id: string;
+  question_text: string;
+  question_type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay';
+  points: number;
+  order_index: number;
+  image_url?: string | null;
+  options?: DemoQuestionOption[];
+}
+
 export interface DemoQuiz {
   id: string;
   title: string;
@@ -40,6 +62,11 @@ export interface DemoQuiz {
   start_at: string;
   end_at: string;
   is_active: boolean;
+  shuffle_questions?: boolean;
+  shuffle_options?: boolean;
+  prevent_previous?: boolean;
+  questions_per_student?: number;
+  questions?: DemoQuestion[];
 }
 
 export interface DemoScore {
@@ -53,7 +80,7 @@ export interface DemoScore {
   answers?: { question_id: string; option_id?: string | null; answer_text?: string }[];
 }
 
-interface DemoDb {
+export interface DemoDb {
   users: DemoUser[];
   classes: { id: string; code: string; name: string; semester: string }[];
   enrollments: { class_id: string; student_id: string }[];
@@ -62,21 +89,9 @@ interface DemoDb {
   scores: DemoScore[];
 }
 
-const HOUR = 3600_000;
+const STORE_PATH = path.join(process.env.TEMP_DIR || '/tmp', 'uniquiz_store.json');
 
 function seed(): DemoDb {
-  const students: DemoUser[] = [
-    { id: 'st-1', student_code: '20120001', full_name: 'Nguyễn Văn An', date_of_birth: '2004-01-15' },
-    { id: 'st-2', student_code: '20120002', full_name: 'Lê Thị Bình', date_of_birth: '2004-03-22' },
-    { id: 'st-3', student_code: '20120003', full_name: 'Phạm Hoàng Cường', date_of_birth: '2003-11-05' },
-    { id: 'st-4', student_code: '20120004', full_name: 'Trần Thị Dung', date_of_birth: '2004-07-30' },
-    { id: 'st-5', student_code: '20120005', full_name: 'Hoàng Văn Em', date_of_birth: '2003-09-12' },
-  ].map((s) => ({
-    ...s,
-    email: `${s.student_code}@student.university.edu.vn`,
-    role: 'student' as const,
-  }));
-
   const lecturers: DemoUser[] = [
     {
       id: 'lecturer-phuong-dtu',
@@ -124,85 +139,50 @@ function seed(): DemoDb {
   }
 
   return {
-    users: [
-      ...lecturers,
-      ...students,
-    ],
-    classes: [
-      { id: 'class-1', code: 'LOG101', name: 'Introduction to Logistics & SCM - Nhóm 01', semester: 'HKI (2026 - 2027)' },
-      { id: 'class-2', code: 'LOG101', name: 'Introduction to Logistics & SCM - Nhóm 02', semester: 'HKI (2026 - 2027)' },
-    ],
-    enrollments: [
-      { class_id: 'class-1', student_id: 'st-1' },
-      { class_id: 'class-1', student_id: 'st-2' },
-      { class_id: 'class-1', student_id: 'st-3' },
-      { class_id: 'class-2', student_id: 'st-4' },
-      { class_id: 'class-2', student_id: 'st-5' },
-    ],
-    quizzes: [
-      {
-        id: 'quiz-logistics-1',
-        title: 'Bài Kiểm Tra Giữa Kỳ - Introduction to Logistics & SCM',
-        description: 'Đề thi trắc nghiệm rút ngẫu nhiên 5 câu từ Ngân hàng đề thi chung.',
-        time_limit_minutes: 45,
-        is_published: true,
-        show_results: false,
-        passcode: 'LOG888',
-        passcode_expires_at: new Date(Date.now() + 24 * HOUR * 7).toISOString(),
-        class_ids: ['class-1', 'class-2'],
-        start_at: new Date(Date.now() - HOUR).toISOString(),
-        end_at: new Date(Date.now() + 24 * HOUR * 7).toISOString(),
-        is_active: true,
-      },
-      {
-        id: 'quiz-logistics-2',
-        title: 'Bài Kiểm Tra Cuối Kỳ - Logistics & SCM',
-        description: 'Ca thi cuối kỳ, phòng thi mở theo lịch khoa.',
-        time_limit_minutes: 60,
-        is_published: true,
-        show_results: false,
-        passcode: 'LOG999',
-        passcode_expires_at: new Date(Date.now() + 24 * HOUR * 30).toISOString(),
-        class_ids: ['class-1', 'class-2'],
-        start_at: new Date(Date.now() + 24 * HOUR * 14).toISOString(),
-        end_at: new Date(Date.now() + 24 * HOUR * 15).toISOString(),
-        is_active: true,
-      },
-      {
-        id: 'quiz-logistics-0',
-        title: 'Bài Kiểm Tra Chương 1 - Nhập môn Logistics',
-        description: 'Ca thi đã kết thúc.',
-        time_limit_minutes: 30,
-        is_published: true,
-        show_results: true,
-        passcode: 'LOG777',
-        passcode_expires_at: new Date(Date.now() - 24 * HOUR * 5).toISOString(),
-        class_ids: ['class-1', 'class-2'],
-        start_at: new Date(Date.now() - 24 * HOUR * 7).toISOString(),
-        end_at: new Date(Date.now() - 24 * HOUR * 5).toISOString(),
-        is_active: true,
-      },
-    ],
+    users: [...lecturers],
+    classes: [],
+    enrollments: [],
+    quizzes: [],
     sessions: [],
-    scores: [
-      {
-        quiz_id: 'quiz-logistics-0',
-        student_id: 'st-1',
-        total_score: 8.5,
-        submitted_at: new Date(Date.now() - 24 * HOUR * 5).toISOString(),
-        status: 'submitted',
-        tab_violations_count: 0,
-      },
-    ],
+    scores: [],
   };
 }
 
 // Giữ qua các lần hot-reload của Next dev server
 const globalStore = globalThis as unknown as { __uniquizDemoDb?: DemoDb };
 
+export function saveDemoDb(): void {
+  try {
+    if (globalStore.__uniquizDemoDb) {
+      fs.writeFileSync(STORE_PATH, JSON.stringify(globalStore.__uniquizDemoDb, null, 2), 'utf8');
+    }
+  } catch (e) {
+    // Bỏ qua lỗi ghi đĩa trong môi trường hạn chế
+  }
+}
+
+export function loadDemoDb(): DemoDb | null {
+  try {
+    if (fs.existsSync(STORE_PATH)) {
+      const raw = fs.readFileSync(STORE_PATH, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.users) && Array.isArray(parsed.classes)) {
+        return parsed;
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
 export function demoDb(): DemoDb {
   if (!globalStore.__uniquizDemoDb) {
-    globalStore.__uniquizDemoDb = seed();
+    const fromDisk = loadDemoDb();
+    if (fromDisk) {
+      globalStore.__uniquizDemoDb = fromDisk;
+    } else {
+      globalStore.__uniquizDemoDb = seed();
+      saveDemoDb();
+    }
   }
   return globalStore.__uniquizDemoDb;
 }

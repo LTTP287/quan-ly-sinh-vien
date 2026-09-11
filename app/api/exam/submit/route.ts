@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   if (!quizId) return NextResponse.json({ error: 'Thieu ma bai thi.' }, { status: 400 });
 
   if (!useRemote) {
-    const { demoDb } = await import('@/lib/server/demoStore');
+    const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
     const db = demoDb();
     let score = db.scores.find((s) => s.quiz_id === quizId && s.student_id === auth.user.id);
     if (!score) {
@@ -39,7 +39,35 @@ export async function POST(request: Request) {
     score.tab_violations_count = Math.max(score.tab_violations_count || 0, Number(body?.violations) || 0);
     score.answers = Array.isArray(body?.answers) ? body.answers : [];
 
-    const res = NextResponse.json({ mode: 'demo' });
+    const quiz = db.quizzes.find((q) => q.id === quizId);
+    let totalScore = 0;
+    let correctCount = 0;
+    const questions = quiz?.questions || [];
+
+    if (questions.length > 0) {
+      for (const a of score.answers || []) {
+        const q = questions.find((x: any) => x.id === a.question_id);
+        if (q) {
+          const opt = (q.options || []).find((o: any) => o.id === a.option_id);
+          if (opt && opt.is_correct) {
+            correctCount++;
+          }
+        }
+      }
+      totalScore = Math.round((correctCount / questions.length) * 10 * 10) / 10;
+    }
+    score.total_score = totalScore;
+    saveDemoDb();
+
+    const res = NextResponse.json({
+      mode: 'remote',
+      result: {
+        score: totalScore,
+        correct_count: correctCount,
+        total_questions: questions.length || score.answers?.length || 0,
+        show_results: !!quiz?.show_results,
+      },
+    });
     res.cookies.set(examTicketCookie(quizId), '', { path: '/', maxAge: 0 });
     return res;
   }

@@ -60,13 +60,19 @@ export async function signInStudent(studentCode: string, dateOfBirth: string): P
   };
   if (!isRemote) {
     body.demo_students = local.getAllStoredStudents();
+    body.demo_classes = local.getStoredClasses();
+    body.demo_enrollments = local.getAllStoredEnrollments();
   }
   return postLogin(body);
 }
 
 /** Đăng nhập giảng viên: email + mật khẩu. */
 export async function signInLecturer(email: string, password: string): Promise<AuthResult> {
-  return postLogin({ role: 'lecturer', email: email.trim(), password });
+  const res = await postLogin({ role: 'lecturer', email: email.trim(), password });
+  if (res.success && !isRemote) {
+    syncDemoQuizzesToServer();
+  }
+  return res;
 }
 
 async function postLogin(body: Record<string, unknown>): Promise<AuthResult> {
@@ -145,16 +151,18 @@ export async function syncDemoQuizzesToServer(): Promise<void> {
   try {
     const quizzes = local.getStoredQuizzes();
     const classes = local.getStoredClasses();
+    const class_students = local.getAllStoredClassStudents();
     await fetch('/api/quizzes/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quizzes, classes }),
+      body: JSON.stringify({ quizzes, classes, class_students }),
     });
   } catch {}
 }
 
 export async function listClasses(): Promise<ClassModule[]> {
   if (!isRemote) {
+    syncDemoQuizzesToServer();
     return local.getStoredClasses().map((c) => ({
       ...c,
       students_count: local.getStoredStudents(c.id).length,
@@ -194,7 +202,7 @@ export async function createClass(input: {
 }): Promise<ClassModule[]> {
   if (!isRemote) {
     const user = await getCurrentUser();
-    return local.addStoredClass({
+    const updated = local.addStoredClass({
       id: `class-${Date.now()}`,
       code: input.code.trim().toUpperCase(),
       name: input.name.trim(),
@@ -203,6 +211,8 @@ export async function createClass(input: {
       created_at: new Date().toISOString(),
       students_count: 0,
     });
+    syncDemoQuizzesToServer();
+    return updated;
   }
 
   const user = await getCurrentUser();
@@ -227,11 +237,13 @@ export async function updateClass(id: string, input: {
   semester: string;
 }): Promise<ClassModule[]> {
   if (!isRemote) {
-    return local.updateStoredClass(id, {
+    const updated = local.updateStoredClass(id, {
       code: input.code.trim().toUpperCase(),
       name: input.name.trim(),
       semester: input.semester,
     });
+    syncDemoQuizzesToServer();
+    return updated;
   }
 
   const { error } = await db()
@@ -249,7 +261,9 @@ export async function updateClass(id: string, input: {
 
 export async function deleteClass(id: string): Promise<ClassModule[]> {
   if (!isRemote) {
-    return local.deleteStoredClass(id);
+    const updated = local.deleteStoredClass(id);
+    syncDemoQuizzesToServer();
+    return updated;
   }
 
   const { error } = await db()
@@ -314,12 +328,8 @@ export async function importStudents(
         created_at: new Date().toISOString(),
       }))
     );
-    // Đồng bộ lên bộ nhớ máy chủ để sinh viên đăng nhập được ngay
-    fetch('/api/students/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ classId, students }),
-    }).catch(() => {});
+    // Đồng bộ toàn bộ dữ liệu lớp và sinh viên lên bộ nhớ máy chủ để sinh viên đăng nhập được ngay
+    syncDemoQuizzesToServer();
     return { created: students.length, enrolled: merged.length, skipped: 0, errors: [] };
   }
 
@@ -335,7 +345,11 @@ export async function importStudents(
 }
 
 export async function removeStudent(classId: string, studentId: string): Promise<UserProfile[]> {
-  if (!isRemote) return local.deleteStoredStudent(classId, studentId);
+  if (!isRemote) {
+    const updated = local.deleteStoredStudent(classId, studentId);
+    syncDemoQuizzesToServer();
+    return updated;
+  }
 
   const { error } = await db()
     .from('class_students')
@@ -527,11 +541,24 @@ export async function setShowResults(quizId: string, value: boolean): Promise<vo
   if (!isRemote) {
     const quiz = local.getStoredQuizById(quizId);
     if (quiz) local.saveStoredQuiz({ ...quiz, show_results: value });
+    syncDemoQuizzesToServer();
     return;
   }
 
   const { error } = await db().from('quizzes').update({ show_results: value }).eq('id', quizId);
   if (error) throw error;
+}
+
+export async function deleteQuiz(quizId: string): Promise<Quiz[]> {
+  if (!isRemote) {
+    const updated = local.deleteStoredQuiz(quizId);
+    syncDemoQuizzesToServer();
+    return updated;
+  }
+
+  const { error } = await db().from('quizzes').delete().eq('id', quizId);
+  if (error) throw error;
+  return listQuizzes();
 }
 
 

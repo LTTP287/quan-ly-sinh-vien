@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     }
 
     if (body.demo_students && Array.isArray(body.demo_students)) {
-      const { demoDb } = await import('@/lib/server/demoStore');
+      const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
       const db = demoDb();
       for (const st of body.demo_students) {
         const stCode = (st.student_code || '').trim().toUpperCase();
@@ -55,6 +55,22 @@ export async function POST(request: Request) {
           db.users.push(st);
         }
       }
+      if (Array.isArray(body.demo_classes) && body.demo_classes.length > 0) {
+        for (const c of body.demo_classes) {
+          if (!db.classes.some((x) => x.id === c.id)) db.classes.push(c);
+        }
+      }
+      if (Array.isArray(body.demo_enrollments)) {
+        for (const en of body.demo_enrollments) {
+          const stCode = (en.student_code || '').trim().toUpperCase();
+          const stUser = db.users.find((u) => (u.student_code || '').trim().toUpperCase() === stCode);
+          const stId = stUser ? stUser.id : en.student_id;
+          if (stId && !db.enrollments.some((e) => e.class_id === en.class_id && e.student_id === stId)) {
+            db.enrollments.push({ class_id: en.class_id, student_id: stId });
+          }
+        }
+      }
+      saveDemoDb();
     }
 
     user = await authenticateStudent(code, dob);

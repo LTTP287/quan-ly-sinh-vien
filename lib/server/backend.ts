@@ -358,19 +358,26 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
       .filter((e) => e.student_id === user.id)
       .map((e) => e.class_id);
 
-    // Nếu sinh viên chưa có ghi danh nào, tự động ghi danh vào tất cả các lớp demo đang có
-    if (myClassIds.length === 0 && db.classes.length > 0) {
-      db.classes.forEach((c) => {
-        db.enrollments.push({ class_id: c.id, student_id: user.id });
-      });
-      myClassIds = db.classes.map((c) => c.id);
+    // Đối chiếu theo mã sinh viên MSSV nếu ID có sự thay đổi giữa các lần đồng bộ
+    if (myClassIds.length === 0 && user.student_code) {
+      const code = user.student_code.trim().toUpperCase();
+      const matchedUsers = db.users.filter((u) => (u.student_code || '').trim().toUpperCase() === code);
+      for (const mu of matchedUsers) {
+        const cids = db.enrollments.filter((e) => e.student_id === mu.id).map((e) => e.class_id);
+        cids.forEach((cid) => {
+          if (!myClassIds.includes(cid)) myClassIds.push(cid);
+        });
+      }
     }
+
     const classes = db.classes.filter((c) => myClassIds.includes(c.id));
 
+    // Khớp CHÍNH XÁC đề thi thuộc lớp học phần sinh viên tham gia
     const quizzes: DashboardQuiz[] = db.quizzes
-      .filter((q) => q.is_published && (q.class_ids.length === 0 || q.class_ids.some((id) => myClassIds.includes(id))))
+      .filter((q) => q.is_published && q.class_ids.some((id) => myClassIds.includes(id)))
       .map((q) => {
         const score = db.scores.find((s) => s.quiz_id === q.id && s.student_id === user.id);
+        const assignedClass = classes.find((c) => q.class_ids.includes(c.id));
         return {
           id: q.id,
           title: q.title,
@@ -381,7 +388,7 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           end_at: q.end_at,
           requires_passcode: !!q.passcode,
           passcode_expires_at: q.passcode_expires_at,
-          class_name: classes[0]?.name || '',
+          class_name: assignedClass?.name || assignedClass?.code || '',
           submitted: !!score?.submitted_at,
           score: q.show_results ? score?.total_score ?? null : null,
           show_results: q.show_results,
@@ -518,12 +525,21 @@ export async function checkQuizPasscode(
     let myClassIds = db.enrollments
       .filter((e) => e.student_id === studentId)
       .map((e) => e.class_id);
-    if (myClassIds.length === 0 && db.classes.length > 0) {
-      db.classes.forEach((c) => {
-        db.enrollments.push({ class_id: c.id, student_id: studentId });
-      });
-      myClassIds = db.classes.map((c) => c.id);
+
+    if (myClassIds.length === 0) {
+      const u = db.users.find((x) => x.id === studentId);
+      if (u?.student_code) {
+        const code = u.student_code.trim().toUpperCase();
+        const matched = db.users.filter((x) => (x.student_code || '').trim().toUpperCase() === code);
+        for (const mu of matched) {
+          const cids = db.enrollments.filter((e) => e.student_id === mu.id).map((e) => e.class_id);
+          cids.forEach((cid) => {
+            if (!myClassIds.includes(cid)) myClassIds.push(cid);
+          });
+        }
+      }
     }
+
     if (quiz.class_ids.length > 0 && !quiz.class_ids.some((id) => myClassIds.includes(id))) {
       return { ok: false, reason: 'NOT_ASSIGNED' };
     }

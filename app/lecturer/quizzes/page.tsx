@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, FilePlus2, BookOpen, Plus, Sparkles, 
   Clock, Eye, EyeOff, CheckSquare, Square, FileCheck2, ArrowRight, 
-  Calendar, KeyRound, Power, ShieldCheck, Lock, AlertCircle 
+  Calendar, KeyRound, Power, ShieldCheck, Lock, AlertCircle, Trash2 
 } from 'lucide-react';
 import { Quiz, ClassModule, ClassQuizSchedule } from '@/types/database';
-import { listQuizzes, listClasses, saveQuizSchedules, isRemote } from '@/lib/data';
+import { listQuizzes, listClasses, saveQuizSchedules, deleteQuiz, isRemote } from '@/lib/data';
 
 export default function LecturerTestBankPage() {
   const router = useRouter();
@@ -76,6 +76,15 @@ export default function LecturerTestBankPage() {
       setQuizzes(await saveQuizSchedules(quizId, schedules));
     } catch (err: any) {
       alert(`Không lưu được lịch thi: ${err?.message || err}`);
+    }
+  };
+
+  const handleDeleteQuiz = async (quizId: string, title: string) => {
+    if (!confirm(`Bạn có chắc chắn muốn xoá đề thi "${title}" khỏi Ngân hàng đề không? Thao tác này không thể hoàn tác.`)) return;
+    try {
+      setQuizzes(await deleteQuiz(quizId));
+    } catch (err: any) {
+      alert(`Không xoá được đề thi: ${err?.message || err}`);
     }
   };
 
@@ -265,6 +274,15 @@ export default function LecturerTestBankPage() {
                     <FileCheck2 className="w-4 h-4" />
                     <span>Xem thống kê điểm & xuất Excel</span>
                   </Link>
+
+                  <button
+                    onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
+                    className="inline-flex items-center text-xs font-semibold text-rose-400 hover:text-rose-300 space-x-1 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
+                    title="Xoá đề thi khỏi ngân hàng"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Xoá đề</span>
+                  </button>
                 </div>
               </div>
             </div>

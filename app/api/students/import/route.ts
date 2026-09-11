@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   }
 
   if (!isSupabaseConfigured || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    const { demoDb } = await import('@/lib/server/demoStore');
+    const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
     const db = demoDb();
     const body = await request.json().catch(() => null);
     const classId: string | undefined = body?.classId;
@@ -58,6 +58,7 @@ export async function POST(request: Request) {
         db.enrollments.push({ class_id: classId, student_id: stUser.id });
       }
     }
+    saveDemoDb();
     return NextResponse.json({ created, enrolled: students.length, skipped: 0, errors: [] });
   }
 
