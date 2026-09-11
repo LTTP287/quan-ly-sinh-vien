@@ -19,6 +19,26 @@ export async function POST(request: Request) {
   if (!quizId) return NextResponse.json({ error: 'Thieu ma bai thi.' }, { status: 400 });
 
   if (!useRemote) {
+    const { demoDb } = await import('@/lib/server/demoStore');
+    const db = demoDb();
+    let score = db.scores.find((s) => s.quiz_id === quizId && s.student_id === auth.user.id);
+    if (!score) {
+      score = {
+        quiz_id: quizId,
+        student_id: auth.user.id,
+        total_score: null,
+        submitted_at: null,
+        status: 'in_progress',
+        tab_violations_count: 0,
+        warning_history: [],
+      };
+      db.scores.push(score);
+    }
+    score.status = body?.timed_out ? 'timed_out' : 'submitted';
+    score.submitted_at = new Date().toISOString();
+    score.tab_violations_count = Math.max(score.tab_violations_count || 0, Number(body?.violations) || 0);
+    score.answers = Array.isArray(body?.answers) ? body.answers : [];
+
     const res = NextResponse.json({ mode: 'demo' });
     res.cookies.set(examTicketCookie(quizId), '', { path: '/', maxAge: 0 });
     return res;

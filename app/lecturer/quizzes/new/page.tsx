@@ -8,7 +8,8 @@ import {
   ArrowLeft, FilePlus2, Plus, Trash2, CheckCircle2, 
   HelpCircle, Lock, Eye, EyeOff, Sparkles, Clock, Calendar, 
   Shuffle, ArrowRightLeft, ShieldBan, Dice5, FileSpreadsheet, 
-  FileText, Upload, Download, CopyCheck, Wand2, Star, BookOpen, CheckSquare, Square, KeyRound 
+  FileText, Upload, Download, CopyCheck, Wand2, Star, BookOpen, CheckSquare, Square, KeyRound,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Question, QuestionOption, Quiz, ClassModule } from '@/types/database';
 import { listClasses, createQuiz } from '@/lib/data';
@@ -295,7 +296,7 @@ B. Sai`);
   };
 
   // Question Authoring Helpers
-  const addQuestion = (type: 'multiple_choice' | 'true_false') => {
+  const addQuestion = (type: Question['question_type']) => {
     const newQId = `q-${Date.now()}`;
     let defaultOptions: QuestionOption[] = [];
 
@@ -306,11 +307,13 @@ B. Sai`);
         { id: `opt-${Date.now()}-3`, question_id: newQId, option_text: 'Lựa chọn C', is_correct: false, order_index: 2 },
         { id: `opt-${Date.now()}-4`, question_id: newQId, option_text: 'Lựa chọn D', is_correct: false, order_index: 3 },
       ];
-    } else {
+    } else if (type === 'true_false') {
       defaultOptions = [
         { id: `opt-tf-1`, question_id: newQId, option_text: 'Đúng', is_correct: true, order_index: 0 },
         { id: `opt-tf-2`, question_id: newQId, option_text: 'Sai', is_correct: false, order_index: 1 },
       ];
+    } else {
+      defaultOptions = [];
     }
 
     const newQ: Question = {
@@ -328,6 +331,10 @@ B. Sai`);
 
   const updateQuestionText = (qId: string, text: string) => {
     setQuestions(questions.map((q) => (q.id === qId ? { ...q, question_text: text } : q)));
+  };
+
+  const updateQuestionImage = (qId: string, imageUrl: string | null) => {
+    setQuestions(questions.map((q) => (q.id === qId ? { ...q, image_url: imageUrl } : q)));
   };
 
   const updateOptionText = (qId: string, optId: string, text: string) => {
@@ -629,16 +636,33 @@ B. Sai`);
               <span>Quy Tắc Trộn Đề & Thi Tuyến Tính</span>
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Toggle 0: Show Results */}
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-white flex items-center space-x-1.5">
+                    <Eye className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Xem Điểm Sau Thi</span>
+                  </span>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Cho xem ngay
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
+                  <input type="checkbox" checked={showResults} onChange={(e) => setShowResults(e.target.checked)} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
               {/* Toggle 1: Shuffle Questions */}
               <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
                 <div>
                   <span className="text-xs font-semibold text-white flex items-center space-x-1.5">
                     <Shuffle className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Trộn Thứ Tự Câu Hỏi</span>
+                    <span>Trộn Câu Hỏi</span>
                   </span>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Xáo trộn thứ tự câu hỏi
+                    Đảo thứ tự câu
                   </p>
                 </div>
 
@@ -837,9 +861,37 @@ B. Sai`);
                   type="button"
                   onClick={() => addQuestion('multiple_choice')}
                   className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-indigo-400 border border-slate-700 flex items-center space-x-1"
+                  title="Nhiều lựa chọn"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Thêm 1 câu thủ công</span>
+                  <span>Trắc nghiệm</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addQuestion('true_false')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-indigo-400 border border-slate-700 flex items-center space-x-1"
+                  title="Đúng/Sai"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Đúng/Sai</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addQuestion('short_answer')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-400 border border-slate-700 flex items-center space-x-1"
+                  title="Tự luận ngắn"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Câu ngắn</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addQuestion('long_answer')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-400 border border-slate-700 flex items-center space-x-1"
+                  title="Tự luận dài"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Câu dài</span>
                 </button>
               </div>
             </div>
@@ -849,7 +901,11 @@ B. Sai`);
                 <div key={q.id} className="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                     <span className="text-xs font-bold font-mono text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
-                      Câu {qIdx + 1} trong Ngân hàng đề ({q.question_type === 'multiple_choice' ? 'Nhiều lựa chọn' : 'Đúng / Sai'})
+                      Câu {qIdx + 1} trong Ngân hàng đề ({
+                        q.question_type === 'multiple_choice' ? 'Nhiều lựa chọn' : 
+                        q.question_type === 'true_false' ? 'Đúng / Sai' :
+                        q.question_type === 'short_answer' ? 'Tự luận ngắn' : 'Tự luận dài'
+                      })
                     </span>
                     <button
                       type="button"
@@ -870,9 +926,57 @@ B. Sai`);
                     />
                   </div>
 
+                  {/* Image Attachment for Question */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-3">
+                      <label className="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-sky-400 border border-slate-700 flex items-center space-x-1.5 transition-colors">
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span>{q.image_url ? 'Đổi hình ảnh' : 'Thêm Picture (Đính kèm ảnh)'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            const reader = new FileReader();
+                            reader.onload = (evt) => {
+                              updateQuestionImage(q.id, String(evt.target?.result || ''));
+                            };
+                            reader.readAsDataURL(f);
+                          }}
+                        />
+                      </label>
+                      {q.image_url && (
+                        <button
+                          type="button"
+                          onClick={() => updateQuestionImage(q.id, null)}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 transition-colors"
+                        >
+                          Xoá ảnh
+                        </button>
+                      )}
+                    </div>
+
+                    {q.image_url && (
+                      <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 inline-block">
+                        <img
+                          src={q.image_url}
+                          alt="Hình ảnh đính kèm"
+                          className="max-h-48 max-w-full rounded-lg object-contain"
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   {/* Question Options */}
                   <div className="space-y-2 pt-1">
-                    {q.options?.map((opt) => (
+                    {(q.question_type === 'short_answer' || q.question_type === 'long_answer') ? (
+                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-400 text-center border-dashed">
+                        Sinh viên sẽ nhập câu trả lời tự luận vào một ô văn bản (Giảng viên chấm điểm sau).
+                      </div>
+                    ) : (
+                      q.options?.map((opt) => (
                       <div key={opt.id} className="flex items-center space-x-3">
                         <input
                           type="radio"
@@ -896,7 +1000,7 @@ B. Sai`);
                           </span>
                         )}
                       </div>
-                    ))}
+                    )))}
                   </div>
                 </div>
               ))}

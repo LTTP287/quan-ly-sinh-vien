@@ -1,33 +1,38 @@
 -- ====================================================================
--- MIGRATION 004 — Tài khoản Owner (Giảng viên chủ hệ thống)
+-- MIGRATION 004 — Khởi tạo tài khoản Giảng viên / Chủ hệ thống (Owner)
 --
--- Đăng nhập giảng viên nay xác thực bằng public.users.password_hash
--- (không cần tài khoản Supabase Auth), nên chỉ cần insert thẳng vào
--- bảng users. Chạy sau 002_auth_and_passcode.sql (cần cột password_hash
--- và extension pgcrypto).
+-- Đăng nhập giảng viên xác thực bằng public.users.password_hash
+-- (chạy sau 002_auth_and_passcode.sql).
 --
--- Mật khẩu đặt tạm theo yêu cầu của owner: LeminhPhuc@2512
--- ĐỔI MẬT KHẨU NÀY ngay sau lần đăng nhập đầu tiên bằng:
---   SELECT public.set_lecturer_password('<email>', '<mật khẩu mới>');
+-- HƯỚNG DẪN DÀNH CHO GIẢNG VIÊN:
+-- Để tạo tài khoản quản trị của Thầy/Cô trên Supabase thật, Thầy/Cô chỉ cần
+-- mở Supabase SQL Editor và chạy lệnh dưới đây với Email và Mật khẩu riêng:
+--
+-- INSERT INTO public.users (id, email, student_code, full_name, role, password_hash)
+-- VALUES (
+--   uuid_generate_v4(),
+--   '<EMAIL_CỦA_THẦY_CÔ>',
+--   NULL,
+--   '<HỌ_VÀ_TÊN_GIẢNG_VIÊN>',
+--   'lecturer',
+--   crypt('<MẬT_KHẨU_TỰ_ĐẶT>', gen_salt('bf'))
+-- )
+-- ON CONFLICT (email) DO UPDATE
+--   SET password_hash = EXCLUDED.password_hash,
+--       full_name = EXCLUDED.full_name,
+--       role = 'lecturer';
 -- ====================================================================
 
+-- Tài khoản Giảng viên mặc định (dùng để kiểm thử, Thầy/Cô nên đổi mật khẩu sau khi cấu hình)
 INSERT INTO public.users (id, email, student_code, full_name, role, password_hash)
 VALUES
   (
     uuid_generate_v4(),
-    'phuong.lethanh797@gmail.com',
+    'giangvien@edu.vn',
     NULL,
-    'ThS. Lê Thị Thanh Phương',
+    'TS. Nguyễn Văn A',
     'lecturer',
-    crypt('LeminhPhuc@2512', gen_salt('bf'))
-  ),
-  (
-    uuid_generate_v4(),
-    'letthanhphuong3@dtu.edu.vn',
-    NULL,
-    'ThS. Lê Thị Thanh Phương',
-    'lecturer',
-    crypt('LeminhPhuc@2512', gen_salt('bf'))
+    crypt('GiangVien@2026', gen_salt('bf'))
   )
 ON CONFLICT (email) DO UPDATE
   SET password_hash = EXCLUDED.password_hash,

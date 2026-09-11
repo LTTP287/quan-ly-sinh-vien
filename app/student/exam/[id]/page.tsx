@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Clock, ShieldAlert, AlertTriangle, ArrowRight, ArrowLeft, Send,
-  AlertCircle, Lock, ShieldBan, Dice5,
+  AlertCircle, Lock, ShieldBan, Dice5, CheckCircle2,
 } from 'lucide-react';
-import { Question, Quiz, Submission, UserProfile } from '@/types/database';
+import { Question, Quiz, Submission, UserProfile, TabViolationRecord } from '@/types/database';
 import { getQuiz, getCurrentUser, saveSubmissionLocal } from '@/lib/data';
 import { gradeSubmission } from '@/lib/grading';
 
@@ -54,11 +54,13 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
 
   const [violationsCount, setViolationsCount] = useState(0);
   const [showWarningModal, setShowWarningModal] = useState(false);
 
   const violationKey = `exam_violations_${params.id}`;
+  const draftKey = `uniquiz_draft_${params.id}`;
 
   // Đổi "vé vào phòng thi" (được cấp sau khi xác thực Mã phòng thi ở Dashboard)
   // lấy đề. Không có vé hợp lệ -> không lấy được đề, kể cả gõ thẳng URL.
@@ -122,6 +124,19 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
         );
         setTimeLeftSeconds(p.quiz.time_limit_minutes * 60);
         setViolationsCount(Math.max(p.tab_violations_count || 0, Number(localStorage.getItem(violationKey) || 0)));
+
+        // Tự động phục hồi đáp án đã lưu nháp trước đó (nếu có)
+        try {
+          const savedDraft = localStorage.getItem(draftKey);
+          if (savedDraft) {
+            const parsed = JSON.parse(savedDraft);
+            if (parsed && typeof parsed === 'object') {
+              setSelectedAnswers(parsed);
+              setLastSavedTime('Đã khôi phục bài làm');
+            }
+          }
+        } catch {}
+
         setLoadState('ready');
         return;
       }
@@ -156,6 +171,19 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
       setQuestions(sampled);
       setTimeLeftSeconds(found.time_limit_minutes * 60);
       setViolationsCount(Number(localStorage.getItem(violationKey) || 0));
+
+      // Tự động phục hồi đáp án đã lưu nháp trước đó (nếu có)
+      try {
+        const savedDraft = localStorage.getItem(draftKey);
+        if (savedDraft) {
+          const parsed = JSON.parse(savedDraft);
+          if (parsed && typeof parsed === 'object') {
+            setSelectedAnswers(parsed);
+            setLastSavedTime('Đã khôi phục bài làm');
+          }
+        }
+      } catch {}
+
       setLoadState('ready');
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -173,10 +201,20 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
   }, [timeLeftSeconds, loadState, isSubmitting]);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) triggerViolation('Phát hiện chuyển tab hoặc thu nhỏ cửa sổ làm bài!');
+    const handleDetection = () => {
+      if (isSubmitting) return;
+      handleAutoSubmit('KICK_OUT: Phát hiện mở tab khác hoặc rời khỏi màn hình thi. Hệ thống đã tự động thu bài và chấm 0 điểm.');
     };
-    const handleBlur = () => triggerViolation('Phát hiện chuột rời khỏi màn hình bài thi!');
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        handleDetection();
+      }
+    };
+
+    const handleBlur = () => {
+      handleDetection();
+    };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleBlur);
@@ -185,30 +223,21 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
       window.removeEventListener('blur', handleBlur);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [violationsCount]);
+  }, [isSubmitting]);
 
   const triggerViolation = (reason: string) => {
-    const newCount = violationsCount + 1;
-    setViolationsCount(newCount);
-    setShowWarningModal(true);
-    localStorage.setItem(violationKey, String(newCount));
-
-    fetch('/api/exam/violation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quiz_id: params.id, message: reason }),
-    })
-      .then((r) => r.json())
-      .then((json) => {
-        if (typeof json.count === 'number' && json.count > newCount) setViolationsCount(json.count);
-      })
-      .catch(() => {});
-
-    if (newCount >= 3) handleAutoSubmit('Tự động nộp bài do vi phạm chuyển tab quá 3 lần!');
+    handleAutoSubmit(reason);
   };
 
   const handleSelectOption = (questionId: string, optionId: string) => {
-    setSelectedAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+    setSelectedAnswers((prev) => {
+      const nextAnswers = { ...prev, [questionId]: optionId };
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(nextAnswers));
+      } catch {}
+      return nextAnswers;
+    });
+    setLastSavedTime(new Date().toLocaleTimeString('vi-VN'));
   };
 
   const goToNextQuestion = () => {
@@ -223,12 +252,21 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
     if (isSubmitting) return;
     setIsSubmitting(true);
     const timedOut = !!reason && reason.includes('Hết giờ');
+    const isKickOut = !!reason && reason.includes('KICK_OUT');
 
     try {
-      const answers = questions.map((q) => ({
-        question_id: q.id,
-        option_id: selectedAnswers[q.id] || null,
-      }));
+      const answers = isKickOut ? [] : questions.map((q) => {
+        if (q.question_type === 'short_answer' || q.question_type === 'long_answer') {
+          return {
+            question_id: q.id,
+            answer_text: selectedAnswers[q.id] || '',
+          };
+        }
+        return {
+          question_id: q.id,
+          option_id: selectedAnswers[q.id] || null,
+        };
+      });
 
       const res = await fetch('/api/exam/submit', {
         method: 'POST',
@@ -250,30 +288,48 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
         totalQuestions = json.result.total_questions;
       } else {
         // Demo: chấm tại chỗ và lưu vào Test Bank để trang Thống kê điểm đọc được
-        const result = gradeSubmission(questions, selectedAnswers, `sub-${params.id}-${student?.id || 'guest'}`);
+        const result = isKickOut
+          ? { score10: 0, correctCount: 0, totalQuestions: questions.length, answers: [] }
+          : gradeSubmission(questions, selectedAnswers, `sub-${params.id}-${student?.id || 'guest'}`);
+        let warningHistory: TabViolationRecord[] = [];
+        try {
+          warningHistory = JSON.parse(localStorage.getItem(`uniquiz_violations_history_${params.id}`) || '[]');
+        } catch {}
+
         const submission: Submission = {
           id: `sub-${params.id}-${student?.id || 'guest'}`,
           quiz_id: params.id,
           student_id: student?.id || 'guest',
           started_at: startedAt,
           submitted_at: new Date().toISOString(),
-          total_score: result.score10,
+          total_score: isKickOut ? 0 : result.score10,
           status: timedOut ? 'timed_out' : 'submitted',
-          tab_violations_count: violationsCount,
+          tab_violations_count: isKickOut ? Math.max(violationsCount, 1) : violationsCount,
+          warning_history: warningHistory,
           answers: result.answers,
           student: student || undefined,
         };
         saveSubmissionLocal(submission);
-        showResults = !!quiz?.show_results;
-        score = result.score10;
-        correctCount = result.correctCount;
+        showResults = isKickOut ? true : !!quiz?.show_results;
+        score = isKickOut ? 0 : result.score10;
+        correctCount = isKickOut ? 0 : result.correctCount;
         totalQuestions = result.totalQuestions;
       }
 
-      localStorage.removeItem(violationKey);
+      // Dọn sạch bài nháp và cờ vi phạm khi đã nộp thành công
+      try {
+        localStorage.removeItem(draftKey);
+        localStorage.removeItem(violationKey);
+        localStorage.removeItem(`uniquiz_violations_history_${params.id}`);
+      } catch {}
 
       const query = new URLSearchParams({ violations: String(violationsCount), reason: reason || '' });
-      if (showResults && score !== null) {
+      if (isKickOut) {
+        query.set('kickout', '1');
+        query.set('score', '0');
+        query.set('correct', '0');
+        query.set('total', String(totalQuestions));
+      } else if (showResults && score !== null) {
         query.set('score', String(score));
         query.set('correct', String(correctCount ?? ''));
         query.set('total', String(totalQuestions));
@@ -337,11 +393,18 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
             </div>
           </div>
 
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-4">
+            {lastSavedTime && (
+              <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{lastSavedTime}</span>
+              </div>
+            )}
+
             {violationsCount > 0 && (
               <div className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center space-x-1 animate-pulse">
                 <AlertTriangle className="w-4 h-4" />
-                <span>Vi phạm: {violationsCount}/3</span>
+                <span>Vi phạm: {violationsCount}/2</span>
               </div>
             )}
 
@@ -362,6 +425,14 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
         </div>
       </header>
 
+      {/* Strict Anti-Cheat Notice Banner */}
+      <div className="bg-rose-950/40 border-b border-rose-500/30 px-6 py-2.5 text-center text-xs text-rose-300 flex items-center justify-center space-x-2">
+        <ShieldBan className="w-4 h-4 text-rose-400 shrink-0" />
+        <span>
+          <strong>Giám sát thi trực tuyến:</strong> Không được mở tab mới, chuyển tab hoặc rời màn hình. Vi phạm sẽ bị <strong>KICK OUT</strong> và nhận <strong>0 điểm</strong> ngay lập tức!
+        </span>
+      </div>
+
       <main className="max-w-7xl mx-auto px-6 py-10 flex-1 w-full grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div className="lg:col-span-3 space-y-6">
           <div className="glass-card p-8 rounded-2xl border border-slate-800 space-y-6">
@@ -376,40 +447,60 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
 
             <h2 className="text-lg font-semibold text-white leading-relaxed">{currentQ.question_text}</h2>
 
+            {currentQ.image_url && (
+              <div className="my-3 p-2 rounded-xl bg-slate-900 border border-slate-800 inline-block">
+                <img
+                  src={currentQ.image_url}
+                  alt="Hình ảnh câu hỏi"
+                  className="max-h-72 max-w-full rounded-lg object-contain"
+                />
+              </div>
+            )}
+
             <div className="space-y-3 pt-4">
-              {currentQ.options?.map((opt, optIdx) => {
-                const optionLabel = String.fromCharCode(65 + optIdx);
-                const isSelected = selectedAnswers[currentQ.id] === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() => handleSelectOption(currentQ.id, opt.id)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between ${
-                      isSelected
-                        ? 'border-purple-500 bg-purple-500/15 text-white shadow-md'
-                        : 'border-slate-800/80 bg-slate-900/60 hover:bg-slate-900 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span
-                        className={`w-7 h-7 rounded-lg font-mono font-bold text-xs flex items-center justify-center border ${
-                          isSelected ? 'bg-purple-500 text-white border-purple-400' : 'bg-slate-800 text-slate-400 border-slate-700'
-                        }`}
-                      >
-                        {optionLabel}
-                      </span>
-                      <span className="text-sm font-medium">{opt.option_text}</span>
-                    </div>
-                    <div
-                      className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                        isSelected ? 'border-purple-400 bg-purple-500' : 'border-slate-700'
+              {(currentQ.question_type === 'short_answer' || currentQ.question_type === 'long_answer') ? (
+                <textarea
+                  rows={currentQ.question_type === 'long_answer' ? 6 : 2}
+                  placeholder="Nhập câu trả lời của bạn..."
+                  value={selectedAnswers[currentQ.id] || ''}
+                  onChange={(e) => handleSelectOption(currentQ.id, e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl p-4 text-sm text-slate-200 focus:outline-none focus:border-purple-500 leading-relaxed"
+                />
+              ) : (
+                currentQ.options?.map((opt, optIdx) => {
+                  const optionLabel = String.fromCharCode(65 + optIdx);
+                  const isSelected = selectedAnswers[currentQ.id] === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleSelectOption(currentQ.id, opt.id)}
+                      className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'border-purple-500 bg-purple-500/15 text-white shadow-md'
+                          : 'border-slate-800/80 bg-slate-900/60 hover:bg-slate-900 text-slate-300'
                       }`}
                     >
-                      {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                    </div>
-                  </button>
-                );
-              })}
+                      <div className="flex items-center space-x-3">
+                        <span
+                          className={`w-7 h-7 rounded-lg font-mono font-bold text-xs flex items-center justify-center border ${
+                            isSelected ? 'bg-purple-500 text-white border-purple-400' : 'bg-slate-800 text-slate-400 border-slate-700'
+                          }`}
+                        >
+                          {optionLabel}
+                        </span>
+                        <span className="text-sm font-medium">{opt.option_text}</span>
+                      </div>
+                      <div
+                        className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                          isSelected ? 'border-purple-400 bg-purple-500' : 'border-slate-700'
+                        }`}
+                      >
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -509,16 +600,16 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
               <ShieldAlert className="w-10 h-10" />
             </div>
             <div>
-              <h3 className="text-xl font-extrabold text-amber-400">CẢNH BÁO VI PHẠM THI</h3>
+              <h3 className="text-xl font-extrabold text-amber-400">CẢNH BÁO VI PHẠM PHÒNG THI</h3>
               <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-                Hệ thống phát hiện bạn vừa <strong>chuyển tab hoặc rời màn hình</strong> bài thi!
+                Hệ thống phát hiện bạn vừa <strong>chuyển tab hoặc thu nhỏ trình duyệt</strong> làm bài!
               </p>
               <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-sm">
-                Số lần vi phạm: {violationsCount} / 3
+                Số lần vi phạm: {violationsCount} / 2
               </div>
             </div>
             <p className="text-xs text-slate-400">
-              * Nếu tiếp tục vi phạm quá 3 lần, bài thi của bạn sẽ <strong>tự động nộp ngay lập tức</strong>.
+              * Nếu tiếp tục vi phạm quá <strong>2 lần</strong>, hệ thống sẽ <strong>tự động nộp bài ngay lập tức</strong> và lưu mốc thời gian vi phạm làm bằng chứng cho Giảng viên.
             </p>
             <button
               onClick={() => setShowWarningModal(false)}

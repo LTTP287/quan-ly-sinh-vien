@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, Users, FileSpreadsheet, Plus, Search, 
-  Trash2, UserCheck, GraduationCap, CheckCircle 
+  Trash2, UserCheck, GraduationCap, CheckCircle, Award 
 } from 'lucide-react';
 import ExcelStudentImporter from '@/components/ExcelStudentImporter';
 import { UserProfile, ClassModule } from '@/types/database';
@@ -107,6 +107,14 @@ export default function ClassDetailsPage({ params }: { params: { id: string } })
           </div>
 
           <div className="flex items-center space-x-3">
+            <Link
+              href={`/lecturer/classes/${params.id}/grades`}
+              className="px-4 py-2 rounded-xl border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-sm font-semibold flex items-center space-x-2 transition-colors"
+            >
+              <Award className="w-4 h-4 text-purple-400" />
+              <span>Bảng Điểm Học Phần</span>
+            </Link>
+
             <button
               onClick={() => setShowImporter(!showImporter)}
               className="gradient-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2"

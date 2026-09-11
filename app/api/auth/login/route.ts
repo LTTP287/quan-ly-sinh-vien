@@ -42,6 +42,21 @@ export async function POST(request: Request) {
       );
     }
 
+    if (body.demo_students && Array.isArray(body.demo_students)) {
+      const { demoDb } = await import('@/lib/server/demoStore');
+      const db = demoDb();
+      for (const st of body.demo_students) {
+        const stCode = (st.student_code || '').trim().toUpperCase();
+        if (!stCode) continue;
+        const idx = db.users.findIndex((u) => (u.student_code || '').trim().toUpperCase() === stCode);
+        if (idx >= 0) {
+          db.users[idx] = { ...db.users[idx], ...st };
+        } else {
+          db.users.push(st);
+        }
+      }
+    }
+
     user = await authenticateStudent(code, dob);
     if (!user) {
       // Không phân biệt "sai MSSV" với "sai ngày sinh" để tránh dò tài khoản

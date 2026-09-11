@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   GraduationCap, BookOpen, Users, FileCheck2, Plus, 
-  ArrowRight, LogOut, Sparkles, FolderPlus, Search 
+  ArrowRight, LogOut, Sparkles, FolderPlus, Search, Pencil, Trash2
 } from 'lucide-react';
 import { ClassModule, UserProfile } from '@/types/database';
-import { listClasses, listQuizzes, createClass, getCurrentUser, signOut } from '@/lib/data';
+import { listClasses, listQuizzes, createClass, updateClass, deleteClass, getCurrentUser, signOut } from '@/lib/data';
 
 export default function LecturerDashboard() {
   const router = useRouter();
@@ -17,6 +17,9 @@ export default function LecturerDashboard() {
   const [quizCount, setQuizCount] = useState(0);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingClassId, setEditingClassId] = useState<string | null>(null);
+
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
   const [newSemester, setNewSemester] = useState('HKI (2026 - 2027)');
@@ -57,6 +60,42 @@ export default function LecturerDashboard() {
       setShowCreateModal(false);
     } catch (err: any) {
       alert(`Không tạo được lớp: ${err?.message || err}`);
+    }
+  };
+
+  const openEditModal = (cls: ClassModule) => {
+    setEditingClassId(cls.id);
+    setNewCode(cls.code);
+    setNewName(cls.name);
+    setNewSemester(cls.semester);
+    setShowEditModal(true);
+  };
+
+  const handleEditClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingClassId || !newCode.trim() || !newName.trim()) return;
+
+    try {
+      const updated = await updateClass(editingClassId, {
+        code: newCode.trim().toUpperCase(),
+        name: newName.trim(),
+        semester: newSemester,
+      });
+      setClasses(updated);
+      setEditingClassId(null);
+      setShowEditModal(false);
+    } catch (err: any) {
+      alert(`Không cập nhật được lớp: ${err?.message || err}`);
+    }
+  };
+
+  const handleDeleteClass = async (id: string, name: string) => {
+    if (!confirm(`Bạn có chắc chắn muốn xoá lớp "${name}" không? Thao tác này không thể hoàn tác và sẽ xoá luôn danh sách sinh viên của lớp.`)) return;
+    try {
+      const updated = await deleteClass(id);
+      setClasses(updated);
+    } catch (err: any) {
+      alert(`Không xoá được lớp: ${err?.message || err}`);
     }
   };
 
@@ -176,7 +215,15 @@ export default function LecturerDashboard() {
                   <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                     {cls.code}
                   </span>
-                  <span className="text-xs text-slate-400 font-medium">{cls.semester}</span>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-xs text-slate-400 font-medium">{cls.semester}</span>
+                    <button onClick={(e) => { e.preventDefault(); openEditModal(cls); }} className="text-slate-500 hover:text-indigo-400 transition-colors">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={(e) => { e.preventDefault(); handleDeleteClass(cls.id, cls.name); }} className="text-slate-500 hover:text-red-400 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors">
                   {cls.name}
@@ -291,6 +338,84 @@ export default function LecturerDashboard() {
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Khởi Tạo Lớp</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Modal: Edit Class */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card p-8 rounded-2xl border border-slate-800 w-full max-w-md space-y-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400">
+                <Pencil className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Chỉnh Sửa Lớp Học Phần</h3>
+                <p className="text-xs text-slate-400">Cập nhật mã môn và tên học phần</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleEditClass} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  Mã Lớp Học Phần
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: INT3306"
+                  value={newCode}
+                  onChange={(e) => setNewCode(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  Tên Học Phần / Lớp
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Lập Trình Web Nâng Cao"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  Học Kỳ
+                </label>
+                <select
+                  value={newSemester}
+                  onChange={(e) => setNewSemester(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="HKI (2026 - 2027)">HKI (2026 - 2027)</option>
+                  <option value="HKII (2026 - 2027)">HKII (2026 - 2027)</option>
+                  <option value="Học kỳ Hè (2026 - 2027)">Học kỳ Hè (2026 - 2027)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="gradient-button px-5 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Cập Nhật Lớp</span>
                 </button>
               </div>
             </form>

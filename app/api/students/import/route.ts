@@ -29,10 +29,36 @@ export async function POST(request: Request) {
   }
 
   if (!isSupabaseConfigured || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json(
-      { error: 'Supabase chưa được cấu hình trên server (chỉ dùng được ở chế độ Supabase).' },
-      { status: 400 }
-    );
+    const { demoDb } = await import('@/lib/server/demoStore');
+    const db = demoDb();
+    const body = await request.json().catch(() => null);
+    const classId: string | undefined = body?.classId;
+    const students: StudentInput[] = Array.isArray(body?.students) ? body.students : [];
+
+    let created = 0;
+    for (const s of students) {
+      const code = (s.student_code || '').trim().toUpperCase();
+      if (!code) continue;
+      const existingIdx = db.users.findIndex((u) => (u.student_code || '').trim().toUpperCase() === code);
+      const stUser = {
+        id: existingIdx >= 0 ? db.users[existingIdx].id : `st-${Date.now()}-${created}`,
+        student_code: code,
+        full_name: s.full_name || code,
+        email: s.email || `${code.toLowerCase()}@student.university.edu.vn`,
+        role: 'student' as const,
+        date_of_birth: s.date_of_birth,
+      };
+      if (existingIdx >= 0) {
+        db.users[existingIdx] = { ...db.users[existingIdx], ...stUser };
+      } else {
+        db.users.push(stUser);
+        created++;
+      }
+      if (classId && !db.enrollments.some((e) => e.class_id === classId && e.student_id === stUser.id)) {
+        db.enrollments.push({ class_id: classId, student_id: stUser.id });
+      }
+    }
+    return NextResponse.json({ created, enrolled: students.length, skipped: 0, errors: [] });
   }
 
   const body = await request.json().catch(() => null);

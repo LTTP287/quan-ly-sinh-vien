@@ -49,6 +49,8 @@ export interface DemoScore {
   submitted_at: string | null;
   status: 'in_progress' | 'submitted' | 'timed_out';
   tab_violations_count: number;
+  warning_history?: { timestamp: string; event: string; message: string }[];
+  answers?: { question_id: string; option_id?: string | null; answer_text?: string }[];
 }
 
 interface DemoDb {
@@ -75,33 +77,32 @@ function seed(): DemoDb {
     role: 'student' as const,
   }));
 
+  const lecturers: DemoUser[] = [
+    {
+      id: 'lecturer-uuid-1',
+      email: 'giangvien@edu.vn',
+      student_code: null,
+      full_name: 'TS. Nguyễn Văn A',
+      role: 'lecturer',
+      password: 'GiangVien@2026',
+    },
+  ];
+
+  // Nếu Giảng viên / Chủ hệ thống cấu hình tài khoản riêng trong file .env.local
+  if (process.env.OWNER_EMAIL) {
+    lecturers.unshift({
+      id: 'owner-uuid-custom',
+      email: process.env.OWNER_EMAIL.trim().toLowerCase(),
+      student_code: null,
+      full_name: process.env.OWNER_NAME || 'Giảng Viên Quản Trị',
+      role: 'lecturer',
+      password: process.env.OWNER_PASSWORD || 'GiangVien@2026',
+    });
+  }
+
   return {
     users: [
-      // Chủ sở hữu hệ thống (Owner) — đăng nhập được bằng 1 trong 2 email này
-      {
-        id: 'owner-uuid-1',
-        email: 'phuong.lethanh797@gmail.com',
-        student_code: null,
-        full_name: 'ThS. Lê Thị Thanh Phương',
-        role: 'lecturer',
-        password: 'LeminhPhuc@2512',
-      },
-      {
-        id: 'owner-uuid-2',
-        email: 'letthanhphuong3@dtu.edu.vn',
-        student_code: null,
-        full_name: 'ThS. Lê Thị Thanh Phương',
-        role: 'lecturer',
-        password: 'LeminhPhuc@2512',
-      },
-      {
-        id: 'lecturer-uuid-1',
-        email: 'giangvien@edu.vn',
-        student_code: null,
-        full_name: 'TS. Nguyễn Văn A',
-        role: 'lecturer',
-        password: 'GiangVien@2026',
-      },
+      ...lecturers,
       ...students,
     ],
     classes: [
@@ -185,8 +186,40 @@ export function demoDb(): DemoDb {
 
 /** Ngày sinh -> chuỗi mật khẩu DDMMYYYY */
 export function dobToPassword(isoDate: string): string {
-  const d = new Date(isoDate);
-  const dd = String(d.getUTCDate()).padStart(2, '0');
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  return `${dd}${mm}${d.getUTCFullYear()}`;
+  if (!isoDate) return '';
+  const str = String(isoDate).trim();
+
+  // 1. Dạng YYYY-MM-DD hoặc YYYY/MM/DD
+  const mIso = str.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  if (mIso) {
+    const [, yyyy, mm, dd] = mIso;
+    return `${dd.padStart(2, '0')}${mm.padStart(2, '0')}${yyyy}`;
+  }
+
+  // 2. Dạng DD/MM/YYYY hoặc DD-MM-YYYY
+  const mDmy = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  if (mDmy) {
+    const [, dd, mm, yyyy] = mDmy;
+    return `${dd.padStart(2, '0')}${mm.padStart(2, '0')}${yyyy}`;
+  }
+
+  // 3. Chuỗi 8 chữ số thuần tuý
+  const digits = str.replace(/\D/g, '');
+  if (digits.length === 8) {
+    // Nếu bắt đầu bằng 19xx hoặc 20xx thì là YYYYMMDD -> đổi về DDMMYYYY
+    if (/^(19|20)\d{6}$/.test(digits)) {
+      return `${digits.slice(6, 8)}${digits.slice(4, 6)}${digits.slice(0, 4)}`;
+    }
+    return digits;
+  }
+
+  // 4. Fallback Date parsing
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    return `${dd}${mm}${d.getUTCFullYear()}`;
+  }
+
+  return '';
 }

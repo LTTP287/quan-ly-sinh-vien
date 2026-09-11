@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- 1. ENUM TYPES
 -- --------------------------------------------------------------------
 DO $$ BEGIN CREATE TYPE user_role AS ENUM ('lecturer', 'student'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE question_type AS ENUM ('multiple_choice', 'true_false'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE question_type AS ENUM ('multiple_choice', 'true_false', 'short_answer', 'long_answer'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE submission_status AS ENUM ('in_progress', 'submitted', 'timed_out'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- --------------------------------------------------------------------
@@ -130,7 +130,8 @@ CREATE TABLE IF NOT EXISTS public.questions (
     question_text TEXT NOT NULL,
     question_type question_type NOT NULL DEFAULT 'multiple_choice',
     points FLOAT NOT NULL DEFAULT 1.0,
-    order_index INT NOT NULL DEFAULT 0
+    order_index INT NOT NULL DEFAULT 0,
+    image_url TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_questions_quiz_id ON public.questions(quiz_id);

@@ -67,7 +67,7 @@ export interface Quiz {
   questions_count?: number;
 }
 
-export type QuestionType = 'multiple_choice' | 'true_false';
+export type QuestionType = 'multiple_choice' | 'true_false' | 'short_answer' | 'long_answer';
 
 export interface Question {
   id: string;
@@ -76,6 +76,7 @@ export interface Question {
   question_type: QuestionType;
   points: number;
   order_index: number;
+  image_url?: string | null;
   options?: QuestionOption[];
 }
 

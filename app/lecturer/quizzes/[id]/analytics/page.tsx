@@ -5,7 +5,8 @@ import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { 
   ArrowLeft, FileSpreadsheet, Download, Eye, EyeOff, 
-  Award, TrendingUp, Users, ShieldAlert, CheckCircle2, Lock 
+  Award, TrendingUp, Users, ShieldAlert, CheckCircle2, Lock,
+  X, CheckCircle, XCircle, FileText, Clock, AlertTriangle
 } from 'lucide-react';
 import { Quiz, Submission } from '@/types/database';
 import { getQuiz, listSubmissions, setShowResults } from '@/lib/data';
@@ -15,6 +16,11 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loaded, setLoaded] = useState(false);
+
+  // State cho Modal chi tiết bài làm & bằng chứng vi phạm
+  const [selectedStudentSubmission, setSelectedStudentSubmission] = useState<any | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -28,6 +34,21 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
       }
     })();
   }, [params.id]);
+
+  const handleOpenDetail = async (studentId: string) => {
+    setLoadingDetail(true);
+    setShowDetailModal(true);
+    try {
+      const res = await fetch(`/api/lecturer/submission-detail?quiz_id=${params.id}&student_id=${studentId}`);
+      if (!res.ok) throw new Error('Không tải được chi tiết bài làm.');
+      const data = await res.json();
+      setSelectedStudentSubmission(data);
+    } catch (err: any) {
+      alert(err?.message || 'Lỗi tải bài làm');
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
 
   // Công bố / khóa điểm và LƯU LẠI vào Test Bank để sinh viên nhìn thấy
   const handleToggleShowResults = async () => {
@@ -194,12 +215,13 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
                   <th className="p-4">Điểm Số</th>
                   <th className="p-4">Vi Phạm Chuyển Tab</th>
                   <th className="p-4">Thời Gian Nộp</th>
+                  <th className="p-4 text-right">Hành Động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 bg-slate-950/40">
                 {submissions.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-sm text-slate-500">
+                    <td colSpan={8} className="p-8 text-center text-sm text-slate-500">
                       Chưa có sinh viên nào nộp bài cho đề thi này.
                     </td>
                   </tr>
@@ -208,7 +230,15 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
                   <tr key={s.id} className="hover:bg-slate-900/50 transition-colors">
                     <td className="p-4 text-slate-500 font-mono text-xs">{idx + 1}</td>
                     <td className="p-4 font-mono font-semibold text-indigo-400">{s.student?.student_code}</td>
-                    <td className="p-4 font-medium text-white">{s.student?.full_name}</td>
+                    <td className="p-4 font-medium text-white">
+                      <button
+                        onClick={() => handleOpenDetail(s.student_id)}
+                        className="text-left font-semibold text-white hover:text-indigo-400 hover:underline transition-colors"
+                        title="Bấm để xem chi tiết bài làm & bằng chứng vi phạm"
+                      >
+                        {s.student?.full_name}
+                      </button>
+                    </td>
                     <td className="p-4 text-slate-400 text-xs">{s.student?.email}</td>
                     <td className="p-4">
                       <span className="font-bold text-emerald-400 text-base">{s.total_score} / 10</span>
@@ -226,6 +256,15 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
                     <td className="p-4 text-xs text-slate-400">
                       {s.submitted_at ? new Date(s.submitted_at).toLocaleTimeString('vi-VN') : 'Đang làm'}
                     </td>
+                    <td className="p-4 text-right">
+                      <button
+                        onClick={() => handleOpenDetail(s.student_id)}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 text-xs font-semibold inline-flex items-center space-x-1.5 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Xem Bài Làm</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -233,6 +272,206 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
           </div>
         </div>
       </main>
+
+      {/* Modal Chi Tiết Bài Làm & Bằng Chứng Vi Phạm Thời Gian Thực */}
+      {showDetailModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card w-full max-w-4xl max-h-[90vh] rounded-3xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-white">
+                    Chi Tiết Bài Làm & Hồ Sơ Giám Sát Phòng Thi
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Sinh viên: <strong className="text-white">{selectedStudentSubmission?.student?.full_name || '...'}</strong> · MSSV: <strong className="text-indigo-400">{selectedStudentSubmission?.student?.student_code || '...'}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedStudentSubmission(null);
+                }}
+                className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {loadingDetail ? (
+                <div className="py-20 text-center text-slate-400 space-y-3">
+                  <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-sm">Đang tải dữ liệu bài làm và lịch sử vi phạm...</p>
+                </div>
+              ) : selectedStudentSubmission ? (
+                <>
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                      <p className="text-xs text-slate-400 uppercase font-semibold">Điểm Bài Thi</p>
+                      <p className="text-2xl font-black text-emerald-400 mt-1 font-mono">
+                        {selectedStudentSubmission.submission.total_score} <span className="text-sm text-slate-500">/ 10</span>
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                      <p className="text-xs text-slate-400 uppercase font-semibold">Số Lần Rời Màn Hình</p>
+                      <p className="text-2xl font-black text-amber-400 mt-1 font-mono">
+                        {selectedStudentSubmission.submission.tab_violations_count} <span className="text-sm text-slate-500">lần vi phạm</span>
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                      <p className="text-xs text-slate-400 uppercase font-semibold">Thời Gian Nộp</p>
+                      <p className="text-sm font-semibold text-white mt-1">
+                        {selectedStudentSubmission.submission.submitted_at
+                          ? new Date(selectedStudentSubmission.submission.submitted_at).toLocaleString('vi-VN')
+                          : 'Chưa hoàn thành'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Violation Evidence Section */}
+                  <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <ShieldAlert className="w-5 h-5 text-amber-400" />
+                      <h4 className="font-bold text-sm text-white uppercase tracking-wider">
+                        Bằng Chứng Vi Phạm Thời Gian Thực (Audit Log)
+                      </h4>
+                    </div>
+
+                    {selectedStudentSubmission.submission.warning_history && selectedStudentSubmission.submission.warning_history.length > 0 ? (
+                      <div className="overflow-x-auto border border-amber-500/20 rounded-xl bg-amber-500/5">
+                        <table className="w-full text-left text-xs text-slate-300">
+                          <thead className="border-b border-amber-500/20 text-amber-400 uppercase">
+                            <tr>
+                              <th className="p-3">Lần</th>
+                              <th className="p-3">Mốc Thời Gian</th>
+                              <th className="p-3">Loại Sự Kiện</th>
+                              <th className="p-3">Mô Tả Vi Phạm</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-amber-500/10 font-mono">
+                            {selectedStudentSubmission.submission.warning_history.map((vh: any, vi: number) => (
+                              <tr key={vi} className="hover:bg-amber-500/10">
+                                <td className="p-3 text-amber-300 font-bold">{vi + 1}</td>
+                                <td className="p-3 text-slate-300">
+                                  {new Date(vh.timestamp).toLocaleTimeString('vi-VN')} ({new Date(vh.timestamp).toLocaleDateString('vi-VN')})
+                                </td>
+                                <td className="p-3 text-amber-400">{vh.event || 'visibility_hidden'}</td>
+                                <td className="p-3 text-slate-200">{vh.message}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 shrink-0" />
+                        <span>Không phát hiện vi phạm nào. Sinh viên hoàn thành bài thi nghiêm túc trong suốt thời gian mở đề.</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Question Paper Review Section */}
+                  <div className="space-y-4 pt-2">
+                    <h4 className="font-bold text-sm text-white uppercase tracking-wider">
+                      Chi Tiết Đề Thi & Phương Án Sinh Viên Đã Chọn ({selectedStudentSubmission.questions.length} câu)
+                    </h4>
+
+                    {selectedStudentSubmission.questions.map((q: any, qIdx: number) => (
+                      <div key={q.id || qIdx} className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start space-x-2">
+                            <span className="px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                              Câu {qIdx + 1}
+                            </span>
+                            <span className="font-medium text-sm text-white leading-relaxed">
+                              {q.question_text}
+                            </span>
+                          </div>
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border shrink-0 ${
+                            q.is_correct
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                          }`}>
+                            {q.is_correct ? `+${q.points} điểm` : '0 điểm'}
+                          </span>
+                        </div>
+
+                        <div className="pt-2">
+                          {(q.question_type === 'short_answer' || q.question_type === 'long_answer') ? (
+                            <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-300 italic whitespace-pre-wrap">
+                              {q.answer_text || <span className="text-slate-600">(Sinh viên không trả lời)</span>}
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {q.options?.map((opt: any, optIdx: number) => {
+                                const label = String.fromCharCode(65 + optIdx);
+                                const isSelected = opt.is_selected;
+                                const isCorrect = opt.is_correct;
+
+                                let style = 'border-slate-800 bg-slate-950/60 text-slate-400';
+                                if (isSelected && isCorrect) {
+                                  style = 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300 font-semibold ring-1 ring-emerald-500/30';
+                                } else if (isSelected && !isCorrect) {
+                                  style = 'border-rose-500/50 bg-rose-500/15 text-rose-300 font-semibold ring-1 ring-rose-500/30';
+                                } else if (isCorrect) {
+                                  style = 'border-emerald-500/40 bg-emerald-500/5 text-emerald-400';
+                                }
+
+                                return (
+                                  <div
+                                    key={opt.id || optIdx}
+                                    className={`p-3 rounded-xl border text-xs flex items-start space-x-2 ${style}`}
+                                  >
+                                    <span className="font-mono font-bold shrink-0">{label}.</span>
+                                    <div className="flex-1">
+                                      <span>{opt.option_text}</span>
+                                      {isSelected && (
+                                        <span className="block mt-1 text-[10px] font-sans font-bold text-indigo-300">
+                                          [Sinh viên chọn]
+                                        </span>
+                                      )}
+                                      {isCorrect && !isSelected && (
+                                        <span className="block mt-1 text-[10px] font-sans text-emerald-400">
+                                          [Đáp án đúng]
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-800 bg-slate-900/60 text-right">
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedStudentSubmission(null);
+                }}
+                className="gradient-button px-5 py-2 rounded-xl text-xs font-bold"
+              >
+                Đóng Cửa Sổ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

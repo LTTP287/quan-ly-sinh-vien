@@ -53,11 +53,15 @@ export interface AuthResult {
  * Xác thực do /api/auth/login làm trên server, trả JWT trong cookie httpOnly.
  */
 export async function signInStudent(studentCode: string, dateOfBirth: string): Promise<AuthResult> {
-  return postLogin({
+  const body: any = {
     role: 'student',
     student_code: studentCode.trim(),
     date_of_birth: (dateOfBirth || '').replace(/\D/g, ''),
-  });
+  };
+  if (!isRemote) {
+    body.demo_students = local.getAllStoredStudents();
+  }
+  return postLogin(body);
 }
 
 /** Đăng nhập giảng viên: email + mật khẩu. */
@@ -204,6 +208,46 @@ export async function createClass(input: {
   return listClasses();
 }
 
+export async function updateClass(id: string, input: {
+  code: string;
+  name: string;
+  semester: string;
+}): Promise<ClassModule[]> {
+  if (!isRemote) {
+    return local.updateStoredClass(id, {
+      code: input.code.trim().toUpperCase(),
+      name: input.name.trim(),
+      semester: input.semester,
+    });
+  }
+
+  const { error } = await db()
+    .from('classes')
+    .update({
+      code: input.code.trim().toUpperCase(),
+      name: input.name.trim(),
+      semester: input.semester,
+    })
+    .eq('id', id);
+  if (error) throw error;
+
+  return listClasses();
+}
+
+export async function deleteClass(id: string): Promise<ClassModule[]> {
+  if (!isRemote) {
+    return local.deleteStoredClass(id);
+  }
+
+  const { error } = await db()
+    .from('classes')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+
+  return listClasses();
+}
+
 export async function listStudents(classId: string): Promise<UserProfile[]> {
   if (!isRemote) return local.getStoredStudents(classId);
 
@@ -257,6 +301,12 @@ export async function importStudents(
         created_at: new Date().toISOString(),
       }))
     );
+    // Đồng bộ lên bộ nhớ máy chủ để sinh viên đăng nhập được ngay
+    fetch('/api/students/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classId, students }),
+    }).catch(() => {});
     return { created: students.length, enrolled: merged.length, skipped: 0, errors: [] };
   }
 

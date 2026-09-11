@@ -1,11 +1,11 @@
 import { ClassModule, UserProfile, Quiz, Question, Submission } from '@/types/database';
 
-const KEY_V1 = 'uni_quiz_classes_v1';
-const KEY_V2 = 'uni_quiz_classes_v2';
-const STU_KEY_V1 = 'uni_quiz_students_v1';
-const STU_KEY_V2 = 'uni_quiz_students_v2';
-const QUIZ_KEY_V1 = 'uni_quiz_testbank_v1';
-const SUB_KEY_V1 = 'uni_quiz_submissions_v1';
+const STORAGE_KEYS = {
+  CLASSES: 'uniquiz_classes',
+  STUDENTS_PREFIX: 'uniquiz_students_',
+  QUIZZES: 'uniquiz_testbank',
+  SUBMISSIONS: 'uniquiz_submissions',
+};
 
 // Initial default classes for 2026 - 2027
 const DEFAULT_CLASSES: ClassModule[] = [
@@ -41,57 +41,67 @@ const DEFAULT_STUDENTS: Record<string, UserProfile[]> = {
   ],
 };
 
-// NON-DESTRUCTIVE: Preserves all user-created classes from v1 and v2
+// Dọn dẹp key cũ và đọc danh sách lớp học phần
 export function getStoredClasses(): ClassModule[] {
   if (typeof window === 'undefined') return DEFAULT_CLASSES;
 
-  const rawV1 = localStorage.getItem(KEY_V1);
-  const rawV2 = localStorage.getItem(KEY_V2);
-
-  let mergedList: ClassModule[] = [];
-
-  if (rawV2) {
+  const raw = localStorage.getItem(STORAGE_KEYS.CLASSES);
+  if (raw) {
     try {
-      mergedList = JSON.parse(rawV2);
-    } catch (e) {}
+      return JSON.parse(raw);
+    } catch {}
   }
 
-  // Restore any user-created class from v1 that was not in v2
-  if (rawV1) {
-    try {
-      const v1List: ClassModule[] = JSON.parse(rawV1);
-      v1List.forEach((c) => {
-        if (!mergedList.some((item) => item.id === c.id)) {
-          mergedList.push(c);
-        }
-      });
-    } catch (e) {}
+  // Tự động dọn dẹp và chuyển đổi dữ liệu từ phiên bản v1/v2 cũ (nếu có)
+  const legacyV2 = localStorage.getItem('uni_quiz_classes_v2');
+  const legacyV1 = localStorage.getItem('uni_quiz_classes_v1');
+  let list: ClassModule[] = [];
+  if (legacyV2) {
+    try { list = JSON.parse(legacyV2); } catch {}
+  } else if (legacyV1) {
+    try { list = JSON.parse(legacyV1); } catch {}
   }
 
-  if (mergedList.length === 0) {
-    mergedList = DEFAULT_CLASSES;
-  }
+  // Xóa các key thừa cũ
+  localStorage.removeItem('uni_quiz_classes_v1');
+  localStorage.removeItem('uni_quiz_classes_v2');
 
-  // Update semester labels to 2026 - 2027 WITHOUT removing any class
-  const finalClasses = mergedList.map((c) => ({
+  const finalClasses = (list.length > 0 ? list : DEFAULT_CLASSES).map((c) => ({
     ...c,
     semester: !c.semester || c.semester.includes('2025') ? 'HKI (2026 - 2027)' : c.semester,
   }));
 
-  // Sync to both storage keys so no class is ever lost
-  localStorage.setItem(KEY_V1, JSON.stringify(finalClasses));
-  localStorage.setItem(KEY_V2, JSON.stringify(finalClasses));
-
+  localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(finalClasses));
   return finalClasses;
 }
 
-// Add a new class module and persist across all keys
+// Add a new class module
 export function addStoredClass(newClass: ClassModule): ClassModule[] {
   const classes = getStoredClasses();
   const updated = [newClass, ...classes];
   if (typeof window !== 'undefined') {
-    localStorage.setItem(KEY_V1, JSON.stringify(updated));
-    localStorage.setItem(KEY_V2, JSON.stringify(updated));
+    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(updated));
+  }
+  return updated;
+}
+
+// Update a class module
+export function updateStoredClass(id: string, updates: Partial<ClassModule>): ClassModule[] {
+  const classes = getStoredClasses();
+  const updated = classes.map(c => c.id === id ? { ...c, ...updates } : c);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(updated));
+  }
+  return updated;
+}
+
+// Delete a class module
+export function deleteStoredClass(id: string): ClassModule[] {
+  const classes = getStoredClasses();
+  const updated = classes.filter(c => c.id !== id);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(updated));
+    localStorage.removeItem(`${STORAGE_KEYS.STUDENTS_PREFIX}${id}`); // clean up students
   }
   return updated;
 }
@@ -102,45 +112,41 @@ export function getStoredClassById(classId: string): ClassModule | undefined {
   return classes.find((c) => c.id === classId);
 }
 
-// Get students for a specific class ID preserving v1 and v2
+// Get students for a specific class ID
 export function getStoredStudents(classId: string): UserProfile[] {
   if (typeof window === 'undefined') return DEFAULT_STUDENTS[classId] || [];
 
-  const rawV1 = localStorage.getItem(`${STU_KEY_V1}_${classId}`);
-  const rawV2 = localStorage.getItem(`${STU_KEY_V2}_${classId}`);
-
-  let merged: UserProfile[] = [];
-  if (rawV2) {
-    try { merged = JSON.parse(rawV2); } catch (e) {}
-  }
-  if (rawV1) {
+  const key = `${STORAGE_KEYS.STUDENTS_PREFIX}${classId}`;
+  const raw = localStorage.getItem(key);
+  if (raw) {
     try {
-      const v1Sts: UserProfile[] = JSON.parse(rawV1);
-      v1Sts.forEach((st) => {
-        if (!merged.some((m) => m.student_code === st.student_code)) {
-          merged.push(st);
-        }
-      });
-    } catch (e) {}
+      return JSON.parse(raw);
+    } catch {}
   }
 
-  if (merged.length === 0) {
-    merged = DEFAULT_STUDENTS[classId] || [];
+  // Dọn dẹp key cũ (nếu có)
+  const legacy = localStorage.getItem(`uni_quiz_students_v2_${classId}`) || localStorage.getItem(`uni_quiz_students_v1_${classId}`);
+  let list: UserProfile[] = [];
+  if (legacy) {
+    try { list = JSON.parse(legacy); } catch {}
+  }
+  localStorage.removeItem(`uni_quiz_students_v1_${classId}`);
+  localStorage.removeItem(`uni_quiz_students_v2_${classId}`);
+
+  if (list.length === 0) {
+    list = DEFAULT_STUDENTS[classId] || [];
   }
 
-  // Bù ngày sinh cho các bản ghi cũ đã lưu trước khi có trường date_of_birth
-  // (nếu không, sinh viên mẫu tạo trước đó sẽ vĩnh viễn không đăng nhập được)
+  // Bù ngày sinh cho sinh viên mẫu nếu thiếu
   const defaults = DEFAULT_STUDENTS[classId] || [];
-  merged = merged.map((st) => {
+  list = list.map((st) => {
     if (st.date_of_birth) return st;
     const fallback = defaults.find((d) => d.student_code === st.student_code);
     return fallback?.date_of_birth ? { ...st, date_of_birth: fallback.date_of_birth } : st;
   });
 
-  localStorage.setItem(`${STU_KEY_V1}_${classId}`, JSON.stringify(merged));
-  localStorage.setItem(`${STU_KEY_V2}_${classId}`, JSON.stringify(merged));
-
-  return merged;
+  localStorage.setItem(key, JSON.stringify(list));
+  return list;
 }
 
 // Save/Merge imported Excel students into a specific class ID
@@ -155,13 +161,11 @@ export function saveStoredStudents(classId: string, newStudents: UserProfile[]):
   });
 
   if (typeof window !== 'undefined') {
-    localStorage.setItem(`${STU_KEY_V1}_${classId}`, JSON.stringify(merged));
-    localStorage.setItem(`${STU_KEY_V2}_${classId}`, JSON.stringify(merged));
+    localStorage.setItem(`${STORAGE_KEYS.STUDENTS_PREFIX}${classId}`, JSON.stringify(merged));
 
     const classes = getStoredClasses();
     const updatedClasses = classes.map((c) => (c.id === classId ? { ...c, students_count: merged.length } : c));
-    localStorage.setItem(KEY_V1, JSON.stringify(updatedClasses));
-    localStorage.setItem(KEY_V2, JSON.stringify(updatedClasses));
+    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(updatedClasses));
   }
 
   return merged;
@@ -173,13 +177,11 @@ export function deleteStoredStudent(classId: string, studentId: string): UserPro
   const updated = existing.filter((s) => s.id !== studentId);
 
   if (typeof window !== 'undefined') {
-    localStorage.setItem(`${STU_KEY_V1}_${classId}`, JSON.stringify(updated));
-    localStorage.setItem(`${STU_KEY_V2}_${classId}`, JSON.stringify(updated));
+    localStorage.setItem(`${STORAGE_KEYS.STUDENTS_PREFIX}${classId}`, JSON.stringify(updated));
 
     const classes = getStoredClasses();
     const updatedClasses = classes.map((c) => (c.id === classId ? { ...c, students_count: updated.length } : c));
-    localStorage.setItem(KEY_V1, JSON.stringify(updatedClasses));
-    localStorage.setItem(KEY_V2, JSON.stringify(updatedClasses));
+    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(updatedClasses));
   }
 
   return updated;
@@ -273,9 +275,9 @@ const DEFAULT_QUIZZES: Quiz[] = [
 
 export function getStoredQuizzes(): Quiz[] {
   if (typeof window === 'undefined') return DEFAULT_QUIZZES;
-  const stored = localStorage.getItem(QUIZ_KEY_V1);
+  const stored = localStorage.getItem(STORAGE_KEYS.QUIZZES) || localStorage.getItem('uni_quiz_testbank_v1');
   if (!stored) {
-    localStorage.setItem(QUIZ_KEY_V1, JSON.stringify(DEFAULT_QUIZZES));
+    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(DEFAULT_QUIZZES));
     return DEFAULT_QUIZZES;
   }
   try {
@@ -286,7 +288,8 @@ export function getStoredQuizzes(): Quiz[] {
         ? { ...q, questions: DEFAULT_QUESTION_BANK, questions_count: DEFAULT_QUESTION_BANK.length }
         : q
     );
-    localStorage.setItem(QUIZ_KEY_V1, JSON.stringify(migrated));
+    localStorage.removeItem('uni_quiz_testbank_v1');
+    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(migrated));
     return migrated;
   } catch (e) {
     return DEFAULT_QUIZZES;
@@ -306,7 +309,7 @@ export function saveStoredQuiz(newQuiz: Quiz): Quiz[] {
   }
 
   if (typeof window !== 'undefined') {
-    localStorage.setItem(QUIZ_KEY_V1, JSON.stringify(updated));
+    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(updated));
   }
   return updated;
 }
@@ -332,9 +335,11 @@ export function getAllStoredStudents(): UserProfile[] {
 // --------------------------------------------------------------------
 export function getStoredSubmissions(): Submission[] {
   if (typeof window === 'undefined') return [];
-  const raw = localStorage.getItem(SUB_KEY_V1);
+  const raw = localStorage.getItem(STORAGE_KEYS.SUBMISSIONS) || localStorage.getItem('uni_quiz_submissions_v1');
   if (!raw) return [];
   try {
+    localStorage.removeItem('uni_quiz_submissions_v1');
+    localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, raw);
     return JSON.parse(raw);
   } catch (e) {
     return [];
@@ -358,7 +363,7 @@ export function saveStoredSubmission(submission: Submission): Submission[] {
   else updated.unshift(submission);
 
   if (typeof window !== 'undefined') {
-    localStorage.setItem(SUB_KEY_V1, JSON.stringify(updated));
+    localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(updated));
   }
   return updated;
 }

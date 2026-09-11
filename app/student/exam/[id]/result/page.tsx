@@ -57,42 +57,56 @@ export default function ExamResultPage({ params }: { params: { id: string } }) {
     })();
   }, [params.id]);
 
-  const canSeeScore = !!result?.showResults && result?.score !== null && result?.score !== undefined;
-  const shownScore = result?.score ?? score;
-  const shownCorrect = result?.correctCount ?? correct;
+  const isKickOut = reason.includes('KICK_OUT') || searchParams.get('kickout') === '1';
+  const canSeeScore = isKickOut || (!!result?.showResults && result?.score !== null && result?.score !== undefined);
+  const shownScore = isKickOut ? 0 : (result?.score ?? score);
+  const shownCorrect = isKickOut ? 0 : (result?.correctCount ?? correct);
   const shownTotal = result?.totalQuestions ?? total;
-  const shownViolations = result?.violations ?? Number(violations);
+  const shownViolations = Math.max(result?.violations ?? Number(violations), isKickOut ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
       {/* Background Orbs */}
-      <div className="absolute top-1/4 left-10 w-80 h-80 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className={`absolute top-1/4 left-10 w-80 h-80 ${isKickOut ? 'bg-rose-600/20' : 'bg-emerald-600/15'} rounded-full blur-3xl pointer-events-none`} />
       <div className="absolute bottom-1/4 right-10 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-lg">
-        <div className="glass-card p-8 rounded-2xl border border-slate-800 text-center space-y-6 shadow-2xl">
-          <div className="p-4 w-fit mx-auto rounded-full bg-emerald-500/20 text-emerald-400">
-            <CheckCircle2 className="w-12 h-12" />
+        <div className={`glass-card p-8 rounded-2xl border ${isKickOut ? 'border-rose-500/40' : 'border-slate-800'} text-center space-y-6 shadow-2xl`}>
+          <div className={`p-4 w-fit mx-auto rounded-full ${isKickOut ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+            {isKickOut ? <ShieldAlert className="w-12 h-12" /> : <CheckCircle2 className="w-12 h-12" />}
           </div>
 
           <div>
-            <h1 className="text-2xl font-extrabold text-white">Nộp Bài Thi Thành Công!</h1>
+            <h1 className={`text-2xl font-extrabold ${isKickOut ? 'text-rose-400' : 'text-white'}`}>
+              {isKickOut ? 'Bị Hủy Bài Thi (Kick Out) — 0 Điểm!' : 'Nộp Bài Thi Thành Công!'}
+            </h1>
             <p className="text-xs text-slate-400 mt-1">{quiz?.title || 'Bài kiểm tra'}</p>
           </div>
 
-          {reason && (
+          {isKickOut ? (
+            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs text-left space-y-1">
+              <p className="font-bold flex items-center space-x-1">
+                <span>⚠️ Vi Phạm Quy Chế Thi Nghiêm Trọng</span>
+              </p>
+              <p>Hệ thống phát hiện bạn đã <strong>chuyển tab, mở cửa sổ mới hoặc thu nhỏ trình duyệt</strong> trong thời gian làm bài. Theo quy chế thi, bài thi của bạn đã bị tự động thu và bạn nhận <strong>0 điểm</strong>.</p>
+            </div>
+          ) : reason && (
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
               {reason}
             </div>
           )}
 
           {canSeeScore ? (
-            /* Grade Released by Lecturer */
-            <div className="p-6 rounded-2xl bg-slate-900/80 border border-emerald-500/30 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Điểm Bài Thi (thang 10)</p>
-              <p className="text-5xl font-extrabold text-white font-mono">{shownScore}</p>
+            /* Grade Display */
+            <div className={`p-6 rounded-2xl bg-slate-900/80 border ${isKickOut ? 'border-rose-500/30' : 'border-emerald-500/30'} space-y-2`}>
+              <p className={`text-xs font-semibold uppercase tracking-wider ${isKickOut ? 'text-rose-400' : 'text-emerald-400'}`}>
+                {isKickOut ? 'Điểm Số Bị Phạt' : 'Điểm Bài Thi (thang 10)'}
+              </p>
+              <p className={`text-5xl font-extrabold font-mono ${isKickOut ? 'text-rose-400' : 'text-white'}`}>{shownScore}</p>
               <p className="text-xs text-slate-400">
-                Trả lời đúng <strong className="text-white">{shownCorrect}</strong> / {shownTotal} câu được rút từ ngân hàng đề.
+                {isKickOut
+                  ? 'Toàn bộ câu trả lời đã bị vô hiệu hoá do vi phạm.'
+                  : `Trả lời đúng ${shownCorrect} / ${shownTotal} câu được rút từ ngân hàng đề.`}
               </p>
             </div>
           ) : (

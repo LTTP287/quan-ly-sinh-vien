@@ -38,13 +38,21 @@ export async function authenticateStudent(
   if (!code || pwd.length !== 8) return null;
 
   if (!useRemote) {
-    const user = demoDb().users.find(
-      (u) =>
-        u.role === 'student' &&
-        (u.student_code || '').toUpperCase() === code &&
-        u.date_of_birth &&
-        dobToPassword(u.date_of_birth) === pwd
-    );
+    const db = demoDb();
+    const user = db.users.find((u) => {
+      if (u.role !== 'student') return false;
+      const userCode = (u.student_code || '').trim().toUpperCase();
+      if (userCode !== code) return false;
+
+      // Nếu sinh viên chưa có ngày sinh thiết lập trong hồ sơ demo -> cho phép đăng nhập
+      if (!u.date_of_birth) return true;
+
+      const expectedPwd = dobToPassword(u.date_of_birth);
+      const rawDigits = normalizeDob(u.date_of_birth);
+
+      return expectedPwd === pwd || rawDigits === pwd;
+    });
+
     if (!user) return null;
     return {
       id: user.id,
@@ -465,7 +473,7 @@ export async function getExamPaperAdmin(quizId: string, studentId: string) {
 export async function submitExamAdmin(
   quizId: string,
   studentId: string,
-  answers: { question_id: string; option_id: string | null }[],
+  answers: { question_id: string; option_id?: string | null; answer_text?: string }[],
   violations: number,
   timedOut: boolean
 ) {
