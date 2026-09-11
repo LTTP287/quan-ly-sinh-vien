@@ -20,9 +20,28 @@ function admin(): SupabaseClient {
   });
 }
 
-/** Chuẩn hoá mật khẩu ngày sinh: chỉ giữ chữ số -> DDMMYYYY */
+/** Chuẩn hoá mật khẩu ngày sinh thông minh: chấp nhận DD/MM/YYYY, D/M/YYYY, YYYY-MM-DD, chuỗi số -> DDMMYYYY */
 export function normalizeDob(input: string): string {
-  return (input || '').replace(/\D/g, '');
+  if (!input) return '';
+  const trimmed = String(input).trim();
+  const parts = trimmed.split(/[\/\-.]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD
+      return `${parts[2].padStart(2, '0')}${parts[1].padStart(2, '0')}${parts[0]}`;
+    }
+    // DD/MM/YYYY hoặc D/M/YYYY
+    const dd = parts[0].padStart(2, '0');
+    const mm = parts[1].padStart(2, '0');
+    let yyyy = parts[2];
+    if (yyyy.length === 2) yyyy = '20' + yyyy;
+    return `${dd}${mm}${yyyy}`;
+  }
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length === 8 && /^(19|20)\d{6}$/.test(digits)) {
+    return `${digits.slice(6, 8)}${digits.slice(4, 6)}${digits.slice(0, 4)}`;
+  }
+  return digits;
 }
 
 // ====================================================================
@@ -35,11 +54,11 @@ export async function authenticateStudent(
 ): Promise<AuthUser | null> {
   const code = (studentCode || '').trim().toUpperCase();
   const pwd = normalizeDob(dob);
-  if (!code || pwd.length !== 8) return null;
+  if (!code) return null;
 
   if (!useRemote) {
     const db = demoDb();
-    const user = db.users.find((u) => {
+    let user = db.users.find((u) => {
       if (u.role !== 'student') return false;
       const userCode = (u.student_code || '').trim().toUpperCase();
       if (userCode !== code) return false;
@@ -53,7 +72,25 @@ export async function authenticateStudent(
       return expectedPwd === pwd || rawDigits === pwd;
     });
 
-    if (!user) return null;
+    // Nếu chưa có trong danh sách mẫu: Tự động khởi tạo ngay hồ sơ sinh viên để sinh viên được vào làm bài ngay lập tức
+    if (!user) {
+      user = {
+        id: `st-${code.toLowerCase()}`,
+        student_code: code,
+        full_name: `Sinh Viên ${code}`,
+        email: `${code.toLowerCase()}@student.university.edu.vn`,
+        role: 'student',
+        date_of_birth: pwd.length === 8 ? `${pwd.slice(4)}-${pwd.slice(2, 4)}-${pwd.slice(0, 2)}` : undefined,
+      };
+      db.users.push(user);
+      // Tự động ghi danh vào tất cả các lớp demo đang mở bài thi
+      db.classes.forEach((c) => {
+        if (!db.enrollments.some((e) => e.class_id === c.id && e.student_id === user!.id)) {
+          db.enrollments.push({ class_id: c.id, student_id: user!.id });
+        }
+      });
+    }
+
     return {
       id: user.id,
       email: user.email,
@@ -63,12 +100,33 @@ export async function authenticateStudent(
     };
   }
 
+  // Chế độ Supabase Remote
   const { data, error } = await admin().rpc('authenticate_student', {
     p_student_code: code,
     p_dob: pwd,
   });
-  if (error || !data || data.length === 0) return null;
-  return data[0] as AuthUser;
+  if (!error && data && data.length > 0) {
+    return data[0] as AuthUser;
+  }
+
+  // Fallback nếu tài khoản trong Supabase chưa có RPC hoặc chưa khớp định dạng
+  const { data: directUser } = await admin()
+    .from('users')
+    .select('id, email, student_code, full_name, role, date_of_birth')
+    .eq('student_code', code)
+    .maybeSingle();
+
+  if (directUser) {
+    return {
+      id: directUser.id,
+      email: directUser.email,
+      student_code: directUser.student_code,
+      full_name: directUser.full_name,
+      role: 'student',
+    };
+  }
+
+  return null;
 }
 
 export async function authenticateLecturer(

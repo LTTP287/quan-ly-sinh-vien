@@ -13,28 +13,26 @@ export default function StudentLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Tự chèn dấu "/" khi gõ để sinh viên khỏi nhầm định dạng ngày sinh
   const handleDobChange = (raw: string) => {
-    const digits = raw.replace(/\D/g, '').slice(0, 8);
-    let formatted = digits;
-    if (digits.length > 4) formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-    else if (digits.length > 2) formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    setDob(formatted);
+    setDob(raw);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    const digits = dob.replace(/\D/g, '');
-    if (digits.length !== 8) {
-      setError('Vui lòng nhập đủ ngày sinh theo định dạng DD/MM/YYYY.');
+    if (!studentCode.trim()) {
+      setError('Vui lòng nhập Mã sinh viên.');
+      return;
+    }
+    if (!dob.trim()) {
+      setError('Vui lòng nhập Ngày sinh (ví dụ: 15/01/2004).');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await loginStudent(studentCode, digits);
+      const res = await loginStudent(studentCode, dob);
       if (res.success) {
         const next = new URLSearchParams(window.location.search).get('next');
         const target = next && next.startsWith('/student') ? next : res.redirect || '/student/dashboard';

@@ -35,9 +35,9 @@ export async function POST(request: Request) {
     if (!code) {
       return NextResponse.json({ error: 'Vui lòng nhập Mã sinh viên.' }, { status: 400 });
     }
-    if (dob.length !== 8) {
+    if (!dob) {
       return NextResponse.json(
-        { error: 'Ngày sinh phải đủ 8 chữ số theo định dạng DDMMYYYY.' },
+        { error: 'Vui lòng nhập ngày sinh.' },
         { status: 400 }
       );
     }

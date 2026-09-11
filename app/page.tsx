@@ -23,25 +23,24 @@ export default function Home() {
   const [lecturerError, setLecturerError] = useState<string | null>(null);
 
   const handleDobChange = (raw: string) => {
-    const digits = raw.replace(/\D/g, '').slice(0, 8);
-    let formatted = digits;
-    if (digits.length > 4) formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-    else if (digits.length > 2) formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    setDob(formatted);
+    setDob(raw);
   };
 
   const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setStudentError(null);
-    const digits = dob.replace(/\D/g, '');
-    if (digits.length !== 8) {
-      setStudentError('Vui lòng nhập đủ 8 chữ số ngày sinh DD/MM/YYYY.');
+    if (!studentCode.trim()) {
+      setStudentError('Vui lòng nhập Mã sinh viên.');
+      return;
+    }
+    if (!dob.trim()) {
+      setStudentError('Vui lòng nhập Ngày sinh (ví dụ: 15/01/2004).');
       return;
     }
 
     setStudentLoading(true);
     try {
-      const res = await signInStudent(studentCode, digits);
+      const res = await signInStudent(studentCode, dob);
       if (res.success) {
         router.push(res.redirect || '/student/dashboard');
         router.refresh();
@@ -198,24 +197,6 @@ export default function Home() {
                   </>
                 )}
               </button>
-
-              {/* Helpful hint for student */}
-              <div className="pt-1 text-left bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1 text-[11px] text-slate-400">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-emerald-400">💡 Tài khoản sinh viên mẫu:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStudentCode('20120001');
-                      setDob('15/01/2004');
-                    }}
-                    className="text-xs text-emerald-400 hover:underline font-medium"
-                  >
-                    [Tự điền]
-                  </button>
-                </div>
-                <p>MSSV: <code className="text-white font-mono">20120001</code> | Ngày sinh: <code className="text-amber-300 font-mono">15/01/2004</code></p>
-              </div>
             </form>
           )}
 
@@ -278,40 +259,6 @@ export default function Home() {
                   </>
                 )}
               </button>
-
-              {/* Helpful hint with quick fill */}
-              <div className="pt-1 text-left bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1.5 text-[11px] text-slate-400">
-                <p className="font-semibold text-indigo-300">💡 Tài khoản Giảng viên truy cập:</p>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span>Email: <code className="text-white font-mono">letthanhphuong3@dtu.edu.vn</code></span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmail('letthanhphuong3@dtu.edu.vn');
-                        setPassword('LeminhPhuc@2512');
-                      }}
-                      className="text-xs text-indigo-400 hover:underline font-medium"
-                    >
-                      [Tự điền]
-                    </button>
-                  </div>
-                  <p>Mật khẩu: <code className="text-amber-300 font-mono">LeminhPhuc@2512</code></p>
-                </div>
-                <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-slate-500">
-                  <span>Hoặc: <code className="text-slate-300">giangvien@edu.vn</code> / <code className="text-slate-300">GiangVien@2026</code></span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('giangvien@edu.vn');
-                      setPassword('GiangVien@2026');
-                    }}
-                    className="text-xs text-slate-400 hover:underline"
-                  >
-                    [Tự điền]
-                  </button>
-                </div>
-              </div>
             </form>
           )}
         </div>
