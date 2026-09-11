@@ -170,8 +170,8 @@ export function deleteStoredStudent(classId: string, studentId: string): UserPro
 // --------------------------------------------------------------------
 
 
-// Ngân hàng câu hỏi mặc định cho đề Logistics (đúng chủ đề của đề thi mẫu)
-const DEFAULT_QUESTION_BANK: Question[] = [
+// Ngân hàng câu hỏi mặc định cho đề Logistics & SCM
+export const DEFAULT_QUESTION_BANK: Question[] = [
   {
     id: 'lq-1', quiz_id: 'quiz-logistics-1', question_type: 'multiple_choice', points: 1, order_index: 0,
     question_text: 'Yếu tố nào sau đây là mục tiêu 7Rs cốt lõi trong hoạt động Logistics?',

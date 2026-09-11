@@ -42,7 +42,8 @@ export async function POST(request: Request) {
     const quiz = db.quizzes.find((q) => q.id === quizId);
     let totalScore = 0;
     let correctCount = 0;
-    const questions = quiz?.questions || [];
+    const { DEFAULT_QUESTION_BANK } = await import('@/lib/classStore');
+    const questions = (quiz?.questions && quiz.questions.length > 0) ? quiz.questions : DEFAULT_QUESTION_BANK;
 
     if (questions.length > 0) {
       for (const a of score.answers || []) {

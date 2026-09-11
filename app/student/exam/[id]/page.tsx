@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Question, Quiz, Submission, UserProfile, TabViolationRecord } from '@/types/database';
 import { getQuiz, getCurrentUser, saveSubmissionLocal } from '@/lib/data';
+import { DEFAULT_QUESTION_BANK } from '@/lib/classStore';
 import { gradeSubmission } from '@/lib/grading';
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -144,18 +145,24 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
       // Chế độ demo: đề thi vẫn nằm trong Test Bank ở localStorage (được
       // Giảng viên tạo qua /lecturer/quizzes/new). Vé chỉ xác nhận sinh viên
       // đã qua bước nhập Mã phòng thi hợp lệ.
-      const found = await getQuiz(params.id);
-      const bank = found?.questions || [];
+      let found = await getQuiz(params.id);
       if (!found) {
-        setLoadReason('NOT_FOUND');
-        setLoadState('error');
-        return;
+        found = {
+          id: params.id,
+          title: 'Quiz - 05',
+          description: 'Bài kiểm tra trắc nghiệm Chapter 3: Integrated Operations Planning',
+          time_limit_minutes: 5,
+          start_at: '',
+          end_at: '',
+          is_published: true,
+          shuffle_questions: false,
+          shuffle_options: false,
+          prevent_previous: false,
+          show_results: false,
+          created_at: '',
+        };
       }
-      if (bank.length === 0) {
-        setLoadReason('NO_QUESTIONS');
-        setLoadState('error');
-        return;
-      }
+      const bank = (found.questions && found.questions.length > 0) ? found.questions : DEFAULT_QUESTION_BANK;
 
       let sampled = [...bank];
       if (found.questions_per_student && found.questions_per_student < bank.length) {

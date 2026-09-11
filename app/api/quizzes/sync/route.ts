@@ -106,7 +106,11 @@ export async function POST(request: Request) {
         shuffle_options: !!q.shuffle_options,
         prevent_previous: !!q.prevent_previous,
         questions_per_student: q.questions_per_student,
-        questions: Array.isArray(q.questions) ? q.questions : [],
+        questions: (Array.isArray(q.questions) && q.questions.length > 0)
+          ? q.questions
+          : (idx >= 0 && db.quizzes[idx]?.questions && db.quizzes[idx].questions!.length > 0)
+            ? db.quizzes[idx].questions
+            : (await import('@/lib/classStore')).DEFAULT_QUESTION_BANK,
       };
 
       if (idx >= 0) {

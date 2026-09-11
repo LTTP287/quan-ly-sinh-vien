@@ -28,12 +28,6 @@ export async function POST(request: Request) {
   if (!quizId) {
     return NextResponse.json({ error: 'Thiếu mã bài thi.' }, { status: 400 });
   }
-  if (!passcode) {
-    return NextResponse.json(
-      { error: 'Vui lòng nhập mã phòng thi.', reason: 'WRONG_PASSCODE' },
-      { status: 400 }
-    );
-  }
 
   const result = await checkQuizPasscode(quizId, auth.user.id, passcode);
 

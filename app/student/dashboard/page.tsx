@@ -83,7 +83,39 @@ export default function StudentDashboard() {
     router.push('/');
   };
 
-  // Bấm "Bắt đầu thi" -> Popup mã phòng thi -> server xác thực -> vào phòng thi.
+  // Bấm "Bắt đầu thi" -> Thử vào thẳng phòng thi nếu bài đã mở -> Nếu cần mã thì hiện modal
+  const handleStartQuiz = async (q: DashboardQuiz) => {
+    setActiveQuiz(q);
+    setPasscode('');
+    setPasscodeError(null);
+    setVerifying(true);
+
+    try {
+      const res = await fetch('/api/quizzes/verify-passcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quiz_id: q.id, passcode: '' }),
+      });
+      const json = await res.json().catch(() => ({}));
+
+      if (res.status === 401) {
+        router.push('/login/student?reason=session_expired');
+        return;
+      }
+      if (res.ok && json.ok) {
+        router.push(json.redirect || `/student/exam/${q.id}`);
+        return;
+      }
+      if (json.error) {
+        setPasscodeError(json.error);
+      }
+    } catch {
+      setPasscodeError('Không kết nối được máy chủ.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const handleVerifyPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeQuiz) return;
@@ -197,15 +229,12 @@ export default function StudentDashboard() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => {
-                      setActiveQuiz(q);
-                      setPasscode('');
-                      setPasscodeError(null);
-                    }}
+                    onClick={() => handleStartQuiz(q)}
+                    disabled={verifying && activeQuiz?.id === q.id}
                     className="w-full gradient-button py-2.5 rounded-xl text-xs font-semibold text-center flex items-center justify-center space-x-2"
                   >
                     <KeyRound className="w-4 h-4 text-amber-300" />
-                    <span>Bắt Đầu Thi</span>
+                    <span>{verifying && activeQuiz?.id === q.id ? 'Đang vào thi...' : 'Bắt Đầu Thi'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 )
@@ -324,15 +353,14 @@ export default function StudentDashboard() {
                 </label>
                 <input
                   type="text"
-                  required
                   autoFocus
-                  placeholder="Nhập mã phòng thi..."
+                  placeholder="Nhập mã phòng thi (hoặc để trống)..."
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   className="w-full bg-slate-900 border border-purple-500/50 rounded-xl px-4 py-3 font-mono font-extrabold text-lg text-amber-400 tracking-wider text-center focus:outline-none focus:border-purple-400 uppercase"
                 />
                 <p className="text-[11px] text-slate-500 mt-2 text-center">
-                  Mã do Giảng viên đọc trực tiếp tại lớp, chỉ có hiệu lực trong khung giờ thi.
+                  Mã do Giảng viên đọc trực tiếp tại lớp (nếu có), hoặc nhấn Xác Nhận để vào thi ngay.
                 </p>
               </div>
 

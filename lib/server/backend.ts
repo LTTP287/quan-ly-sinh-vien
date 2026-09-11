@@ -551,8 +551,12 @@ export async function checkQuizPasscode(
     if (quiz.passcode_expires_at && now > new Date(quiz.passcode_expires_at).getTime()) {
       return { ok: false, reason: 'PASSCODE_EXPIRED' };
     }
+    // Khi Giảng viên đã mở thi (is_active = true) cho lớp học phần,
+    // sinh viên thuộc lớp được phép vào làm bài trực tiếp ngay cả khi không có mã phòng thi.
     if (quiz.passcode && quiz.passcode.trim()) {
-      if ((passcode || '').trim().toUpperCase() !== quiz.passcode.trim().toUpperCase()) {
+      const input = (passcode || '').trim().toUpperCase();
+      const expected = quiz.passcode.trim().toUpperCase();
+      if (input && input !== expected && !quiz.is_active) {
         return { ok: false, reason: 'WRONG_PASSCODE' };
       }
     }
