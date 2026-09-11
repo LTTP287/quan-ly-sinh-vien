@@ -140,6 +140,19 @@ export async function signOut(): Promise<void> {
 // CLASSES & STUDENTS
 // ====================================================================
 
+export async function syncDemoQuizzesToServer(): Promise<void> {
+  if (typeof window === 'undefined' || isRemote) return;
+  try {
+    const quizzes = local.getStoredQuizzes();
+    const classes = local.getStoredClasses();
+    await fetch('/api/quizzes/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quizzes, classes }),
+    });
+  } catch {}
+}
+
 export async function listClasses(): Promise<ClassModule[]> {
   if (!isRemote) {
     return local.getStoredClasses().map((c) => ({
@@ -374,7 +387,10 @@ function mapQuizRow(row: any): Quiz {
 }
 
 export async function listQuizzes(): Promise<Quiz[]> {
-  if (!isRemote) return local.getStoredQuizzes();
+  if (!isRemote) {
+    syncDemoQuizzesToServer();
+    return local.getStoredQuizzes();
+  }
 
   const { data, error } = await db()
     .from('quizzes')
@@ -432,6 +448,7 @@ export async function createQuiz(
       assigned_classes_count: assignments.length,
       class_schedules: schedules,
     });
+    syncDemoQuizzesToServer();
     return id;
   }
 
@@ -531,12 +548,14 @@ export async function saveQuizSchedules(
   if (!isRemote) {
     const quiz = local.getStoredQuizById(quizId);
     if (!quiz) return local.getStoredQuizzes();
-    return local.saveStoredQuiz({
+    const updated = local.saveStoredQuiz({
       ...quiz,
       class_schedules: schedules,
       assigned_class_ids: classIds,
       assigned_classes_count: classIds.length,
     });
+    syncDemoQuizzesToServer();
+    return updated;
   }
 
   const supabase = db();

@@ -354,13 +354,21 @@ function classifyQuiz(startAt: string, endAt: string, isActive: boolean): QuizSt
 export async function getStudentDashboard(user: AuthUser): Promise<StudentDashboard> {
   if (!useRemote) {
     const db = demoDb();
-    const myClassIds = db.enrollments
+    let myClassIds = db.enrollments
       .filter((e) => e.student_id === user.id)
       .map((e) => e.class_id);
+
+    // Nếu sinh viên chưa có ghi danh nào, tự động ghi danh vào tất cả các lớp demo đang có
+    if (myClassIds.length === 0 && db.classes.length > 0) {
+      db.classes.forEach((c) => {
+        db.enrollments.push({ class_id: c.id, student_id: user.id });
+      });
+      myClassIds = db.classes.map((c) => c.id);
+    }
     const classes = db.classes.filter((c) => myClassIds.includes(c.id));
 
     const quizzes: DashboardQuiz[] = db.quizzes
-      .filter((q) => q.is_published && q.class_ids.some((id) => myClassIds.includes(id)))
+      .filter((q) => q.is_published && (q.class_ids.length === 0 || q.class_ids.some((id) => myClassIds.includes(id))))
       .map((q) => {
         const score = db.scores.find((s) => s.quiz_id === q.id && s.student_id === user.id);
         return {
@@ -507,10 +515,16 @@ export async function checkQuizPasscode(
     if (!quiz) return { ok: false, reason: 'NOT_FOUND' };
     if (!quiz.is_published) return { ok: false, reason: 'NOT_PUBLISHED' };
 
-    const myClassIds = db.enrollments
+    let myClassIds = db.enrollments
       .filter((e) => e.student_id === studentId)
       .map((e) => e.class_id);
-    if (!quiz.class_ids.some((id) => myClassIds.includes(id))) {
+    if (myClassIds.length === 0 && db.classes.length > 0) {
+      db.classes.forEach((c) => {
+        db.enrollments.push({ class_id: c.id, student_id: studentId });
+      });
+      myClassIds = db.classes.map((c) => c.id);
+    }
+    if (quiz.class_ids.length > 0 && !quiz.class_ids.some((id) => myClassIds.includes(id))) {
       return { ok: false, reason: 'NOT_ASSIGNED' };
     }
     if (!quiz.is_active) return { ok: false, reason: 'ROOM_CLOSED' };
