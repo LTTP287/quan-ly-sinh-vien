@@ -56,7 +56,7 @@ export async function signInStudent(studentCode: string, dateOfBirth: string): P
   const body: any = {
     role: 'student',
     student_code: studentCode.trim(),
-    date_of_birth: (dateOfBirth || '').replace(/\D/g, ''),
+    date_of_birth: (dateOfBirth || '').trim(),
   };
   if (!isRemote) {
     body.demo_students = local.getAllStoredStudents();
