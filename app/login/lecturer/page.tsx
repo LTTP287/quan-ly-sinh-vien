@@ -97,7 +97,7 @@ export default function LecturerLoginPage() {
                 <input
                   type="password"
                   required={isRemote}
-                  placeholder="••••••••"
+                  placeholder=""
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
