@@ -138,11 +138,125 @@ function seed(): DemoDb {
     }
   }
 
+  const defaultStudent: DemoUser = {
+    id: 'st-123456789',
+    student_code: '123456789',
+    full_name: 'Sinh Viên 123456789',
+    email: '123456789@student.university.edu.vn',
+    role: 'student',
+    date_of_birth: '2004-01-15',
+  };
+
+  const defaultClass = {
+    id: 'class-scm201-i',
+    code: 'SCM201 I',
+    name: 'Introduction to Logistics & SCM',
+    semester: 'HKI (2026 - 2027)',
+  };
+
+  const chapter3Questions: DemoQuestion[] = [
+    {
+      id: 'c3-q1',
+      quiz_id: 'quiz-tb-1789133680207',
+      question_text: 'Khái niệm S&OP (Sales and Operations Planning) trong chuỗi cung ứng đóng vai trò chủ đạo nào?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 0,
+      options: [
+        { id: 'c3-q1-a', question_id: 'c3-q1', option_text: 'Cân bằng giữa dự báo nhu cầu thị trường và năng lực sản xuất, cung ứng', is_correct: true, order_index: 0 },
+        { id: 'c3-q1-b', question_id: 'c3-q1', option_text: 'Tối đa hóa lượng hàng tồn kho dự trữ tại mọi điểm', is_correct: false, order_index: 1 },
+        { id: 'c3-q1-c', question_id: 'c3-q1', option_text: 'Chỉ tập trung vào việc cắt giảm chi phí nhân sự', is_correct: false, order_index: 2 },
+        { id: 'c3-q1-d', question_id: 'c3-q1', option_text: 'Quản lý các thủ tục hải quan xuất nhập khẩu', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c3-q2',
+      quiz_id: 'quiz-tb-1789133680207',
+      question_text: 'Trong hoạch định tổng hợp (Aggregate Planning), chiến lược đuổi theo nhu cầu (Chase Strategy) có đặc điểm nào?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 1,
+      options: [
+        { id: 'c3-q2-a', question_id: 'c3-q2', option_text: 'Điều chỉnh sản lượng sản xuất theo từng thời kỳ khớp sát với nhu cầu thực tế', is_correct: true, order_index: 0 },
+        { id: 'c3-q2-b', question_id: 'c3-q2', option_text: 'Giữ nguyên mức sản xuất cố định trong suốt cả năm', is_correct: false, order_index: 1 },
+        { id: 'c3-q2-c', question_id: 'c3-q2', option_text: 'Luôn sử dụng tối đa nhà thầu phụ bất kể nhu cầu', is_correct: false, order_index: 2 },
+        { id: 'c3-q2-d', question_id: 'c3-q2', option_text: 'Không quan tâm đến chi phí tuyển dụng hay sa thải nhân công', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c3-q3',
+      quiz_id: 'quiz-tb-1789133680207',
+      question_text: 'Bullwhip Effect (Hiệu ứng chiếc roi da) có xu hướng làm méo mó thông tin nhu cầu nghiêm trọng nhất ở mắt xích nào?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 2,
+      options: [
+        { id: 'c3-q3-a', question_id: 'c3-q3', option_text: 'Nhà cung ứng nguyên vật liệu cấp 1 và cấp 2 (thượng nguồn)', is_correct: true, order_index: 0 },
+        { id: 'c3-q3-b', question_id: 'c3-q3', option_text: 'Khách hàng tiêu dùng cuối cùng (hạ nguồn)', is_correct: false, order_index: 1 },
+        { id: 'c3-q3-c', question_id: 'c3-q3', option_text: 'Cửa hàng bán lẻ trực tiếp', is_correct: false, order_index: 2 },
+        { id: 'c3-q3-d', question_id: 'c3-q3', option_text: 'Đơn vị chuyển phát nhanh chặng cuối', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c3-q4',
+      quiz_id: 'quiz-tb-1789133680207',
+      question_text: 'Chiến lược sản xuất theo mức độ bằng phẳng (Level Strategy) ưu tiên điều gì?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 3,
+      options: [
+        { id: 'c3-q4-a', question_id: 'c3-q4', option_text: 'Duy trì tốc độ sản xuất và lực lượng lao động ổn định, dùng hàng tồn kho làm đệm', is_correct: true, order_index: 0 },
+        { id: 'c3-q4-b', question_id: 'c3-q4', option_text: 'Thay đổi liên tục số lượng nhân công mỗi ngày', is_correct: false, order_index: 1 },
+        { id: 'c3-q4-c', question_id: 'c3-q4', option_text: 'Xóa bỏ hoàn toàn kho đệm tồn kho', is_correct: false, order_index: 2 },
+        { id: 'c3-q4-d', question_id: 'c3-q4', option_text: 'Đóng cửa nhà máy vào mùa cao điểm', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c3-q5',
+      quiz_id: 'quiz-tb-1789133680207',
+      question_text: 'Mục tiêu cốt lõi của hoạt động Integrated Operations Planning (Hoạch định vận hành tích hợp) là gì?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 4,
+      options: [
+        { id: 'c3-q5-a', question_id: 'c3-q5', option_text: 'Đồng bộ hóa mục tiêu kinh doanh, tài chính và vận hành chuỗi cung ứng trên một kế hoạch thống nhất', is_correct: true, order_index: 0 },
+        { id: 'c3-q5-b', question_id: 'c3-q5', option_text: 'Phân chia riêng rẽ dữ liệu giữa phòng bán hàng và phòng sản xuất', is_correct: false, order_index: 1 },
+        { id: 'c3-q5-c', question_id: 'c3-q5', option_text: 'Chỉ tập trung tối ưu hóa hoạt động của bộ phận kế toán', is_correct: false, order_index: 2 },
+        { id: 'c3-q5-d', question_id: 'c3-q5', option_text: 'Tăng thời gian hoàn vốn đầu tư của dự án', is_correct: false, order_index: 3 },
+      ],
+    },
+  ];
+
+  const defaultQuiz: DemoQuiz = {
+    id: 'quiz-tb-1789133680207',
+    title: 'Quiz - 05',
+    description: 'Pop Quiz thuộc Chapter 3: Integrated Operations Planning (p2). Thời gian làm bài 5 phút, 5 câu hỏi ngẫu nhiên. Sinh viên không thể xem lại câu hỏi trước, và sẽ tính 0 điểm nếu hệ thống phát hiện sinh viên chuyển màn hình.',
+    time_limit_minutes: 5,
+    is_published: true,
+    show_results: false,
+    passcode: null,
+    passcode_expires_at: null,
+    class_ids: ['class-scm201-i'],
+    start_at: new Date(Date.now() - 3600000).toISOString(),
+    end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+    is_active: true,
+    shuffle_questions: true,
+    shuffle_options: true,
+    prevent_previous: true,
+    questions_per_student: 5,
+    questions: chapter3Questions,
+  };
+
+  const aliasQuiz: DemoQuiz = {
+    ...defaultQuiz,
+    id: 'quiz-05-scm',
+  };
+
   return {
-    users: [...lecturers],
-    classes: [],
-    enrollments: [],
-    quizzes: [],
+    users: [...lecturers, defaultStudent],
+    classes: [defaultClass],
+    enrollments: [{ class_id: 'class-scm201-i', student_id: 'st-123456789' }],
+    quizzes: [defaultQuiz, aliasQuiz],
     sessions: [],
     scores: [],
   };
@@ -177,7 +291,7 @@ export function loadDemoDb(): DemoDb | null {
 export function demoDb(): DemoDb {
   if (!globalStore.__uniquizDemoDb) {
     const fromDisk = loadDemoDb();
-    if (fromDisk) {
+    if (fromDisk && fromDisk.quizzes && fromDisk.quizzes.length > 0) {
       globalStore.__uniquizDemoDb = fromDisk;
     } else {
       globalStore.__uniquizDemoDb = seed();
