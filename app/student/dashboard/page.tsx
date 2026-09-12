@@ -87,6 +87,11 @@ export default function StudentDashboard() {
   // 1. Nếu đề KHÔNG yêu cầu mã PIN (!q.requires_passcode): Vào thẳng phòng thi, KHÔNG hiện popup modal.
   // 2. Nếu đề CÓ yêu cầu mã PIN (q.requires_passcode): Hiện popup modal và bắt buộc nhập mã PIN.
   const handleStartQuiz = async (q: DashboardQuiz) => {
+    if (q.submitted) {
+      alert('Bạn đã nộp bài thi này rồi và không thể làm lại.');
+      return;
+    }
+
     setPasscodeError(null);
 
     // Trường hợp 1: Không yêu cầu mã PIN -> Vào thẳng

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, FilePlus2, BookOpen, Plus, Sparkles, 
   Clock, Eye, EyeOff, CheckSquare, Square, FileCheck2, ArrowRight, 
-  Calendar, KeyRound, Power, ShieldCheck, Lock, AlertCircle, Trash2, Award
+  Calendar, KeyRound, Power, ShieldCheck, Lock, AlertCircle, Trash2, Award, Edit3
 } from 'lucide-react';
 import { Quiz, ClassModule, ClassQuizSchedule } from '@/types/database';
 import { listQuizzes, listClasses, saveQuizSchedules, deleteQuiz, isRemote } from '@/lib/data';
@@ -276,14 +276,24 @@ export default function LecturerTestBankPage() {
                   })}
                 </div>
 
-                <div className="pt-2 flex items-center justify-between">
-                  <Link
-                    href={`/lecturer/quizzes/${quiz.id}/analytics`}
-                    className="inline-flex items-center text-xs font-semibold text-purple-400 hover:text-purple-300 space-x-1"
-                  >
-                    <FileCheck2 className="w-4 h-4" />
-                    <span>Xem thống kê điểm & xuất Excel</span>
-                  </Link>
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Link
+                      href={`/lecturer/quizzes/${quiz.id}/edit`}
+                      className="inline-flex items-center text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-3 py-1.5 rounded-lg space-x-1 transition-colors"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Xem & Điều Chỉnh Đề</span>
+                    </Link>
+
+                    <Link
+                      href={`/lecturer/quizzes/${quiz.id}/analytics`}
+                      className="inline-flex items-center text-xs font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 px-3 py-1.5 rounded-lg space-x-1 transition-colors"
+                    >
+                      <FileCheck2 className="w-3.5 h-3.5" />
+                      <span>Xem Bảng Điểm & Excel</span>
+                    </Link>
+                  </div>
 
                   <button
                     onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}

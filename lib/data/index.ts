@@ -435,6 +435,43 @@ export async function getQuiz(quizId: string): Promise<Quiz | null> {
   return mapQuizRow(data);
 }
 
+export async function getQuizWithQuestions(quizId: string): Promise<Quiz | null> {
+  if (!isRemote) {
+    const q = local.getStoredQuizById(quizId);
+    if (!q) return null;
+    if (!q.questions || q.questions.length === 0) {
+      const { DEFAULT_QUESTION_BANK } = await import('@/lib/classStore');
+      return { ...q, questions: DEFAULT_QUESTION_BANK };
+    }
+    return q;
+  }
+
+  const { data, error } = await db()
+    .from('quizzes')
+    .select('*, quiz_classes(*), questions(*, options:question_options(*))')
+    .eq('id', quizId)
+    .single();
+  if (error) return null;
+  const mapped = mapQuizRow(data);
+  mapped.questions = (data.questions || []).map((q: any) => ({
+    id: q.id,
+    quiz_id: q.quiz_id,
+    question_text: q.question_text,
+    question_type: q.question_type,
+    points: q.points,
+    order_index: q.order_index,
+    image_url: q.image_url,
+    options: (q.options || []).map((o: any) => ({
+      id: o.id,
+      question_id: o.question_id,
+      option_text: o.option_text,
+      is_correct: o.is_correct,
+      order_index: o.order_index,
+    })),
+  }));
+  return mapped;
+}
+
 export interface QuizAssignmentInput {
   class_id: string;
   start_at: string;
@@ -543,6 +580,91 @@ export async function createQuiz(
   }
 
   return quizId;
+}
+
+export async function updateQuiz(
+  quizId: string,
+  quiz: Partial<Quiz>,
+  questions?: Question[],
+  assignments?: QuizAssignmentInput[]
+): Promise<void> {
+  if (!isRemote) {
+    const existing = local.getStoredQuizById(quizId);
+    if (!existing) return;
+
+    const schedules: Record<string, ClassQuizSchedule> = { ...(existing.class_schedules || {}) };
+    if (assignments) {
+      assignments.forEach((a) => {
+        schedules[a.class_id] = {
+          class_id: a.class_id,
+          start_at: a.start_at,
+          end_at: a.end_at,
+          access_code: a.access_code || null,
+          is_active: schedules[a.class_id]?.is_active !== false,
+        };
+      });
+    }
+
+    const updatedQuestions = questions !== undefined ? questions : existing.questions || [];
+    local.saveStoredQuiz({
+      ...existing,
+      ...quiz,
+      questions: updatedQuestions,
+      questions_count: updatedQuestions.length,
+      assigned_class_ids: assignments ? assignments.map((a) => a.class_id) : existing.assigned_class_ids,
+      assigned_classes_count: assignments ? assignments.length : existing.assigned_classes_count,
+      class_schedules: schedules,
+    });
+    syncDemoQuizzesToServer();
+    return;
+  }
+
+  const supabase = db();
+  const { error: quizErr } = await supabase
+    .from('quizzes')
+    .update({
+      ...(quiz.title && { title: quiz.title }),
+      ...(quiz.description !== undefined && { description: quiz.description }),
+      ...(quiz.time_limit_minutes && { time_limit_minutes: quiz.time_limit_minutes }),
+      ...(quiz.show_results !== undefined && { show_results: quiz.show_results }),
+      ...(quiz.shuffle_questions !== undefined && { shuffle_questions: quiz.shuffle_questions }),
+      ...(quiz.shuffle_options !== undefined && { shuffle_options: quiz.shuffle_options }),
+      ...(quiz.prevent_previous !== undefined && { prevent_previous: quiz.prevent_previous }),
+      ...(quiz.questions_per_student !== undefined && { questions_per_student: quiz.questions_per_student }),
+      ...(quiz.passcode !== undefined && { passcode: quiz.passcode }),
+    })
+    .eq('id', quizId);
+
+  if (quizErr) throw quizErr;
+
+  if (questions && questions.length > 0) {
+    // Xóa câu hỏi cũ và ghi lại câu hỏi mới
+    await supabase.from('questions').delete().eq('quiz_id', quizId);
+    for (const q of questions) {
+      const { data: qRow, error: qErr } = await supabase
+        .from('questions')
+        .insert({
+          quiz_id: quizId,
+          question_text: q.question_text,
+          question_type: q.question_type,
+          points: q.points,
+          order_index: q.order_index,
+        })
+        .select('id')
+        .single();
+      if (qErr) continue;
+
+      const options = (q.options || []).map((o, idx) => ({
+        question_id: qRow.id,
+        option_text: o.option_text,
+        is_correct: o.is_correct,
+        order_index: idx,
+      }));
+      if (options.length > 0) {
+        await supabase.from('question_options').insert(options);
+      }
+    }
+  }
 }
 
 export async function setShowResults(quizId: string, value: boolean): Promise<void> {

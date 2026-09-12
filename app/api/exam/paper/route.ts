@@ -41,9 +41,20 @@ export async function POST(request: Request) {
     const db = demoDb();
     const quiz = db.quizzes.find((q) => q.id === quizId);
 
-    const existingScore = db.scores.find((s) => s.quiz_id === quizId && s.student_id === auth.user.id);
+    const myCode = auth.user.student_code ? auth.user.student_code.trim().toUpperCase() : '';
+    const existingScore = db.scores.find((s) => {
+      if (s.quiz_id !== quizId || !s.submitted_at) return false;
+      if (s.student_id === auth.user.id) return true;
+      if (myCode) {
+        const scUser = db.users.find((x) => x.id === s.student_id);
+        if (scUser && (scUser.student_code || '').trim().toUpperCase() === myCode) {
+          return true;
+        }
+      }
+      return false;
+    });
     if (existingScore?.submitted_at) {
-      return NextResponse.json({ error: 'Bạn đã nộp bài thi này rồi.', reason: 'ALREADY_SUBMITTED' }, { status: 409 });
+      return NextResponse.json({ error: 'Bạn đã nộp bài thi này rồi và không thể làm lại.', reason: 'ALREADY_SUBMITTED' }, { status: 409 });
     }
 
     let questions: any[] = (quiz && Array.isArray(quiz.questions) && quiz.questions.length > 0)

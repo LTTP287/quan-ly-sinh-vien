@@ -14,9 +14,9 @@ import { getClass, listStudents, listQuizzes, listSubmissions } from '@/lib/data
 
 interface StudentGradeRow {
   student: UserProfile;
-  attendanceScore: number;
   quizScores: Record<string, number | null>; // quizId -> score
-  finalScore10: number;
+  submittedCount: number;
+  averageQuizScore: number;
   letterGrade: string;
   rank: string;
 }
@@ -29,15 +29,6 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
   const [submissionsByQuiz, setSubmissionsByQuiz] = useState<Record<string, Record<string, number>>>({}); // quizId -> studentId -> score
   const [loading, setLoading] = useState(true);
 
-  // Trọng số tính điểm (%): Chuyên cần + Giữa kỳ/Quiz + Cuối kỳ
-  const [weightAttendance, setWeightAttendance] = useState(10);
-  const [weightMidterm, setWeightMidterm] = useState(30);
-  const [weightFinal, setWeightFinal] = useState(60);
-  const [showConfig, setShowConfig] = useState(false);
-
-  // Điểm chuyên cần nhập tay cho từng sinh viên (mặc định 10)
-  const [attendanceScores, setAttendanceScores] = useState<Record<string, number>>({});
-
   useEffect(() => {
     (async () => {
       try {
@@ -46,13 +37,6 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
 
         const stList = await listStudents(params.id);
         setStudents(stList);
-
-        // Khởi tạo điểm chuyên cần mặc định là 10.0
-        const defaultAtt: Record<string, number> = {};
-        stList.forEach((s) => {
-          defaultAtt[s.id] = 10;
-        });
-        setAttendanceScores(defaultAtt);
 
         // Lấy tất cả quizzes gán cho lớp này
         const allQuizzes = await listQuizzes();
@@ -83,25 +67,18 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
     })();
   }, [params.id]);
 
-  const handleAttendanceChange = (studentId: string, val: string) => {
-    const num = Math.min(10, Math.max(0, parseFloat(val) || 0));
-    setAttendanceScores((prev) => ({ ...prev, [studentId]: num }));
-  };
-
   // Tính điểm chữ và xếp loại theo thang điểm chuẩn Đại học
   const getLetterAndRank = (score: number): { letter: string; rank: string } => {
     if (score >= 8.5) return { letter: 'A', rank: 'Giỏi / Xuất sắc' };
     if (score >= 7.0) return { letter: 'B', rank: 'Khá' };
     if (score >= 5.5) return { letter: 'C', rank: 'Trung bình' };
     if (score >= 4.0) return { letter: 'D', rank: 'Trung bình yếu' };
-    return { letter: 'F', rank: 'Học lại' };
+    return { letter: 'F', rank: 'Chưa đạt' };
   };
 
-  // Tổng hợp dữ liệu bảng điểm
+  // Tổng hợp dữ liệu bảng điểm thuần túy từ các bài Quiz làm trên web
   const gradeRows: StudentGradeRow[] = students.map((st) => {
-    const att = attendanceScores[st.id] ?? 10;
     const scores: Record<string, number | null> = {};
-
     let totalQuizScore = 0;
     let quizCount = 0;
 
@@ -114,33 +91,29 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
       }
     });
 
-    const avgQuiz = quizCount > 0 ? totalQuizScore / quizCount : 0;
-
-    // Công thức tính: Chuyên cần (weightAttendance%) + Bài tập/Quiz/Giữa kỳ/Cuối kỳ (còn lại)
-    const otherWeight = Math.max(0, 100 - weightAttendance);
-    const finalScore = Math.round(((att * weightAttendance + avgQuiz * otherWeight) / 100) * 10) / 10;
-    const { letter, rank } = getLetterAndRank(finalScore);
+    const avgQuiz = quizCount > 0 ? Math.round((totalQuizScore / quizCount) * 10) / 10 : 0;
+    const { letter, rank } = getLetterAndRank(avgQuiz);
 
     return {
       student: st,
-      attendanceScore: att,
       quizScores: scores,
-      finalScore10: finalScore,
-      letterGrade: letter,
-      rank,
+      submittedCount: quizCount,
+      averageQuizScore: avgQuiz,
+      letterGrade: quizCount > 0 ? letter : '—',
+      rank: quizCount > 0 ? rank : 'Chưa làm bài',
     };
   });
 
   // Thống kê toàn lớp
   const avgClassScore =
     gradeRows.length > 0
-      ? (gradeRows.reduce((acc, r) => acc + r.finalScore10, 0) / gradeRows.length).toFixed(1)
+      ? (gradeRows.reduce((acc, r) => acc + r.averageQuizScore, 0) / gradeRows.length).toFixed(1)
       : '0.0';
 
-  const passCount = gradeRows.filter((r) => r.finalScore10 >= 4.0).length;
+  const passCount = gradeRows.filter((r) => r.averageQuizScore >= 4.0).length;
   const passRate = gradeRows.length > 0 ? Math.round((passCount / gradeRows.length) * 100) : 0;
 
-  // Xuất file Excel chuẩn theo định dạng Phòng Đào Tạo
+  // Xuất file Excel chuẩn tổng hợp điểm Quiz
   const handleExportExcel = () => {
     const exportData: any[] = [];
 
@@ -150,26 +123,25 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
         'Mã Sinh Viên': r.student.student_code || '',
         'Họ và Tên': r.student.full_name,
         'Email': r.student.email,
-        [`Chuyên Cần (${weightAttendance}%)`]: r.attendanceScore,
+        'Số Bài Đã Làm': `${r.submittedCount}/${quizzes.length}`,
       };
 
       quizzes.forEach((q) => {
-        row[q.title] = r.quizScores[q.id] !== null ? r.quizScores[q.id] : 'Chưa nộp';
+        row[q.title] = r.quizScores[q.id] !== null ? r.quizScores[q.id] : 'Chưa làm';
       });
 
-      row['Điểm Tổng Kết (Hệ 10)'] = r.finalScore10;
+      row['Điểm TB Quizzes (Hệ 10)'] = r.averageQuizScore;
       row['Điểm Chữ'] = r.letterGrade;
       row['Xếp Loại'] = r.rank;
-      row['Ghi Chú'] = r.finalScore10 >= 4.0 ? 'Đạt' : 'Học lại';
 
       exportData.push(row);
     });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Bang_Diem_Hoc_Phan');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Diem_Quizzes_Lop');
 
-    const fileName = `Bang_Diem_${(classInfo?.code || 'LOP')}_${(classInfo?.name || 'HocPhan').replace(/[\/:*?"<>|\s]+/g, '_')}.xlsx`;
+    const fileName = `Bang_Diem_Quizzes_${(classInfo?.code || 'LOP')}_${(classInfo?.name || 'HocPhan').replace(/[\/:*?"<>|\s]+/g, '_')}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -200,14 +172,6 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
 
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => setShowConfig(!showConfig)}
-              className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center space-x-2 transition-colors"
-            >
-              <Sliders className="w-4 h-4 text-purple-400" />
-              <span>{showConfig ? 'Đóng Cấu Hình Trọng Số' : 'Cấu Hình Trọng Số Điểm'}</span>
-            </button>
-
-            <button
               onClick={handleExportExcel}
               className="gradient-button px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2"
             >
@@ -220,41 +184,6 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8 flex-1 w-full space-y-6">
-        {/* Weights Configuration Card */}
-        {showConfig && (
-          <div className="glass-card p-6 rounded-2xl border border-purple-500/30 bg-purple-950/20 space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center space-x-2">
-              <Sliders className="w-5 h-5 text-purple-400" />
-              <h3 className="font-bold text-sm text-white">Cấu Hình Trọng Số Điểm Học Phần</h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Điều chỉnh tỷ lệ phần trăm giữa Điểm Chuyên cần và Điểm Bài kiểm tra / Quiz để tính Điểm Tổng kết học phần.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Điểm Chuyên Cần (%)</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={50}
-                  value={weightAttendance}
-                  onChange={(e) => setWeightAttendance(Number(e.target.value) || 0)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Bài Kiểm Tra / Quizzes / Thi (%)</label>
-                <input
-                  type="number"
-                  disabled
-                  value={100 - weightAttendance}
-                  className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-400 font-mono"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="glass-card p-6 rounded-2xl border border-slate-800 flex items-center justify-between">
@@ -269,7 +198,7 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
 
           <div className="glass-card p-6 rounded-2xl border border-slate-800 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Điểm Trung Bình Lớp</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Điểm TB Quizzes Cả Lớp</p>
               <h2 className="text-3xl font-extrabold text-purple-400 mt-1">{avgClassScore} / 10</h2>
             </div>
             <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400">
@@ -292,9 +221,9 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
         <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="text-lg font-bold text-white">Bảng Điểm Chi Tiết Cả Học Kỳ</h2>
+              <h2 className="text-lg font-bold text-white">Bảng Điểm Tổng Hợp Quizzes Của Lớp</h2>
               <p className="text-xs text-slate-400">
-                Nhập trực tiếp điểm Chuyên cần (nếu cần), điểm bài thi trắc nghiệm được tự động kéo từ Test Bank
+                Tổng hợp tất cả điểm bài thi / quiz được sinh viên làm trực tiếp trên hệ thống web
               </p>
             </div>
           </div>
@@ -306,13 +235,13 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
                   <th className="p-4">STT</th>
                   <th className="p-4">Mã Sinh Viên</th>
                   <th className="p-4">Họ và Tên</th>
-                  <th className="p-4">Chuyên Cần ({weightAttendance}%)</th>
+                  <th className="p-4 text-center">Số Bài Đã Làm</th>
                   {quizzes.map((q) => (
                     <th key={q.id} className="p-4 whitespace-nowrap">
                       {q.title.length > 25 ? `${q.title.slice(0, 25)}...` : q.title}
                     </th>
                   ))}
-                  <th className="p-4 text-center">Tổng Kết (Hệ 10)</th>
+                  <th className="p-4 text-center">Điểm TB Quizzes</th>
                   <th className="p-4 text-center">Điểm Chữ</th>
                   <th className="p-4">Xếp Loại</th>
                 </tr>
@@ -330,16 +259,8 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
                       <td className="p-4 text-slate-500 font-mono text-xs">{idx + 1}</td>
                       <td className="p-4 font-mono font-semibold text-indigo-400">{r.student.student_code}</td>
                       <td className="p-4 font-medium text-white">{r.student.full_name}</td>
-                      <td className="p-4">
-                        <input
-                          type="number"
-                          step={0.5}
-                          min={0}
-                          max={10}
-                          value={attendanceScores[r.student.id] ?? 10}
-                          onChange={(e) => handleAttendanceChange(r.student.id, e.target.value)}
-                          className="w-16 bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-1 text-center text-xs font-mono text-white focus:outline-none focus:border-indigo-500"
-                        />
+                      <td className="p-4 text-center font-mono text-xs text-slate-300">
+                        {r.submittedCount} / {quizzes.length}
                       </td>
                       {quizzes.map((q) => {
                         const sc = r.quizScores[q.id];
@@ -354,7 +275,7 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
                         );
                       })}
                       <td className="p-4 text-center font-mono font-black text-base text-purple-300">
-                        {r.finalScore10}
+                        {r.averageQuizScore}
                       </td>
                       <td className="p-4 text-center font-mono font-bold text-base">
                         <span className={`px-2 py-0.5 rounded-md text-xs ${

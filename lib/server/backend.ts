@@ -418,11 +418,23 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
 
     const classes = db.classes.filter((c) => myClassIds.includes(c.id));
 
+    const myStudentCode = user.student_code ? user.student_code.trim().toUpperCase() : '';
+
     // Khớp đề thi thuộc lớp học phần sinh viên tham gia
     const quizzesRaw: DashboardQuiz[] = db.quizzes
       .filter((q) => isQuizForStudent(q, myClassIds, db.classes))
       .map((q) => {
-        const score = db.scores.find((s) => s.quiz_id === q.id && s.student_id === user.id);
+        const score = db.scores.find((s) => {
+          if (s.quiz_id !== q.id) return false;
+          if (s.student_id === user.id) return true;
+          if (myStudentCode) {
+            const scUser = db.users.find((x) => x.id === s.student_id);
+            if (scUser && (scUser.student_code || '').trim().toUpperCase() === myStudentCode) {
+              return true;
+            }
+          }
+          return false;
+        });
         const assignedClass = classes.find((c) => q.class_ids.includes(c.id)) || classes[0];
         return {
           id: q.id,
@@ -553,7 +565,8 @@ export type PasscodeReason =
   | 'NOT_STARTED'
   | 'ENDED'
   | 'PASSCODE_EXPIRED'
-  | 'WRONG_PASSCODE';
+  | 'WRONG_PASSCODE'
+  | 'ALREADY_SUBMITTED';
 
 export const PASSCODE_MESSAGES: Record<PasscodeReason, string> = {
   NOT_FOUND: 'Không tìm thấy bài thi.',
@@ -564,6 +577,7 @@ export const PASSCODE_MESSAGES: Record<PasscodeReason, string> = {
   ENDED: 'Đã hết khung giờ thi của lớp bạn.',
   PASSCODE_EXPIRED: 'Mã phòng thi đã hết hiệu lực.',
   WRONG_PASSCODE: 'Mã phòng thi không đúng.',
+  ALREADY_SUBMITTED: 'Bạn đã nộp bài thi này rồi và không thể làm lại.',
 };
 
 export async function checkQuizPasscode(
@@ -576,6 +590,25 @@ export async function checkQuizPasscode(
     const quiz = db.quizzes.find((q) => q.id === quizId);
     if (!quiz) return { ok: false, reason: 'NOT_FOUND' };
     if (!quiz.is_published) return { ok: false, reason: 'NOT_PUBLISHED' };
+
+    // Kiểm tra sinh viên đã nộp bài này trước đó chưa (bằng studentId hoặc MSSV)
+    const u = db.users.find((x) => x.id === studentId);
+    const studentCode = u?.student_code ? u.student_code.trim().toUpperCase() : '';
+    const existingScore = db.scores.find((s) => {
+      if (s.quiz_id !== quizId || !s.submitted_at) return false;
+      if (s.student_id === studentId) return true;
+      if (studentCode) {
+        const scUser = db.users.find((x) => x.id === s.student_id);
+        if (scUser && (scUser.student_code || '').trim().toUpperCase() === studentCode) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (existingScore) {
+      return { ok: false, reason: 'ALREADY_SUBMITTED' };
+    }
 
     let myClassIds = db.enrollments
       .filter((e) => e.student_id === studentId)
