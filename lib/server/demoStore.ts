@@ -247,16 +247,11 @@ function seed(): DemoDb {
     questions: chapter3Questions,
   };
 
-  const aliasQuiz: DemoQuiz = {
-    ...defaultQuiz,
-    id: 'quiz-05-scm',
-  };
-
   return {
     users: [...lecturers, defaultStudent],
     classes: [defaultClass],
     enrollments: [{ class_id: 'class-scm201-i', student_id: 'st-123456789' }],
-    quizzes: [defaultQuiz, aliasQuiz],
+    quizzes: [defaultQuiz],
     sessions: [],
     scores: [],
   };

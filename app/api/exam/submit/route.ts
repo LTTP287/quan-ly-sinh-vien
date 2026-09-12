@@ -45,6 +45,11 @@ export async function POST(request: Request) {
     const { DEFAULT_QUESTION_BANK } = await import('@/lib/classStore');
     const questions = (quiz?.questions && quiz.questions.length > 0) ? quiz.questions : DEFAULT_QUESTION_BANK;
 
+    // Số câu hỏi thực tế trong đề thi của sinh viên
+    const totalTestedQuestions = (score.answers && score.answers.length > 0)
+      ? score.answers.length
+      : (quiz?.questions_per_student || questions.length || 1);
+
     if (questions.length > 0) {
       for (const a of score.answers || []) {
         const q = questions.find((x: any) => x.id === a.question_id);
@@ -55,7 +60,10 @@ export async function POST(request: Request) {
           }
         }
       }
-      totalScore = Math.round((correctCount / questions.length) * 10 * 10) / 10;
+      // Quy đổi chuẩn xác theo thang điểm tối đa là 10
+      totalScore = totalTestedQuestions > 0
+        ? Math.round((correctCount / totalTestedQuestions) * 10 * 10) / 10
+        : 0;
     }
     score.total_score = totalScore;
     saveDemoDb();
@@ -65,7 +73,7 @@ export async function POST(request: Request) {
       result: {
         score: totalScore,
         correct_count: correctCount,
-        total_questions: questions.length || score.answers?.length || 0,
+        total_questions: totalTestedQuestions,
         show_results: !!quiz?.show_results,
       },
     });

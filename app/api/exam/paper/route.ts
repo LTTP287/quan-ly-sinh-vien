@@ -74,11 +74,14 @@ export async function POST(request: Request) {
     }
 
     // Ẩn đáp án đúng is_correct để sinh viên không thể F12 gian lận
+    // Mỗi câu được chia đều điểm chuẩn xác theo thang điểm tối đa là 10 (ví dụ 5 câu = 2đ/câu)
+    const pointsPerQ = questions.length > 0 ? Math.round((10 / questions.length) * 100) / 100 : 1;
+
     const sanitizedQuestions = questions.map((q, idx) => ({
       id: q.id,
       question_text: q.question_text,
       question_type: q.question_type || 'multiple_choice',
-      points: q.points || 1,
+      points: pointsPerQ,
       order_index: idx,
       image_url: q.image_url || null,
       options: (q.options || []).map((o: any, oi: number) => ({

@@ -58,13 +58,13 @@ export async function authenticateStudent(
 
   if (!useRemote) {
     const db = demoDb();
-    let user = db.users.find((u) => {
+    const user = db.users.find((u) => {
       if (u.role !== 'student') return false;
       const userCode = (u.student_code || '').trim().toUpperCase();
       if (userCode !== code) return false;
 
-      // Nếu sinh viên chưa có ngày sinh thiết lập trong hồ sơ demo -> cho phép đăng nhập
-      if (!u.date_of_birth) return true;
+      // Sinh viên bắt buộc phải có ngày sinh thiết lập trong danh sách đã import
+      if (!u.date_of_birth) return false;
 
       const expectedPwd = dobToPassword(u.date_of_birth);
       const rawDigits = normalizeDob(u.date_of_birth);
@@ -72,23 +72,8 @@ export async function authenticateStudent(
       return expectedPwd === pwd || rawDigits === pwd;
     });
 
-    // Nếu chưa có trong danh sách mẫu: Tự động khởi tạo ngay hồ sơ sinh viên để sinh viên được vào làm bài ngay lập tức
     if (!user) {
-      user = {
-        id: `st-${code.toLowerCase()}`,
-        student_code: code,
-        full_name: `Sinh Viên ${code}`,
-        email: `${code.toLowerCase()}@student.university.edu.vn`,
-        role: 'student',
-        date_of_birth: pwd.length === 8 ? `${pwd.slice(4)}-${pwd.slice(2, 4)}-${pwd.slice(0, 2)}` : undefined,
-      };
-      db.users.push(user);
-      // Tự động ghi danh vào tất cả các lớp demo đang mở bài thi
-      db.classes.forEach((c) => {
-        if (!db.enrollments.some((e) => e.class_id === c.id && e.student_id === user!.id)) {
-          db.enrollments.push({ class_id: c.id, student_id: user!.id });
-        }
-      });
+      return null;
     }
 
     return {
@@ -116,14 +101,18 @@ export async function authenticateStudent(
     .eq('student_code', code)
     .maybeSingle();
 
-  if (directUser) {
-    return {
-      id: directUser.id,
-      email: directUser.email,
-      student_code: directUser.student_code,
-      full_name: directUser.full_name,
-      role: 'student',
-    };
+  if (directUser && directUser.date_of_birth) {
+    const expectedPwd = dobToPassword(directUser.date_of_birth);
+    const rawDigits = normalizeDob(directUser.date_of_birth);
+    if (expectedPwd === pwd || rawDigits === pwd) {
+      return {
+        id: directUser.id,
+        email: directUser.email,
+        student_code: directUser.student_code,
+        full_name: directUser.full_name,
+        role: 'student',
+      };
+    }
   }
 
   return null;
@@ -378,14 +367,6 @@ export function isQuizForStudent(
     }
   }
 
-  // Khớp với sinh viên học lớp SCM201 / Logistics cho đề thi Quiz 05
-  if (Array.from(myClassCodes).some((code) => code.includes('SCM201') || code.includes('LOG'))) {
-    const t = (quiz.title || '').toLowerCase();
-    if (t.includes('quiz - 05') || t.includes('quiz 05') || t.includes('scm') || quiz.id.includes('scm') || quiz.id.includes('1789133680207')) {
-      return true;
-    }
-  }
-
   return false;
 }
 
@@ -405,14 +386,6 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
         cids.forEach((cid) => {
           if (!myClassIds.includes(cid)) myClassIds.push(cid);
         });
-      }
-    }
-
-    if (myClassIds.length === 0 && db.classes.length > 0) {
-      const scmClass = db.classes.find((c) => (c.code || '').includes('SCM201') || c.id === 'class-scm201-i') || db.classes[0];
-      if (scmClass) {
-        db.enrollments.push({ class_id: scmClass.id, student_id: user.id });
-        myClassIds.push(scmClass.id);
       }
     }
 
@@ -625,14 +598,6 @@ export async function checkQuizPasscode(
             if (!myClassIds.includes(cid)) myClassIds.push(cid);
           });
         }
-      }
-    }
-
-    if (myClassIds.length === 0 && db.classes.length > 0) {
-      const scmClass = db.classes.find((c) => c.code.includes('SCM201') || c.id === 'class-scm201-i') || db.classes[0];
-      if (scmClass) {
-        db.enrollments.push({ class_id: scmClass.id, student_id: studentId });
-        myClassIds.push(scmClass.id);
       }
     }
 
