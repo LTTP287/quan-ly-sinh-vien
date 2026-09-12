@@ -30,27 +30,42 @@ export default function LecturerTestBankPage() {
         shortPts: 3.0,
         longCount: 1,
         longPts: 3.0,
+        sampleMc: 20,
+        sampleShort: 3,
+        sampleEssay: 1,
       };
     }
     const mc = questions.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
-    const mcPts = Math.round(mc.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 10) / 10;
+    const mcUnitPrice = mc.length > 0 ? Number(mc[0].points) || 0.2 : 0.2;
+    const sampleMc = quiz.section_sampling?.multiple_choice ?? (mc.length > 0 ? mc.length : 20);
+    const mcPts = Math.round((sampleMc * mcUnitPrice) * 10) / 10;
 
     const short = questions.filter((q) => q.question_type === 'short_answer');
-    const shortPts = Math.round(short.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 10) / 10;
+    const shortUnitPrice = short.length > 0 ? Number(short[0].points) || 1.0 : 1.0;
+    const sampleShort = quiz.section_sampling?.short_answer ?? (short.length > 0 ? short.length : 3);
+    const shortPts = Math.round((sampleShort * shortUnitPrice) * 10) / 10;
 
     const long = questions.filter((q) => q.question_type === 'long_answer');
-    const longPts = Math.round(long.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 10) / 10;
+    const longUnitPrice = long.length > 0 ? Number(long[0].points) || 3.0 : 3.0;
+    const sampleEssay = quiz.section_sampling?.long_answer ?? (long.length > 0 ? long.length : 1);
+    const longPts = Math.round((sampleEssay * longUnitPrice) * 10) / 10;
 
     const totalPts = Math.round((mcPts + shortPts + longPts) * 10) / 10;
 
     return {
       totalPts: totalPts > 0 ? totalPts : 10,
       mcCount: mc.length,
+      mcUnitPrice,
       mcPts,
       shortCount: short.length,
+      shortUnitPrice,
       shortPts,
       longCount: long.length,
+      longUnitPrice,
       longPts,
+      sampleMc,
+      sampleShort,
+      sampleEssay,
     };
   };
 
@@ -349,25 +364,28 @@ export default function LecturerTestBankPage() {
                         <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
                           <span className="block text-[10px] font-bold text-indigo-400">P1. Trắc Nghiệm</span>
                           <span className="font-bold text-white text-xs">{pts.mcPts}đ</span>
-                          <span className="block text-[10px] text-slate-400">{pts.mcCount} câu</span>
+                          <span className="block text-[10px] text-indigo-300">Rút {pts.sampleMc}/{pts.mcCount}</span>
                         </div>
                         <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
                           <span className="block text-[10px] font-bold text-emerald-400">P2. Câu Ngắn</span>
                           <span className="font-bold text-white text-xs">{pts.shortPts}đ</span>
-                          <span className="block text-[10px] text-slate-400">{pts.shortCount} câu</span>
+                          <span className="block text-[10px] text-emerald-300">Rút {pts.sampleShort}/{pts.shortCount}</span>
                         </div>
                         <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
                           <span className="block text-[10px] font-bold text-amber-400">P3. Tự Luận</span>
                           <span className="font-bold text-white text-xs">{pts.longPts}đ</span>
-                          <span className="block text-[10px] text-slate-400">{pts.longCount} câu</span>
+                          <span className="block text-[10px] text-amber-300">Rút {pts.sampleEssay}/{pts.longCount}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span>🎲 Rút ngẫu nhiên/SV: <strong className="text-purple-400">{quiz.questions_per_student || 24} câu</strong></span>
+                        <span>🎲 Rút ngẫu nhiên/SV: <strong className="text-purple-400">{pts.sampleMc + pts.sampleShort + pts.sampleEssay} câu</strong></span>
                         <span>🔒 Trộn đề & Khóa câu trước</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        <span>Phân bổ: <strong>{pts.sampleMc} TN</strong> ({pts.mcPts}đ) &bull; <strong>{pts.sampleShort} Ngắn</strong> ({pts.shortPts}đ) &bull; <strong>{pts.sampleEssay} Tự luận</strong> ({pts.longPts}đ)</span>
                       </div>
                     </div>
                   </div>

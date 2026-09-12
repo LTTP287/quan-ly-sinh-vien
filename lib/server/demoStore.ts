@@ -66,6 +66,11 @@ export interface DemoQuiz {
   shuffle_options?: boolean;
   prevent_previous?: boolean;
   questions_per_student?: number;
+  section_sampling?: {
+    multiple_choice?: number;
+    short_answer?: number;
+    long_answer?: number;
+  } | null;
   questions?: DemoQuestion[];
 }
 

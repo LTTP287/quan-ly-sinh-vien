@@ -57,6 +57,11 @@ export interface Quiz {
   shuffle_options: boolean; // Trộn thứ tự đáp án (A, B, C, D)
   prevent_previous: boolean; // Khóa không cho quay lại câu hỏi trước
   questions_per_student?: number | null; // Số câu hỏi rút ngẫu nhiên cho mỗi sinh viên (VD: 5 câu từ ngân hàng đề)
+  section_sampling?: {
+    multiple_choice?: number; // Số câu rút ngẫu nhiên Phần 1: Trắc nghiệm (VD: 20)
+    short_answer?: number;    // Số câu rút ngẫu nhiên Phần 2: Câu ngắn (VD: 3)
+    long_answer?: number;     // Số câu rút ngẫu nhiên Phần 3: Tự luận dài (VD: 1)
+  } | null;
   questions?: Question[]; // Ngân hàng câu hỏi của đề thi (được lưu kèm khi Giảng viên tạo đề)
   passcode?: string | null; // Mã phòng thi (Room Passcode) - giảng viên đọc tại lớp
   passcode_expires_at?: string | null; // Hạn hiệu lực của mã phòng thi

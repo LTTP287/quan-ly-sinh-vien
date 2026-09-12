@@ -74,6 +74,11 @@ export default function NewQuizPage() {
   const [batchShortPoints, setBatchShortPoints] = useState<number>(1.0);
   const [batchEssayPoints, setBatchEssayPoints] = useState<number>(3.0);
 
+  // Số Câu Hỏi Rút Ngẫu Nhiên Cho Mỗi Phần
+  const [sampleMcCount, setSampleMcCount] = useState<number>(20);
+  const [sampleShortCount, setSampleShortCount] = useState<number>(3);
+  const [sampleEssayCount, setSampleEssayCount] = useState<number>(1);
+
   // Question Bank State
   const [questions, setQuestions] = useState<Question[]>([
     {
@@ -337,6 +342,10 @@ B. Sai`);
     setBatchMcPoints(0.2);
     setBatchShortPoints(1.0);
     setBatchEssayPoints(3.0);
+    setSampleMcCount(20);
+    setSampleShortCount(3);
+    setSampleEssayCount(1);
+    setQuestionsPerStudent(24);
     setQuestions(questions.map((q) => {
       if (q.question_type === 'multiple_choice' || q.question_type === 'true_false') {
         return { ...q, points: 0.2 };
@@ -364,6 +373,9 @@ B. Sai`);
     setBatchMcPoints(0.2);
     setBatchShortPoints(1.0);
     setBatchEssayPoints(3.0);
+    setSampleMcCount(20);
+    setSampleShortCount(3);
+    setSampleEssayCount(1);
 
     const scaffolded: Question[] = [];
     const timestamp = Date.now();
@@ -414,7 +426,7 @@ B. Sai`);
     });
 
     setQuestions(scaffolded);
-    setQuestionsPerStudent(scaffolded.length);
+    setQuestionsPerStudent(24);
   };
 
   // Question Authoring Helpers
@@ -532,6 +544,11 @@ B. Sai`);
           shuffle_options: shuffleOptions,
           prevent_previous: preventPrevious,
           questions_per_student: questionsPerStudent,
+          section_sampling: {
+            multiple_choice: sampleMcCount,
+            short_answer: sampleShortCount,
+            long_answer: sampleEssayCount,
+          },
           passcode: accessCode.trim().toUpperCase() || null,
           passcode_expires_at: passcodeExpiresAt ? new Date(passcodeExpiresAt).toISOString() : null,
         },
@@ -1034,86 +1051,158 @@ B. Sai`);
             {/* 3-Section Breakdown Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Phần 1 */}
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-                    Phần 1: Trắc Nghiệm & Đúng/Sai
+                    Phần 1: Trắc Nghiệm
                   </span>
                   <span className="text-xs font-bold text-white bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30">
-                    {mcTotalPoints} điểm
+                    {Math.round((sampleMcCount * batchMcPoints) * 10) / 10} điểm
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between text-xs text-slate-400">
-                  <span>Số lượng: <strong className="text-white">{mcQuestions.length} câu</strong></span>
-                  <span>TB: <strong className="text-indigo-300">{mcQuestions.length > 0 ? (Math.round((mcTotalPoints / mcQuestions.length) * 100) / 100) : 0}đ/câu</strong></span>
+                  <span>Kho ngân hàng: <strong className="text-white">{mcQuestions.length} câu</strong></span>
+                  <span>Đơn giá: <strong className="text-indigo-300">{batchMcPoints}đ/câu</strong></span>
                 </div>
-                <div className="pt-2 border-t border-slate-800/80 flex items-center space-x-2">
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
                   <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
-                  <input
-                    type="number"
-                    step="0.05"
-                    min="0"
-                    value={batchMcPoints}
-                    onChange={(e) => setBatchMcPoints(Number(e.target.value) || 0)}
-                    className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-indigo-500"
-                  />
-                  <span className="text-[11px] text-slate-500">đ</span>
+                  <div className="flex items-center space-x-1.5">
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      value={batchMcPoints}
+                      onChange={(e) => setBatchMcPoints(Number(e.target.value) || 0)}
+                      className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-indigo-500"
+                    />
+                    <span className="text-[11px] text-slate-500">đ</span>
+                  </div>
+                </div>
+                {/* Rút Ngẫu Nhiên Phần 1 */}
+                <div className="pt-1.5 flex items-center justify-between bg-indigo-500/10 p-2 rounded-lg border border-indigo-500/20">
+                  <div className="flex items-center space-x-1">
+                    <Dice5 className="w-3.5 h-3.5 text-indigo-400" />
+                    <label className="text-[11px] font-semibold text-indigo-200">Rút ngẫu nhiên:</label>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={Math.max(1, mcQuestions.length)}
+                      value={sampleMcCount}
+                      onChange={(e) => {
+                        const val = Math.max(0, Number(e.target.value) || 0);
+                        setSampleMcCount(val);
+                        setQuestionsPerStudent(val + sampleShortCount + sampleEssayCount);
+                      }}
+                      className="w-16 bg-slate-950 border border-indigo-500/50 font-bold rounded-lg px-2 py-1 text-xs text-indigo-300 text-right focus:outline-none focus:border-indigo-400"
+                    />
+                    <span className="text-[11px] text-indigo-300 font-medium">câu</span>
+                  </div>
                 </div>
               </div>
 
               {/* Phần 2 */}
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                     Phần 2: Câu Hỏi Ngắn
                   </span>
                   <span className="text-xs font-bold text-white bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                    {shortTotalPoints} điểm
+                    {Math.round((sampleShortCount * batchShortPoints) * 10) / 10} điểm
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between text-xs text-slate-400">
-                  <span>Số lượng: <strong className="text-white">{shortQuestions.length} câu</strong></span>
-                  <span>TB: <strong className="text-emerald-300">{shortQuestions.length > 0 ? (Math.round((shortTotalPoints / shortQuestions.length) * 100) / 100) : 0}đ/câu</strong></span>
+                  <span>Kho ngân hàng: <strong className="text-white">{shortQuestions.length} câu</strong></span>
+                  <span>Đơn giá: <strong className="text-emerald-300">{batchShortPoints}đ/câu</strong></span>
                 </div>
-                <div className="pt-2 border-t border-slate-800/80 flex items-center space-x-2">
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
                   <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={batchShortPoints}
-                    onChange={(e) => setBatchShortPoints(Number(e.target.value) || 0)}
-                    className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-emerald-500"
-                  />
-                  <span className="text-[11px] text-slate-500">đ</span>
+                  <div className="flex items-center space-x-1.5">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={batchShortPoints}
+                      onChange={(e) => setBatchShortPoints(Number(e.target.value) || 0)}
+                      className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-emerald-500"
+                    />
+                    <span className="text-[11px] text-slate-500">đ</span>
+                  </div>
+                </div>
+                {/* Rút Ngẫu Nhiên Phần 2 */}
+                <div className="pt-1.5 flex items-center justify-between bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
+                  <div className="flex items-center space-x-1">
+                    <Dice5 className="w-3.5 h-3.5 text-emerald-400" />
+                    <label className="text-[11px] font-semibold text-emerald-200">Rút ngẫu nhiên:</label>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={Math.max(1, shortQuestions.length)}
+                      value={sampleShortCount}
+                      onChange={(e) => {
+                        const val = Math.max(0, Number(e.target.value) || 0);
+                        setSampleShortCount(val);
+                        setQuestionsPerStudent(sampleMcCount + val + sampleEssayCount);
+                      }}
+                      className="w-16 bg-slate-950 border border-emerald-500/50 font-bold rounded-lg px-2 py-1 text-xs text-emerald-300 text-right focus:outline-none focus:border-emerald-400"
+                    />
+                    <span className="text-[11px] text-emerald-300 font-medium">câu</span>
+                  </div>
                 </div>
               </div>
 
               {/* Phần 3 */}
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
                     Phần 3: Tự Luận Dài
                   </span>
                   <span className="text-xs font-bold text-white bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/30">
-                    {longTotalPoints} điểm
+                    {Math.round((sampleEssayCount * batchEssayPoints) * 10) / 10} điểm
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between text-xs text-slate-400">
-                  <span>Số lượng: <strong className="text-white">{longQuestions.length} câu</strong></span>
-                  <span>TB: <strong className="text-amber-300">{longQuestions.length > 0 ? (Math.round((longTotalPoints / longQuestions.length) * 100) / 100) : 0}đ/câu</strong></span>
+                  <span>Kho ngân hàng: <strong className="text-white">{longQuestions.length} câu</strong></span>
+                  <span>Đơn giá: <strong className="text-amber-300">{batchEssayPoints}đ/câu</strong></span>
                 </div>
-                <div className="pt-2 border-t border-slate-800/80 flex items-center space-x-2">
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
                   <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    value={batchEssayPoints}
-                    onChange={(e) => setBatchEssayPoints(Number(e.target.value) || 0)}
-                    className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-amber-500"
-                  />
-                  <span className="text-[11px] text-slate-500">đ</span>
+                  <div className="flex items-center space-x-1.5">
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={batchEssayPoints}
+                      onChange={(e) => setBatchEssayPoints(Number(e.target.value) || 0)}
+                      className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-amber-500"
+                    />
+                    <span className="text-[11px] text-slate-500">đ</span>
+                  </div>
+                </div>
+                {/* Rút Ngẫu Nhiên Phần 3 */}
+                <div className="pt-1.5 flex items-center justify-between bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                  <div className="flex items-center space-x-1">
+                    <Dice5 className="w-3.5 h-3.5 text-amber-400" />
+                    <label className="text-[11px] font-semibold text-amber-200">Rút ngẫu nhiên:</label>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={Math.max(1, longQuestions.length)}
+                      value={sampleEssayCount}
+                      onChange={(e) => {
+                        const val = Math.max(0, Number(e.target.value) || 0);
+                        setSampleEssayCount(val);
+                        setQuestionsPerStudent(sampleMcCount + sampleShortCount + val);
+                      }}
+                      className="w-16 bg-slate-950 border border-amber-500/50 font-bold rounded-lg px-2 py-1 text-xs text-amber-300 text-right focus:outline-none focus:border-amber-400"
+                    />
+                    <span className="text-[11px] text-amber-300 font-medium">câu</span>
+                  </div>
                 </div>
               </div>
             </div>

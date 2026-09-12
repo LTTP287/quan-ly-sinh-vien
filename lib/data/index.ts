@@ -400,6 +400,7 @@ function mapQuizRow(row: any): Quiz {
     shuffle_options: row.shuffle_options,
     prevent_previous: row.prevent_previous,
     questions_per_student: row.questions_per_student,
+    section_sampling: row.section_sampling || null,
     created_at: row.created_at,
     assigned_class_ids: assignments.map((a: any) => a.class_id),
     class_schedules: schedules,
@@ -530,6 +531,7 @@ export async function createQuiz(
       shuffle_options: quiz.shuffle_options,
       prevent_previous: quiz.prevent_previous,
       questions_per_student: quiz.questions_per_student,
+      section_sampling: quiz.section_sampling || null,
       passcode: quiz.passcode || null,
       passcode_expires_at: quiz.passcode_expires_at || null,
     })
@@ -631,6 +633,7 @@ export async function updateQuiz(
       ...(quiz.shuffle_options !== undefined && { shuffle_options: quiz.shuffle_options }),
       ...(quiz.prevent_previous !== undefined && { prevent_previous: quiz.prevent_previous }),
       ...(quiz.questions_per_student !== undefined && { questions_per_student: quiz.questions_per_student }),
+      ...(quiz.section_sampling !== undefined && { section_sampling: quiz.section_sampling }),
       ...(quiz.passcode !== undefined && { passcode: quiz.passcode }),
     })
     .eq('id', quizId);

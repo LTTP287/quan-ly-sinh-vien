@@ -106,6 +106,7 @@ export async function POST(request: Request) {
         shuffle_options: q.shuffle_options !== false,
         prevent_previous: !!q.prevent_previous,
         questions_per_student: q.questions_per_student,
+        section_sampling: q.section_sampling || null,
         questions: (Array.isArray(q.questions) && q.questions.length > 0)
           ? q.questions
           : (idx >= 0 && db.quizzes[idx]?.questions && db.quizzes[idx].questions!.length > 0)

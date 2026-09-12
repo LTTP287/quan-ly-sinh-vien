@@ -88,15 +88,40 @@ export async function POST(request: Request) {
       : [...DEFAULT_QUESTION_BANK];
 
     const questionsPerStudent = quiz?.questions_per_student || 5;
+    const sampling = quiz?.section_sampling;
 
-    // Xáo trộn thứ tự các câu hỏi trong bộ câu hỏi
-    if (quiz?.shuffle_questions !== false) {
-      questions = shuffleArray(questions, rng);
-    }
+    // Rút ngẫu nhiên theo từng phần (section_sampling) nếu có cấu hình:
+    // Ví dụ: phần 1 rút 20 câu, phần 2 rút 3 câu, phần 3 rút 1 câu
+    if (sampling && (typeof sampling.multiple_choice === 'number' || typeof sampling.short_answer === 'number' || typeof sampling.long_answer === 'number')) {
+      let mcPool = questions.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
+      let shortPool = questions.filter((q) => q.question_type === 'short_answer');
+      let longPool = questions.filter((q) => q.question_type === 'long_answer');
 
-    // Rút ngẫu nhiên số câu hỏi phân bổ cho sinh viên nếu có cấu hình
-    if (questionsPerStudent > 0 && questionsPerStudent < questions.length) {
-      questions = questions.slice(0, questionsPerStudent);
+      if (quiz?.shuffle_questions !== false) {
+        mcPool = shuffleArray(mcPool, rng);
+        shortPool = shuffleArray(shortPool, rng);
+        longPool = shuffleArray(longPool, rng);
+      }
+
+      const mcTake = Math.min(mcPool.length, Math.max(0, sampling.multiple_choice ?? mcPool.length));
+      const shortTake = Math.min(shortPool.length, Math.max(0, sampling.short_answer ?? shortPool.length));
+      const longTake = Math.min(longPool.length, Math.max(0, sampling.long_answer ?? longPool.length));
+
+      questions = [
+        ...mcPool.slice(0, mcTake),
+        ...shortPool.slice(0, shortTake),
+        ...longPool.slice(0, longTake),
+      ];
+    } else {
+      // Xáo trộn thứ tự các câu hỏi trong bộ câu hỏi
+      if (quiz?.shuffle_questions !== false) {
+        questions = shuffleArray(questions, rng);
+      }
+
+      // Rút ngẫu nhiên số câu hỏi phân bổ cho sinh viên nếu có cấu hình
+      if (questionsPerStudent > 0 && questionsPerStudent < questions.length) {
+        questions = questions.slice(0, questionsPerStudent);
+      }
     }
 
     // Ẩn đáp án đúng is_correct để sinh viên không thể F12 gian lận
