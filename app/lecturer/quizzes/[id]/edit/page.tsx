@@ -359,6 +359,12 @@ B. Sai`);
   const longQuestions = questions.filter((q) => q.question_type === 'long_answer');
   const longTotalPoints = Math.round(longQuestions.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 100) / 100;
 
+  // Điểm bài thi thực tế rút ngẫu nhiên cho mỗi sinh viên (Target: 10.0 điểm)
+  const plannedMcPoints = Math.round((sampleMcCount * batchMcPoints) * 10) / 10;
+  const plannedShortPoints = Math.round((sampleShortCount * batchShortPoints) * 10) / 10;
+  const plannedEssayPoints = Math.round((sampleEssayCount * batchEssayPoints) * 10) / 10;
+  const examTotalPoints = Math.round((plannedMcPoints + plannedShortPoints + plannedEssayPoints) * 10) / 10;
+
   const updateQuestionPoints = (qId: string, pts: number) => {
     setQuestions(questions.map((q) => (q.id === qId ? { ...q, points: Math.max(0, Number(pts) || 0) } : q)));
   };
@@ -1046,17 +1052,17 @@ B. Sai`);
                   <h3 className="text-base font-bold text-white flex items-center space-x-2">
                     <span>Thang Điểm & Phân Bổ Điểm Thi</span>
                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${
-                      Math.abs(totalPoints - 10) < 0.05
+                      Math.abs(examTotalPoints - 10) < 0.05
                         ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                         : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                     }`}>
-                      {Math.abs(totalPoints - 10) < 0.05
-                        ? '✓ Chuẩn thang điểm 10.0'
-                        : `Chưa tròn 10 điểm (Hiện tại: ${totalPoints}đ)`}
+                      {Math.abs(examTotalPoints - 10) < 0.05
+                        ? `✓ Chuẩn đề thi 10.0 điểm (${questionsPerStudent} câu rút)`
+                        : `Chưa tròn 10 điểm (Hiện tại: ${examTotalPoints}đ)`}
                     </span>
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Tùy chỉnh điểm cho từng phần (Trắc nghiệm, Câu ngắn, Tự luận) hoặc phân bổ chi tiết từng câu
+                    Phân bổ điểm theo 3 phần: Trắc nghiệm (4đ) + Câu ngắn (3đ) + Tự luận (3đ) = 10.0 điểm
                   </p>
                 </div>
               </div>
@@ -1246,11 +1252,19 @@ B. Sai`);
 
             {/* Quick apply button row & summary bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
-              <div className="text-xs text-slate-400">
-                Tổng cộng: <strong className="text-white">{questions.length} câu hỏi</strong> &bull; Tổng điểm hiện có:{' '}
-                <strong className={Math.abs(totalPoints - 10) < 0.05 ? 'text-emerald-400 font-bold text-sm' : 'text-amber-400 font-bold text-sm'}>
-                  {totalPoints} / 10.0 điểm
-                </strong>
+              <div className="text-xs text-slate-400 space-y-1">
+                <div>
+                  Đề thi sinh viên nhận ({questionsPerStudent} câu rút):{' '}
+                  <strong className={Math.abs(examTotalPoints - 10) < 0.05 ? 'text-emerald-400 font-bold text-sm' : 'text-amber-400 font-bold text-sm'}>
+                    {examTotalPoints} / 10.0 điểm
+                  </strong>
+                  <span className="text-[11px] text-slate-500 ml-2">
+                    ({sampleMcCount} TN &times; {batchMcPoints}đ + {sampleShortCount} Ngắn &times; {batchShortPoints}đ + {sampleEssayCount} Tự luận &times; {batchEssayPoints}đ)
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  Kho ngân hàng hiện có: <strong className="text-slate-300">{questions.length} câu</strong> (Trắc nghiệm: {mcQuestions.length}, Ngắn: {shortQuestions.length}, Tự luận: {longQuestions.length}) &bull; Tổng điểm tất cả câu trong kho: <strong className="text-slate-300">{totalPoints}đ</strong>
+                </div>
               </div>
 
               <div className="flex items-center flex-wrap gap-2">
