@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, FilePlus2, BookOpen, Plus, Sparkles, 
   Clock, Eye, EyeOff, CheckSquare, Square, FileCheck2, ArrowRight, 
-  Calendar, KeyRound, Power, ShieldCheck, Lock, AlertCircle, Trash2 
+  Calendar, KeyRound, Power, ShieldCheck, Lock, AlertCircle, Trash2, Award
 } from 'lucide-react';
 import { Quiz, ClassModule, ClassQuizSchedule } from '@/types/database';
 import { listQuizzes, listClasses, saveQuizSchedules, deleteQuiz, isRemote } from '@/lib/data';
@@ -106,13 +106,23 @@ export default function LecturerTestBankPage() {
             </div>
           </div>
 
-          <Link
-            href="/lecturer/quizzes/new"
-            className="gradient-button px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tạo Đề Thi Mới Vào Test Bank</span>
-          </Link>
+          <div className="flex items-center space-x-3">
+            <Link
+              href="/lecturer/grades"
+              className="px-4 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-sm font-semibold flex items-center space-x-2 transition-colors shadow-sm"
+            >
+              <Award className="w-4 h-4 text-emerald-400" />
+              <span>Bảng Điểm Tổng Hợp</span>
+            </Link>
+
+            <Link
+              href="/lecturer/quizzes/new"
+              className="gradient-button px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tạo Đề Thi Mới Vào Test Bank</span>
+            </Link>
+          </div>
         </div>
       </header>
 

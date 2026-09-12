@@ -626,6 +626,23 @@ export async function saveQuizSchedules(
 
 export async function listSubmissions(quizId: string): Promise<Submission[]> {
   if (!isRemote) {
+    try {
+      const res = await fetch(`/api/lecturer/submissions?quiz_id=${encodeURIComponent(quizId)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.submissions)) {
+          const serverSubs = json.submissions as Submission[];
+          const localSubs = local.getSubmissionsByQuiz(quizId);
+          const map = new Map<string, Submission>();
+          localSubs.forEach((s) => map.set(s.student_id, s));
+          serverSubs.forEach((s) => map.set(s.student_id, s));
+          return Array.from(map.values()).sort((a, b) =>
+            (b.submitted_at || '').localeCompare(a.submitted_at || '')
+          );
+        }
+      }
+    } catch {}
+
     return local
       .getSubmissionsByQuiz(quizId)
       .sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || ''));

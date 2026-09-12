@@ -83,42 +83,57 @@ export default function StudentDashboard() {
     router.push('/');
   };
 
-  // Bấm "Bắt đầu thi" -> Thử vào thẳng phòng thi nếu bài đã mở -> Nếu cần mã thì hiện modal
+  // Bấm "Bắt đầu thi" ->
+  // 1. Nếu đề KHÔNG yêu cầu mã PIN (!q.requires_passcode): Vào thẳng phòng thi, KHÔNG hiện popup modal.
+  // 2. Nếu đề CÓ yêu cầu mã PIN (q.requires_passcode): Hiện popup modal và bắt buộc nhập mã PIN.
   const handleStartQuiz = async (q: DashboardQuiz) => {
+    setPasscodeError(null);
+
+    // Trường hợp 1: Không yêu cầu mã PIN -> Vào thẳng
+    if (!q.requires_passcode) {
+      setActiveQuiz(null);
+      setVerifying(true);
+      try {
+        const res = await fetch('/api/quizzes/verify-passcode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quiz_id: q.id, passcode: '' }),
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (res.status === 401) {
+          router.push('/login/student?reason=session_expired');
+          return;
+        }
+        if (res.ok && json.ok) {
+          router.push(json.redirect || `/student/exam/${q.id}`);
+          return;
+        }
+        if (json.error) {
+          alert(json.error);
+        }
+      } catch {
+        alert('Không kết nối được máy chủ phòng thi.');
+      } finally {
+        setVerifying(false);
+      }
+      return;
+    }
+
+    // Trường hợp 2: Có yêu cầu mã PIN -> Hiện popup modal
     setActiveQuiz(q);
     setPasscode('');
-    setPasscodeError(null);
-    setVerifying(true);
-
-    try {
-      const res = await fetch('/api/quizzes/verify-passcode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quiz_id: q.id, passcode: '' }),
-      });
-      const json = await res.json().catch(() => ({}));
-
-      if (res.status === 401) {
-        router.push('/login/student?reason=session_expired');
-        return;
-      }
-      if (res.ok && json.ok) {
-        router.push(json.redirect || `/student/exam/${q.id}`);
-        return;
-      }
-      if (json.error) {
-        setPasscodeError(json.error);
-      }
-    } catch {
-      setPasscodeError('Không kết nối được máy chủ.');
-    } finally {
-      setVerifying(false);
-    }
   };
 
   const handleVerifyPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeQuiz) return;
+
+    if (!passcode.trim()) {
+      setPasscodeError('Vui lòng nhập mã PIN phòng thi do Giảng viên cung cấp.');
+      return;
+    }
+
     setPasscodeError(null);
     setVerifying(true);
 
@@ -126,7 +141,7 @@ export default function StudentDashboard() {
       const res = await fetch('/api/quizzes/verify-passcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quiz_id: activeQuiz.id, passcode }),
+        body: JSON.stringify({ quiz_id: activeQuiz.id, passcode: passcode.trim() }),
       });
       const json = await res.json().catch(() => ({}));
 
@@ -135,7 +150,7 @@ export default function StudentDashboard() {
         return;
       }
       if (!res.ok) {
-        setPasscodeError(json.error || 'Không vào được phòng thi.');
+        setPasscodeError(json.error || 'Mã PIN phòng thi không chính xác.');
         return;
       }
       router.push(json.redirect || `/student/exam/${activeQuiz.id}`);
@@ -354,13 +369,14 @@ export default function StudentDashboard() {
                 <input
                   type="text"
                   autoFocus
-                  placeholder="Nhập mã phòng thi (hoặc để trống)..."
+                  required
+                  placeholder="Nhập mã PIN phòng thi..."
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   className="w-full bg-slate-900 border border-purple-500/50 rounded-xl px-4 py-3 font-mono font-extrabold text-lg text-amber-400 tracking-wider text-center focus:outline-none focus:border-purple-400 uppercase"
                 />
-                <p className="text-[11px] text-slate-500 mt-2 text-center">
-                  Mã do Giảng viên đọc trực tiếp tại lớp (nếu có), hoặc nhấn Xác Nhận để vào thi ngay.
+                <p className="text-[11px] text-slate-400 mt-2 text-center">
+                  Bài thi này yêu cầu mã PIN do Giảng viên công bố tại lớp.
                 </p>
               </div>
 

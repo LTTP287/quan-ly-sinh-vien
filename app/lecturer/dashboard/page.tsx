@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   GraduationCap, BookOpen, Users, FileCheck2, Plus, 
-  ArrowRight, LogOut, Sparkles, FolderPlus, Search, Pencil, Trash2
+  ArrowRight, LogOut, Sparkles, FolderPlus, Search, Pencil, Trash2, Award
 } from 'lucide-react';
 import { ClassModule, UserProfile } from '@/types/database';
 import { listClasses, listQuizzes, createClass, updateClass, deleteClass, getCurrentUser, signOut } from '@/lib/data';
@@ -122,11 +122,19 @@ export default function LecturerDashboard() {
 
           <div className="flex items-center space-x-3">
             <Link
+              href="/lecturer/grades"
+              className="px-4 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-sm font-semibold flex items-center space-x-2 transition-colors shadow-sm"
+            >
+              <Award className="w-4 h-4 text-emerald-400" />
+              <span>Bảng Điểm Tổng Hợp</span>
+            </Link>
+
+            <Link
               href="/lecturer/quizzes"
               className="px-4 py-2 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 text-sm font-semibold flex items-center space-x-2 transition-colors"
             >
               <BookOpen className="w-4 h-4 text-purple-400" />
-              <span>Thư Viện Test Bank Dùng Chung</span>
+              <span>Thư Viện Test Bank</span>
             </Link>
 
             <button
@@ -253,11 +261,11 @@ export default function LecturerDashboard() {
                   </Link>
 
                   <Link
-                    href="/lecturer/quizzes"
-                    className="px-3 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-xs font-semibold text-purple-300 border border-purple-500/20 flex items-center space-x-1"
+                    href={`/lecturer/classes/${cls.id}/grades`}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-semibold text-emerald-300 border border-emerald-500/20 flex items-center space-x-1"
                   >
-                    <FileCheck2 className="w-3.5 h-3.5" />
-                    <span>Thống kê điểm & Excel</span>
+                    <Award className="w-3.5 h-3.5" />
+                    <span>Xem Bảng Điểm & Excel</span>
                   </Link>
                 </div>
               </div>

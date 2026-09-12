@@ -615,12 +615,13 @@ export async function checkQuizPasscode(
     if (quiz.passcode_expires_at && now > new Date(quiz.passcode_expires_at).getTime()) {
       return { ok: false, reason: 'PASSCODE_EXPIRED' };
     }
-    // Khi Giảng viên đã mở thi (is_active = true) cho lớp học phần,
-    // sinh viên thuộc lớp được phép vào làm bài trực tiếp ngay cả khi không có mã phòng thi.
+    // Kiểm tra mã PIN phòng thi:
+    // 1. Nếu đề KHÔNG đặt mã PIN -> Cho vào làm bài trực tiếp.
+    // 2. Nếu đề CÓ đặt mã PIN -> Bắt buộc sinh viên phải nhập đúng mã PIN đã cài đặt.
     if (quiz.passcode && quiz.passcode.trim()) {
       const input = (passcode || '').trim().toUpperCase();
       const expected = quiz.passcode.trim().toUpperCase();
-      if (input && input !== expected && !quiz.is_active) {
+      if (!input || input !== expected) {
         return { ok: false, reason: 'WRONG_PASSCODE' };
       }
     }
