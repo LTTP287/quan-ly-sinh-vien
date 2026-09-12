@@ -42,22 +42,30 @@ export async function POST(request: Request) {
       );
     }
 
-    if (body.demo_students && Array.isArray(body.demo_students)) {
+    // Đồng bộ dữ liệu demo (sinh viên, lớp học, đề thi) từ trình duyệt lên bộ nhớ server
+    if (body.demo_students || body.demo_classes || body.demo_quizzes || body.demo_enrollments) {
       const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
       const db = demoDb();
-      for (const st of body.demo_students) {
-        const stCode = (st.student_code || '').trim().toUpperCase();
-        if (!stCode) continue;
-        const idx = db.users.findIndex((u) => (u.student_code || '').trim().toUpperCase() === stCode);
-        if (idx >= 0) {
-          db.users[idx] = { ...db.users[idx], ...st };
-        } else {
-          db.users.push(st);
+      if (Array.isArray(body.demo_students)) {
+        for (const st of body.demo_students) {
+          const stCode = (st.student_code || '').trim().toUpperCase();
+          if (!stCode) continue;
+          const idx = db.users.findIndex((u) => (u.student_code || '').trim().toUpperCase() === stCode);
+          if (idx >= 0) {
+            db.users[idx] = { ...db.users[idx], ...st };
+          } else {
+            db.users.push(st);
+          }
         }
       }
       if (Array.isArray(body.demo_classes) && body.demo_classes.length > 0) {
         for (const c of body.demo_classes) {
-          if (!db.classes.some((x) => x.id === c.id)) db.classes.push(c);
+          const idx = db.classes.findIndex((x) => x.id === c.id);
+          if (idx >= 0) {
+            db.classes[idx] = { ...db.classes[idx], ...c };
+          } else {
+            db.classes.push(c);
+          }
         }
       }
       if (Array.isArray(body.demo_enrollments)) {
@@ -67,6 +75,41 @@ export async function POST(request: Request) {
           const stId = stUser ? stUser.id : en.student_id;
           if (stId && !db.enrollments.some((e) => e.class_id === en.class_id && e.student_id === stId)) {
             db.enrollments.push({ class_id: en.class_id, student_id: stId });
+          }
+        }
+      }
+      if (Array.isArray(body.demo_quizzes) && body.demo_quizzes.length > 0) {
+        const { DEFAULT_QUESTION_BANK } = await import('@/lib/classStore');
+        for (const q of body.demo_quizzes) {
+          if (!q.id) continue;
+          const idx = db.quizzes.findIndex((x) => x.id === q.id);
+          const classIds = Array.isArray(q.assigned_class_ids) && q.assigned_class_ids.length > 0
+            ? q.assigned_class_ids
+            : (q.class_id ? [q.class_id] : Object.keys(q.class_schedules || {}));
+
+          const demoQuizItem: any = {
+            id: q.id,
+            title: q.title || 'Quiz - 05',
+            description: q.description || '',
+            time_limit_minutes: Number(q.time_limit_minutes) || 5,
+            is_published: q.is_published !== false,
+            show_results: !!q.show_results,
+            passcode: q.passcode || q.access_code || null,
+            passcode_expires_at: q.passcode_expires_at || null,
+            class_ids: classIds,
+            start_at: q.start_at || new Date(Date.now() - 3600000).toISOString(),
+            end_at: q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
+            is_active: q.is_active !== false,
+            shuffle_questions: !!q.shuffle_questions,
+            shuffle_options: !!q.shuffle_options,
+            prevent_previous: !!q.prevent_previous,
+            questions_per_student: q.questions_per_student,
+            questions: (Array.isArray(q.questions) && q.questions.length > 0) ? q.questions : (idx >= 0 && db.quizzes[idx]?.questions && db.quizzes[idx].questions!.length > 0 ? db.quizzes[idx].questions : DEFAULT_QUESTION_BANK),
+          };
+          if (idx >= 0) {
+            db.quizzes[idx] = { ...db.quizzes[idx], ...demoQuizItem };
+          } else {
+            db.quizzes.push(demoQuizItem);
           }
         }
       }

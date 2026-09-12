@@ -62,13 +62,21 @@ export async function signInStudent(studentCode: string, dateOfBirth: string): P
     body.demo_students = local.getAllStoredStudents();
     body.demo_classes = local.getStoredClasses();
     body.demo_enrollments = local.getAllStoredEnrollments();
+    body.demo_quizzes = local.getStoredQuizzes();
   }
   return postLogin(body);
 }
 
 /** Đăng nhập giảng viên: email + mật khẩu. */
 export async function signInLecturer(email: string, password: string): Promise<AuthResult> {
-  const res = await postLogin({ role: 'lecturer', email: email.trim(), password });
+  const body: any = { role: 'lecturer', email: email.trim(), password };
+  if (!isRemote) {
+    body.demo_students = local.getAllStoredStudents();
+    body.demo_classes = local.getStoredClasses();
+    body.demo_enrollments = local.getAllStoredEnrollments();
+    body.demo_quizzes = local.getStoredQuizzes();
+  }
+  const res = await postLogin(body);
   if (res.success && !isRemote) {
     syncDemoQuizzesToServer();
   }
