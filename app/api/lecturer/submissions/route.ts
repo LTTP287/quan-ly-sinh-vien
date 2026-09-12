@@ -32,26 +32,40 @@ export async function GET(request: Request) {
     }
 
     if (classId) {
-      const studentIdsInClass = new Set(
-        db.enrollments.filter((e) => e.class_id === classId).map((e) => e.student_id)
+      const classEnrollments = db.enrollments.filter((e) => e.class_id === classId);
+      const enrolledStudentIds = new Set(classEnrollments.map((e) => e.student_id));
+      const enrolledStudentCodes = new Set(
+        db.users.filter((u) => enrolledStudentIds.has(u.id)).map((u) => (u.student_code || '').trim().toUpperCase())
       );
-      scores = scores.filter((s) => studentIdsInClass.has(s.student_id));
+      scores = scores.filter((s) => {
+        if (enrolledStudentIds.has(s.student_id)) return true;
+        const u = db.users.find((x) => x.id === s.student_id);
+        const code = (u?.student_code || s.student_id.replace(/^st-/, '')).trim().toUpperCase();
+        return enrolledStudentCodes.has(code);
+      });
     }
 
     const result = scores.map((s) => {
-      const studentUser = db.users.find((u) => u.id === s.student_id);
+      const studentCodeFallback = s.student_id.replace(/^st-/, '').trim().toUpperCase();
+      const studentUser = db.users.find((u) => {
+        if (u.id === s.student_id) return true;
+        const uc = (u.student_code || '').trim().toUpperCase();
+        return uc && (uc === studentCodeFallback || s.student_id.includes(uc));
+      });
+      const studentCode = studentUser?.student_code || studentCodeFallback;
       const quiz = db.quizzes.find((q) => q.id === s.quiz_id);
       return {
         id: `sub-${s.quiz_id}-${s.student_id}`,
         quiz_id: s.quiz_id,
         student_id: s.student_id,
+        student_code: studentCode,
         total_score: s.total_score,
         submitted_at: s.submitted_at,
         status: s.status,
         tab_violations_count: s.tab_violations_count || 0,
         student: {
           id: s.student_id,
-          student_code: studentUser?.student_code || s.student_id.replace('st-', ''),
+          student_code: studentCode,
           full_name: studentUser?.full_name || 'Sinh Viên',
           email: studentUser?.email || '',
         },

@@ -293,6 +293,25 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
         score = json.result.score;
         correctCount = json.result.correct_count;
         totalQuestions = json.result.total_questions;
+
+        // Lưu bản sao submission vào localStorage để bảng điểm đồng bộ tức thì mọi nơi
+        try {
+          const stId = student?.id || (student?.student_code ? `st-${student.student_code}` : 'guest');
+          const submission: Submission = {
+            id: `sub-${params.id}-${stId}`,
+            quiz_id: params.id,
+            student_id: stId,
+            started_at: startedAt,
+            submitted_at: new Date().toISOString(),
+            total_score: isKickOut ? 0 : score,
+            status: timedOut ? 'timed_out' : 'submitted',
+            tab_violations_count: isKickOut ? Math.max(violationsCount, 1) : violationsCount,
+            warning_history: [],
+            answers: answers as any,
+            student: student || undefined,
+          };
+          saveSubmissionLocal(submission);
+        } catch {}
       } else {
         // Demo: chấm tại chỗ và lưu vào Test Bank để trang Thống kê điểm đọc được
         const result = isKickOut

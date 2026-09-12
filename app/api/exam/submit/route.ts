@@ -21,7 +21,17 @@ export async function POST(request: Request) {
   if (!useRemote) {
     const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
     const db = demoDb();
-    let score = db.scores.find((s) => s.quiz_id === quizId && s.student_id === auth.user.id);
+    const userCode = (auth.user.student_code || '').trim().toUpperCase();
+
+    let score = db.scores.find((s) => {
+      if (s.quiz_id !== quizId) return false;
+      if (s.student_id === auth.user.id) return true;
+      if (userCode && (s.student_id === `st-${userCode}` || s.student_id === userCode)) return true;
+      const u = db.users.find((x) => x.id === s.student_id);
+      if (userCode && u && (u.student_code || '').trim().toUpperCase() === userCode) return true;
+      return false;
+    });
+
     if (!score) {
       score = {
         quiz_id: quizId,
@@ -34,6 +44,22 @@ export async function POST(request: Request) {
       };
       db.scores.push(score);
     }
+
+    // Đảm bảo thông tin sinh viên có trong db.users để giảng viên đối soát tên/MSSV
+    const existingUser = db.users.find((u) => u.id === auth.user.id || (userCode && (u.student_code || '').trim().toUpperCase() === userCode));
+    if (existingUser) {
+      if (auth.user.student_code) existingUser.student_code = auth.user.student_code;
+      if (auth.user.full_name) existingUser.full_name = auth.user.full_name;
+    } else {
+      db.users.push({
+        id: auth.user.id,
+        student_code: auth.user.student_code,
+        full_name: auth.user.full_name || 'Sinh Viên',
+        email: auth.user.email || '',
+        role: 'student',
+      });
+    }
+
     score.status = body?.timed_out ? 'timed_out' : 'submitted';
     score.submitted_at = new Date().toISOString();
     score.tab_violations_count = Math.max(score.tab_violations_count || 0, Number(body?.violations) || 0);

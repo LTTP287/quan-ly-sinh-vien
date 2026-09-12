@@ -52,8 +52,26 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
             const subs = await listSubmissions(q.id);
             subsMap[q.id] = {};
             subs.forEach((s) => {
-              if (s.student_id && s.total_score !== null && s.total_score !== undefined) {
-                subsMap[q.id][s.student_id] = s.total_score;
+              if (s.total_score !== null && s.total_score !== undefined) {
+                const scoreVal = Number(s.total_score);
+                // Index theo student_id
+                if (s.student_id) {
+                  subsMap[q.id][s.student_id] = scoreVal;
+                  if (s.student_id.startsWith('st-')) {
+                    const raw = s.student_id.replace(/^st-/, '').trim().toUpperCase();
+                    if (raw) subsMap[q.id][raw] = scoreVal;
+                  }
+                }
+                // Index theo student object id
+                if (s.student?.id) {
+                  subsMap[q.id][s.student.id] = scoreVal;
+                }
+                // Index theo Mã Sinh Viên (MSSV)
+                const code = (s.student?.student_code || (s as any).student_code || '').trim().toUpperCase();
+                if (code) {
+                  subsMap[q.id][code] = scoreVal;
+                  subsMap[q.id][`st-${code}`] = scoreVal;
+                }
               }
             });
           })
@@ -83,7 +101,21 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
     let quizCount = 0;
 
     quizzes.forEach((q) => {
-      const s = submissionsByQuiz[q.id]?.[st.id];
+      const qSubs = submissionsByQuiz[q.id] || {};
+      const stCode = (st.student_code || '').trim().toUpperCase();
+      const rawIdCode = st.id && st.id.startsWith('st-') ? st.id.replace(/^st-/, '').trim().toUpperCase() : '';
+
+      let s: number | undefined = undefined;
+      if (st.id && qSubs[st.id] !== undefined) {
+        s = qSubs[st.id];
+      } else if (stCode && qSubs[stCode] !== undefined) {
+        s = qSubs[stCode];
+      } else if (stCode && qSubs[`st-${stCode}`] !== undefined) {
+        s = qSubs[`st-${stCode}`];
+      } else if (rawIdCode && qSubs[rawIdCode] !== undefined) {
+        s = qSubs[rawIdCode];
+      }
+
       scores[q.id] = s !== undefined ? s : null;
       if (s !== undefined) {
         totalQuizScore += s;
