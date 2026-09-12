@@ -114,7 +114,7 @@ export async function POST(request: Request) {
         id: q.id,
         question_text: q.question_text,
         question_type: q.question_type || 'multiple_choice',
-        points: pointsPerQ,
+        points: typeof q.points === 'number' && q.points > 0 ? q.points : pointsPerQ,
         order_index: idx,
         image_url: q.image_url || null,
         options: rawOptions.map((o: any, oi: number) => ({

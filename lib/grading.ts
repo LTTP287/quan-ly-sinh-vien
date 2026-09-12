@@ -25,7 +25,7 @@ export function gradeSubmission(
   let correctCount = 0;
 
   questions.forEach((q) => {
-    const points = q.points || 1;
+    const points = typeof q.points === 'number' ? q.points : 1;
     totalPoints += points;
 
     const selectedOptionId = selectedAnswers[q.id] || null;

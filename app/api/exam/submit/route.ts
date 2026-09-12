@@ -77,19 +77,34 @@ export async function POST(request: Request) {
       : (quiz?.questions_per_student || questions.length || 1);
 
     if (questions.length > 0) {
+      let earnedPoints = 0;
+      let maxPoints = 0;
+
       for (const a of score.answers || []) {
         const q = questions.find((x: any) => x.id === a.question_id);
         if (q) {
+          const qPoints = typeof q.points === 'number' && q.points > 0 ? q.points : (10 / totalTestedQuestions);
+          maxPoints += qPoints;
           const opt = (q.options || []).find((o: any) => o.id === a.option_id);
           if (opt && opt.is_correct) {
             correctCount++;
+            earnedPoints += qPoints;
           }
         }
       }
-      // Quy đổi chuẩn xác theo thang điểm tối đa là 10
-      totalScore = totalTestedQuestions > 0
-        ? Math.round((correctCount / totalTestedQuestions) * 10 * 10) / 10
-        : 0;
+
+      if (maxPoints > 0) {
+        if (Math.abs(maxPoints - 10) < 0.05) {
+          totalScore = Math.round(earnedPoints * 10) / 10;
+        } else {
+          totalScore = Math.round((earnedPoints / maxPoints) * 10 * 10) / 10;
+        }
+      } else {
+        totalScore = totalTestedQuestions > 0
+          ? Math.round((correctCount / totalTestedQuestions) * 10 * 10) / 10
+          : 0;
+      }
+      totalScore = Math.min(10, Math.max(0, totalScore));
     }
     score.total_score = totalScore;
     saveDemoDb();

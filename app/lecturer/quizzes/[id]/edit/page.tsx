@@ -9,7 +9,7 @@ import {
   HelpCircle, Lock, Eye, EyeOff, Sparkles, Clock, Calendar, 
   Shuffle, ArrowRightLeft, ShieldBan, Dice5, FileSpreadsheet, 
   FileText, Upload, Download, CopyCheck, Wand2, Star, BookOpen, CheckSquare, Square, KeyRound,
-  Image as ImageIcon
+  Image as ImageIcon, Calculator, Sliders, Award, AlertTriangle, Layers
 } from 'lucide-react';
 import { Question, QuestionOption, Quiz, ClassModule } from '@/types/database';
 import { listClasses, getQuizWithQuestions, updateQuiz } from '@/lib/data';
@@ -98,6 +98,11 @@ export default function EditQuizPage({ params }: { params: { id: string } }) {
     }
   };
 
+  // Thang Điểm Phân Bổ Theo Loại Câu Hỏi
+  const [batchMcPoints, setBatchMcPoints] = useState<number>(0.2);
+  const [batchShortPoints, setBatchShortPoints] = useState<number>(1.0);
+  const [batchEssayPoints, setBatchEssayPoints] = useState<number>(3.0);
+
   // Question Bank State
   const [questions, setQuestions] = useState<Question[]>([
     {
@@ -105,7 +110,7 @@ export default function EditQuizPage({ params }: { params: { id: string } }) {
       quiz_id: 'new',
       question_text: 'Yếu tố nào sau đây là mục tiêu 7Rs cốt lõi trong hoạt động Logistics?',
       question_type: 'multiple_choice',
-      points: 1.0,
+      points: 0.2,
       order_index: 0,
       options: [
         { id: 'opt-1', question_id: 'q-1', option_text: 'Right Product, Right Quantity, Right Condition, Right Place, Right Time, Right Customer, Right Price', is_correct: true, order_index: 0 },
@@ -118,7 +123,7 @@ export default function EditQuizPage({ params }: { params: { id: string } }) {
       quiz_id: 'new',
       question_text: 'Mô hình Bullwhip Effect mô tả hiện tượng biến động nhu cầu gia tăng khi đi ngược lên phía trên Chuỗi cung ứng (từ bán lẻ về nhà sản xuất).',
       question_type: 'true_false',
-      points: 1.0,
+      points: 0.2,
       order_index: 1,
       options: [
         { id: 'opt-tf-1', question_id: 'q-2', option_text: 'Đúng', is_correct: true, order_index: 0 },
@@ -190,12 +195,14 @@ B. Sai`);
           if (optC) options.push({ id: `${qId}-optC`, question_id: qId, option_text: String(optC).replace(/^\*/, '').trim(), is_correct: isCorrectC, order_index: 2 });
           if (optD) options.push({ id: `${qId}-optD`, question_id: qId, option_text: String(optD).replace(/^\*/, '').trim(), is_correct: isCorrectD, order_index: 3 });
 
+          const rowPoints = Number(row['Điểm'] || row['Thang điểm'] || row['Số điểm'] || row['Points']) || batchMcPoints;
+
           newParsedQuestions.push({
             id: qId,
             quiz_id: 'new',
             question_text: String(qText).trim(),
             question_type: options.length > 2 ? 'multiple_choice' : 'true_false',
-            points: 1.0,
+            points: rowPoints,
             order_index: questions.length + idx,
             options,
           });
@@ -304,7 +311,7 @@ B. Sai`);
             quiz_id: 'new',
             question_text: qText,
             question_type: options.length > 2 ? 'multiple_choice' : 'true_false',
-            points: 1.0,
+            points: batchMcPoints,
             order_index: questions.length + idx,
             options,
           });
@@ -324,12 +331,129 @@ B. Sai`);
     }
   };
 
+  // Point Allocation & Breakdown Calculations
+  const totalPoints = Math.round(questions.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 100) / 100;
+  
+  const mcQuestions = questions.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
+  const mcTotalPoints = Math.round(mcQuestions.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 100) / 100;
+  
+  const shortQuestions = questions.filter((q) => q.question_type === 'short_answer');
+  const shortTotalPoints = Math.round(shortQuestions.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 100) / 100;
+
+  const longQuestions = questions.filter((q) => q.question_type === 'long_answer');
+  const longTotalPoints = Math.round(longQuestions.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 100) / 100;
+
+  const updateQuestionPoints = (qId: string, pts: number) => {
+    setQuestions(questions.map((q) => (q.id === qId ? { ...q, points: Math.max(0, Number(pts) || 0) } : q)));
+  };
+
+  const handleApplyBatchPoints = () => {
+    setQuestions(questions.map((q) => {
+      if (q.question_type === 'multiple_choice' || q.question_type === 'true_false') {
+        return { ...q, points: Number(batchMcPoints) || 0 };
+      }
+      if (q.question_type === 'short_answer') {
+        return { ...q, points: Number(batchShortPoints) || 0 };
+      }
+      if (q.question_type === 'long_answer') {
+        return { ...q, points: Number(batchEssayPoints) || 0 };
+      }
+      return q;
+    }));
+  };
+
+  const handleApplyMidtermPreset = () => {
+    setBatchMcPoints(0.2);
+    setBatchShortPoints(1.0);
+    setBatchEssayPoints(3.0);
+    setQuestions(questions.map((q) => {
+      if (q.question_type === 'multiple_choice' || q.question_type === 'true_false') {
+        return { ...q, points: 0.2 };
+      }
+      if (q.question_type === 'short_answer') {
+        return { ...q, points: 1.0 };
+      }
+      if (q.question_type === 'long_answer') {
+        return { ...q, points: 3.0 };
+      }
+      return q;
+    }));
+  };
+
+  const handleDistributeEvenly = () => {
+    if (questions.length === 0) return;
+    const ptPerQ = Math.round((10 / questions.length) * 100) / 100;
+    setQuestions(questions.map((q) => ({ ...q, points: ptPerQ })));
+  };
+
+  const handleScaffoldMidtermTemplate = () => {
+    if (questions.length > 0 && !window.confirm('Thầy/Cô có muốn khởi tạo Khung Đề Thi Midterm Chuẩn (10 điểm: 20 câu trắc nghiệm 0.2đ + 3 câu ngắn 1.0đ + 1 câu tự luận 3.0đ)? Thao tác này sẽ thay thế các câu hỏi hiện tại.')) {
+      return;
+    }
+    setBatchMcPoints(0.2);
+    setBatchShortPoints(1.0);
+    setBatchEssayPoints(3.0);
+
+    const scaffolded: Question[] = [];
+    const timestamp = Date.now();
+
+    // 20 câu trắc nghiệm (0.2 x 20 = 4.0 điểm)
+    for (let i = 1; i <= 20; i++) {
+      const qId = `midterm-mc-${timestamp}-${i}`;
+      scaffolded.push({
+        id: qId,
+        quiz_id: quizId,
+        question_text: `[Phần 1 - Trắc nghiệm] Câu hỏi trắc nghiệm số ${i}...`,
+        question_type: 'multiple_choice',
+        points: 0.2,
+        order_index: i - 1,
+        options: [
+          { id: `${qId}-opt-1`, question_id: qId, option_text: 'Phương án A', is_correct: true, order_index: 0 },
+          { id: `${qId}-opt-2`, question_id: qId, option_text: 'Phương án B', is_correct: false, order_index: 1 },
+          { id: `${qId}-opt-3`, question_id: qId, option_text: 'Phương án C', is_correct: false, order_index: 2 },
+          { id: `${qId}-opt-4`, question_id: qId, option_text: 'Phương án D', is_correct: false, order_index: 3 },
+        ],
+      });
+    }
+
+    // 3 câu ngắn (1.0 x 3 = 3.0 điểm)
+    for (let i = 1; i <= 3; i++) {
+      const qId = `midterm-short-${timestamp}-${i}`;
+      scaffolded.push({
+        id: qId,
+        quiz_id: quizId,
+        question_text: `[Phần 2 - Câu hỏi ngắn] Câu hỏi tình huống / bài tập ngắn số ${i}...`,
+        question_type: 'short_answer',
+        points: 1.0,
+        order_index: 20 + (i - 1),
+        options: [],
+      });
+    }
+
+    // 1 câu tự luận dài (3.0 điểm)
+    const qIdLong = `midterm-long-${timestamp}-1`;
+    scaffolded.push({
+      id: qIdLong,
+      quiz_id: quizId,
+      question_text: `[Phần 3 - Tự luận dài] Trình bày phân tích tình huống thực tế hoặc bài toán chiến lược tổng hợp (3.0 điểm)...`,
+      question_type: 'long_answer',
+      points: 3.0,
+      order_index: 23,
+      options: [],
+    });
+
+    setQuestions(scaffolded);
+    setQuestionsPerStudent(scaffolded.length);
+  };
+
   // Question Authoring Helpers
   const addQuestion = (type: Question['question_type']) => {
     const newQId = `q-${Date.now()}`;
     let defaultOptions: QuestionOption[] = [];
+    let initialPoints = 1.0;
 
     if (type === 'multiple_choice') {
+      initialPoints = batchMcPoints;
       defaultOptions = [
         { id: `opt-${Date.now()}-1`, question_id: newQId, option_text: 'Lựa chọn A', is_correct: true, order_index: 0 },
         { id: `opt-${Date.now()}-2`, question_id: newQId, option_text: 'Lựa chọn B', is_correct: false, order_index: 1 },
@@ -337,20 +461,25 @@ B. Sai`);
         { id: `opt-${Date.now()}-4`, question_id: newQId, option_text: 'Lựa chọn D', is_correct: false, order_index: 3 },
       ];
     } else if (type === 'true_false') {
+      initialPoints = batchMcPoints;
       defaultOptions = [
         { id: `opt-tf-1`, question_id: newQId, option_text: 'Đúng', is_correct: true, order_index: 0 },
         { id: `opt-tf-2`, question_id: newQId, option_text: 'Sai', is_correct: false, order_index: 1 },
       ];
-    } else {
+    } else if (type === 'short_answer') {
+      initialPoints = batchShortPoints;
+      defaultOptions = [];
+    } else if (type === 'long_answer') {
+      initialPoints = batchEssayPoints;
       defaultOptions = [];
     }
 
     const newQ: Question = {
       id: newQId,
-      quiz_id: 'new',
+      quiz_id: quizId,
       question_text: `Câu hỏi mới số ${questions.length + 1}...`,
       question_type: type,
-      points: 1.0,
+      points: initialPoints,
       order_index: questions.length,
       options: defaultOptions,
     };
@@ -878,6 +1007,175 @@ B. Sai`);
             </div>
           )}
 
+          {/* SECTION: THANG ĐIỂM & PHÂN BỔ ĐIỂM THI */}
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 p-6 rounded-2xl border border-indigo-500/30 shadow-xl space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-500/20 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 bg-indigo-500/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+                  <Calculator className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                    <span>Thang Điểm & Phân Bổ Điểm Thi</span>
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${
+                      Math.abs(totalPoints - 10) < 0.05
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    }`}>
+                      {Math.abs(totalPoints - 10) < 0.05
+                        ? '✓ Chuẩn thang điểm 10.0'
+                        : `Chưa tròn 10 điểm (Hiện tại: ${totalPoints}đ)`}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Tùy chỉnh điểm cho từng phần (Trắc nghiệm, Câu ngắn, Tự luận) hoặc phân bổ chi tiết từng câu
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Presets Buttons */}
+              <div className="flex items-center flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleApplyMidtermPreset}
+                  className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm"
+                  title="Áp dụng thang điểm Midterm: Trắc nghiệm 0.2đ, Câu ngắn 1.0đ, Tự luận 3.0đ"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Mẫu Midterm (4đ - 3đ - 3đ)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDistributeEvenly}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium flex items-center space-x-1.5 transition-all"
+                  title="Chia đều 10.0 điểm cho tất cả các câu hiện có"
+                >
+                  <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Chia Đều 10 Điểm</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3-Section Breakdown Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Phần 1 */}
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                    Phần 1: Trắc Nghiệm & Đúng/Sai
+                  </span>
+                  <span className="text-xs font-bold text-white bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30">
+                    {mcTotalPoints} điểm
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between text-xs text-slate-400">
+                  <span>Số lượng: <strong className="text-white">{mcQuestions.length} câu</strong></span>
+                  <span>TB: <strong className="text-indigo-300">{mcQuestions.length > 0 ? (Math.round((mcTotalPoints / mcQuestions.length) * 100) / 100) : 0}đ/câu</strong></span>
+                </div>
+                <div className="pt-2 border-t border-slate-800/80 flex items-center space-x-2">
+                  <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    value={batchMcPoints}
+                    onChange={(e) => setBatchMcPoints(Number(e.target.value) || 0)}
+                    className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-indigo-500"
+                  />
+                  <span className="text-[11px] text-slate-500">đ</span>
+                </div>
+              </div>
+
+              {/* Phần 2 */}
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Phần 2: Câu Hỏi Ngắn
+                  </span>
+                  <span className="text-xs font-bold text-white bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                    {shortTotalPoints} điểm
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between text-xs text-slate-400">
+                  <span>Số lượng: <strong className="text-white">{shortQuestions.length} câu</strong></span>
+                  <span>TB: <strong className="text-emerald-300">{shortQuestions.length > 0 ? (Math.round((shortTotalPoints / shortQuestions.length) * 100) / 100) : 0}đ/câu</strong></span>
+                </div>
+                <div className="pt-2 border-t border-slate-800/80 flex items-center space-x-2">
+                  <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={batchShortPoints}
+                    onChange={(e) => setBatchShortPoints(Number(e.target.value) || 0)}
+                    className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-emerald-500"
+                  />
+                  <span className="text-[11px] text-slate-500">đ</span>
+                </div>
+              </div>
+
+              {/* Phần 3 */}
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                    Phần 3: Tự Luận Dài
+                  </span>
+                  <span className="text-xs font-bold text-white bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/30">
+                    {longTotalPoints} điểm
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between text-xs text-slate-400">
+                  <span>Số lượng: <strong className="text-white">{longQuestions.length} câu</strong></span>
+                  <span>TB: <strong className="text-amber-300">{longQuestions.length > 0 ? (Math.round((longTotalPoints / longQuestions.length) * 100) / 100) : 0}đ/câu</strong></span>
+                </div>
+                <div className="pt-2 border-t border-slate-800/80 flex items-center space-x-2">
+                  <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={batchEssayPoints}
+                    onChange={(e) => setBatchEssayPoints(Number(e.target.value) || 0)}
+                    className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-amber-500"
+                  />
+                  <span className="text-[11px] text-slate-500">đ</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick apply button row & summary bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+              <div className="text-xs text-slate-400">
+                Tổng cộng: <strong className="text-white">{questions.length} câu hỏi</strong> &bull; Tổng điểm hiện có:{' '}
+                <strong className={Math.abs(totalPoints - 10) < 0.05 ? 'text-emerald-400 font-bold text-sm' : 'text-amber-400 font-bold text-sm'}>
+                  {totalPoints} / 10.0 điểm
+                </strong>
+              </div>
+
+              <div className="flex items-center flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleApplyBatchPoints}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md hover:shadow-indigo-500/20 transition-all flex items-center space-x-1.5"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Áp Dụng Phân Bổ Cho Các Câu</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleScaffoldMidtermTemplate}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all flex items-center space-x-1.5"
+                  title="Tạo khung mẫu đề thi Midterm đầy đủ: 20 trắc nghiệm (4đ) + 3 câu ngắn (3đ) + 1 tự luận (3đ)"
+                >
+                  <FilePlus2 className="w-3.5 h-3.5" />
+                  <span>Khởi Tạo Khung Đề Midterm Chuẩn (10đ)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* QUESTION BANK LIST */}
           <div className="pt-6 border-t border-slate-800 space-y-6">
             <div className="flex items-center justify-between">
@@ -933,13 +1231,27 @@ B. Sai`);
                         q.question_type === 'short_answer' ? 'Tự luận ngắn' : 'Tự luận dài'
                       })
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => removeQuestion(q.id)}
-                      className="text-slate-500 hover:text-red-400 p-1 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-1.5 bg-slate-900 px-2.5 py-1 rounded-xl border border-slate-800">
+                        <span className="text-[11px] text-slate-400 font-medium">Thang điểm:</span>
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="0"
+                          value={q.points ?? 1}
+                          onChange={(e) => updateQuestionPoints(q.id, Number(e.target.value))}
+                          className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-0.5 text-xs text-amber-400 font-bold text-right focus:outline-none focus:border-amber-500"
+                        />
+                        <span className="text-[11px] text-slate-400 font-bold">đ</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeQuestion(q.id)}
+                        className="text-slate-500 hover:text-red-400 p-1 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Question Text input */}
