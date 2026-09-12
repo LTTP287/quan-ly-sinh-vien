@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, FilePlus2, BookOpen, Plus, Sparkles, 
   Clock, Eye, EyeOff, CheckSquare, Square, FileCheck2, ArrowRight, 
-  Calendar, KeyRound, Power, ShieldCheck, Lock, AlertCircle, Trash2, Award, Edit3
+  Calendar, KeyRound, Power, ShieldCheck, Lock, AlertCircle, Trash2, Award, Edit3,
+  Calculator, Sliders, CheckCircle2, Layers
 } from 'lucide-react';
 import { Quiz, ClassModule, ClassQuizSchedule } from '@/types/database';
 import { listQuizzes, listClasses, saveQuizSchedules, deleteQuiz, isRemote } from '@/lib/data';
@@ -16,6 +17,96 @@ export default function LecturerTestBankPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [classes, setClasses] = useState<ClassModule[]>([]);
   const [activeQuizForSchedule, setActiveQuizForSchedule] = useState<Quiz | null>(null);
+
+  // Helper tính toán điểm số và 3 phần đề thi
+  const getQuizPointsBreakdown = (quiz: Quiz) => {
+    const questions = quiz.questions || [];
+    if (questions.length === 0) {
+      return {
+        totalPts: 10,
+        mcCount: 20,
+        mcPts: 4.0,
+        shortCount: 3,
+        shortPts: 3.0,
+        longCount: 1,
+        longPts: 3.0,
+      };
+    }
+    const mc = questions.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
+    const mcPts = Math.round(mc.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 10) / 10;
+
+    const short = questions.filter((q) => q.question_type === 'short_answer');
+    const shortPts = Math.round(short.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 10) / 10;
+
+    const long = questions.filter((q) => q.question_type === 'long_answer');
+    const longPts = Math.round(long.reduce((sum, q) => sum + (Number(q.points) || 0), 0) * 10) / 10;
+
+    const totalPts = Math.round((mcPts + shortPts + longPts) * 10) / 10;
+
+    return {
+      totalPts: totalPts > 0 ? totalPts : 10,
+      mcCount: mc.length,
+      mcPts,
+      shortCount: short.length,
+      shortPts,
+      longCount: long.length,
+      longPts,
+    };
+  };
+
+  const handleCreateMidtermTemplate = async () => {
+    try {
+      const { createDefaultMidtermQuiz, saveStoredQuiz } = await import('@/lib/classStore');
+      const midterm = createDefaultMidtermQuiz();
+      saveStoredQuiz(midterm);
+      const updated = await listQuizzes();
+      setQuizzes(updated);
+      alert('Đã khởi tạo thành công Đề Thi Midterm Chuẩn (10 Điểm: 20 trắc nghiệm 4.0đ + 3 câu ngắn 3.0đ + 1 tự luận 3.0đ) vào Ngân Hàng Đề!');
+    } catch (e: any) {
+      alert(`Lỗi khởi tạo đề thi mẫu: ${e?.message || e}`);
+    }
+  };
+
+  const handleApplyMidtermToQuiz = async (quizId: string) => {
+    try {
+      const { getQuizWithQuestions, updateQuiz } = await import('@/lib/data');
+      const target = await getQuizWithQuestions(quizId);
+      if (!target || !target.questions || target.questions.length === 0) {
+        alert('Đề thi này chưa có câu hỏi trong ngân hàng đề. Vui lòng bấm Chỉnh Sửa để thêm câu hỏi.');
+        return;
+      }
+      const updatedQuestions = target.questions.map((q) => {
+        if (q.question_type === 'multiple_choice' || q.question_type === 'true_false') {
+          return { ...q, points: 0.2 };
+        }
+        if (q.question_type === 'short_answer') {
+          return { ...q, points: 1.0 };
+        }
+        if (q.question_type === 'long_answer') {
+          return { ...q, points: 3.0 };
+        }
+        return q;
+      });
+
+      await updateQuiz(
+        quizId,
+        { ...target },
+        updatedQuestions,
+        (target.assigned_class_ids || []).map((cid) => ({
+          class_id: cid,
+          start_at: target.start_at || new Date().toISOString(),
+          end_at: target.end_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+          access_code: target.passcode || null,
+        }))
+      );
+
+      const refreshed = await listQuizzes();
+      setQuizzes(refreshed);
+      alert('Đã áp dụng thang điểm Midterm (0.2đ / 1.0đ / 3.0đ) thành công cho bài thi!');
+    } catch (err: any) {
+      alert(`Lỗi cập nhật thang điểm: ${err?.message || err}`);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -135,31 +226,151 @@ export default function LecturerTestBankPage() {
           </div>
         </div>
 
-        {/* Quizzes Test Bank Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {quizzes.map((quiz) => (
-            <div key={quiz.id} className="glass-card p-6 rounded-2xl border border-slate-800 space-y-6 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-semibold px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                    Test Bank Dùng Chung
-                  </span>
-                  <span className="text-xs text-slate-400 flex items-center space-x-1">
-                    <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>{quiz.time_limit_minutes} phút</span>
-                  </span>
-                </div>
-
-                <h3 className="text-lg font-bold text-white mb-2">{quiz.title}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed mb-4">{quiz.description}</p>
-
-                <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span>🎲 Rút ngẫu nhiên/SV: <strong className="text-purple-400">{quiz.questions_per_student || 5} câu</strong></span>
-                    <span>🔒 Trộn đề & Khóa câu trước</span>
-                  </div>
-                </div>
+        {/* BANNER: HỆ THỐNG THANG ĐIỂM & PHÂN BỔ ĐIỂM THI TEST BANK */}
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 p-6 rounded-2xl border border-indigo-500/30 shadow-xl space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-start space-x-3.5">
+              <div className="p-3 bg-indigo-500/20 text-indigo-400 rounded-xl border border-indigo-500/30 shrink-0">
+                <Calculator className="w-6 h-6" />
               </div>
+              <div>
+                <div className="flex items-center space-x-2.5">
+                  <h3 className="text-lg font-bold text-white">Hệ Thống Thang Điểm & Phân Bổ Điểm Thi (Thang Điểm 10.0)</h3>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    ✓ Chuẩn hóa 3 phần
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Đã thiết lập sẵn khung thang điểm 10.0 điểm phân bổ chuẩn 3 phần theo đúng yêu cầu khảo thí của Thầy/Cô:
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center flex-wrap gap-2.5">
+              <button
+                type="button"
+                onClick={handleCreateMidtermTemplate}
+                className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center space-x-2 transition-all shadow-sm"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>⚡ Khởi Tạo Đề Thi Midterm Chuẩn (10đ)</span>
+              </button>
+
+              <Link
+                href="/lecturer/quizzes/new"
+                className="gradient-button px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tạo Đề Thi Mới Tùy Chỉnh</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* 3-Section Cards Display */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2">
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-indigo-500/20 space-y-1">
+              <span className="text-[11px] font-bold uppercase text-indigo-400">Phần 1: Trắc Nghiệm (4.0 Điểm)</span>
+              <p className="text-xs text-white font-semibold">20 câu &times; 0.2 điểm/câu = 4.0đ</p>
+              <p className="text-[11px] text-slate-400">Đánh giá kiến thức nền tảng & khái niệm cốt lõi</p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-emerald-500/20 space-y-1">
+              <span className="text-[11px] font-bold uppercase text-emerald-400">Phần 2: Câu Hỏi Ngắn (3.0 Điểm)</span>
+              <p className="text-xs text-white font-semibold">3 câu &times; 1.0 điểm/câu = 3.0đ</p>
+              <p className="text-[11px] text-slate-400">Bài tập tính toán & phân tích tình huống ngắn</p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-amber-500/20 space-y-1">
+              <span className="text-[11px] font-bold uppercase text-amber-400">Phần 3: Tự Luận Dài (3.0 Điểm)</span>
+              <p className="text-xs text-white font-semibold">1 câu tự luận tổng hợp = 3.0đ</p>
+              <p className="text-[11px] text-slate-400">Case study & giải pháp chiến lược chuỗi cung ứng</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Quizzes Test Bank Cards */}
+        {quizzes.length === 0 ? (
+          <div className="glass-card p-12 rounded-2xl border border-slate-800 text-center space-y-4">
+            <div className="p-4 bg-indigo-500/10 text-indigo-400 rounded-2xl w-16 h-16 mx-auto flex items-center justify-center">
+              <Calculator className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Chưa có đề thi nào trong Ngân hàng đề Test Bank</h3>
+            <p className="text-xs text-slate-400 max-w-md mx-auto">
+              Thầy/Cô có thể tạo nhanh đề thi Midterm mẫu chuẩn 3 phần (10.0 điểm: 20 câu trắc nghiệm 4.0đ + 3 câu ngắn 3.0đ + 1 câu dài 3.0đ) chỉ với 1 cú nhấp.
+            </p>
+            <div className="pt-2 flex items-center justify-center space-x-3">
+              <button
+                onClick={handleCreateMidtermTemplate}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center space-x-2 transition-all shadow-lg"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>⚡ Khởi Tạo Ngân Hàng Đề Thi Midterm Chuẩn (10 Điểm)</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {quizzes.map((quiz) => {
+              const pts = getQuizPointsBreakdown(quiz);
+              return (
+                <div key={quiz.id} className="glass-card p-6 rounded-2xl border border-slate-800 space-y-6 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        Test Bank Dùng Chung
+                      </span>
+                      <span className="text-xs text-slate-400 flex items-center space-x-1">
+                        <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>{quiz.time_limit_minutes} phút</span>
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg font-bold text-white mb-2">{quiz.title}</h3>
+                    <p className="text-xs text-slate-400 leading-relaxed mb-4">{quiz.description}</p>
+
+                    {/* THANG ĐIỂM & PHÂN BỔ 3 PHẦN TRÊN TỪNG ĐỀ THI */}
+                    <div className="p-4 rounded-xl bg-slate-900/90 border border-indigo-500/30 space-y-2.5 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Calculator className="w-4 h-4 text-indigo-400" />
+                          <span className="text-xs font-bold text-white uppercase tracking-wider">Thang Điểm Bài Thi</span>
+                        </div>
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                          Math.abs(pts.totalPts - 10) < 0.05
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        }`}>
+                          {pts.totalPts} / 10.0 điểm
+                        </span>
+                      </div>
+
+                      {/* 3 Phần phân bổ */}
+                      <div className="grid grid-cols-3 gap-2 text-[11px] pt-1">
+                        <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
+                          <span className="block text-[10px] font-bold text-indigo-400">P1. Trắc Nghiệm</span>
+                          <span className="font-bold text-white text-xs">{pts.mcPts}đ</span>
+                          <span className="block text-[10px] text-slate-400">{pts.mcCount} câu</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
+                          <span className="block text-[10px] font-bold text-emerald-400">P2. Câu Ngắn</span>
+                          <span className="font-bold text-white text-xs">{pts.shortPts}đ</span>
+                          <span className="block text-[10px] text-slate-400">{pts.shortCount} câu</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
+                          <span className="block text-[10px] font-bold text-amber-400">P3. Tự Luận</span>
+                          <span className="font-bold text-white text-xs">{pts.longPts}đ</span>
+                          <span className="block text-[10px] text-slate-400">{pts.longCount} câu</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span>🎲 Rút ngẫu nhiên/SV: <strong className="text-purple-400">{quiz.questions_per_student || 24} câu</strong></span>
+                        <span>🔒 Trộn đề & Khóa câu trước</span>
+                      </div>
+                    </div>
+                  </div>
 
               {/* PER-CLASS SCHEDULE & SECURITY ACCESS MANAGEMENT */}
               <div className="pt-4 border-t border-slate-800 space-y-4">
@@ -276,38 +487,51 @@ export default function LecturerTestBankPage() {
                   })}
                 </div>
 
-                <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2">
+                <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="flex items-center flex-wrap gap-2">
                     <Link
                       href={`/lecturer/quizzes/${quiz.id}/edit`}
-                      className="inline-flex items-center text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-3 py-1.5 rounded-lg space-x-1 transition-colors"
+                      className="inline-flex items-center text-xs font-bold text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 px-3 py-1.5 rounded-xl space-x-1.5 transition-colors shadow-sm"
+                      title="Mở giao diện điều chỉnh thang điểm và ngân hàng câu hỏi"
                     >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Xem & Điều Chỉnh Đề</span>
+                      <Calculator className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Chỉnh Sửa Thang Điểm & Đề Thi</span>
                     </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyMidtermToQuiz(quiz.id)}
+                      className="inline-flex items-center text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-3 py-1.5 rounded-xl space-x-1.5 transition-colors shadow-sm"
+                      title="Áp dụng thang điểm Midterm: 0.2đ Trắc nghiệm + 1.0đ Câu ngắn + 3.0đ Tự luận"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Mẫu Midterm (4đ - 3đ - 3đ)</span>
+                    </button>
 
                     <Link
                       href={`/lecturer/quizzes/${quiz.id}/analytics`}
-                      className="inline-flex items-center text-xs font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 px-3 py-1.5 rounded-lg space-x-1 transition-colors"
+                      className="inline-flex items-center text-xs font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 px-3 py-1.5 rounded-xl space-x-1 transition-colors"
                     >
                       <FileCheck2 className="w-3.5 h-3.5" />
-                      <span>Xem Bảng Điểm & Excel</span>
+                      <span>Xem Bảng Điểm</span>
                     </Link>
                   </div>
 
-                  <button
-                    onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
-                    className="inline-flex items-center text-xs font-semibold text-rose-400 hover:text-rose-300 space-x-1 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
-                    title="Xoá đề thi khỏi ngân hàng"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Xoá đề</span>
-                  </button>
+                    <button
+                      onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
+                      className="inline-flex items-center text-xs font-semibold text-rose-400 hover:text-rose-300 space-x-1 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
+                      title="Xoá đề thi khỏi ngân hàng"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Xoá đề</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+      )}
       </main>
     </div>
   );
