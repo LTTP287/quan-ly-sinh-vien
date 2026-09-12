@@ -30,16 +30,9 @@ export async function POST(request: Request) {
 
   if (role === 'student') {
     const code = String(body.student_code || '').trim();
-    const dob = normalizeDob(String(body.date_of_birth || ''));
 
     if (!code) {
       return NextResponse.json({ error: 'Vui lòng nhập Mã sinh viên.' }, { status: 400 });
-    }
-    if (!dob) {
-      return NextResponse.json(
-        { error: 'Vui lòng nhập ngày sinh.' },
-        { status: 400 }
-      );
     }
 
     // Đồng bộ dữ liệu demo (sinh viên, lớp học, đề thi) từ trình duyệt lên bộ nhớ server
@@ -116,9 +109,146 @@ export async function POST(request: Request) {
       saveDemoDb();
     }
 
+    if (body.mode === 'in_class') {
+      const passcode = String(body.passcode || '').trim().toUpperCase();
+      const { demoDb } = await import('@/lib/server/demoStore');
+      const db = demoDb();
+      const stUser = db.users.find(
+        (u) => u.role === 'student' && (u.student_code || '').trim().toUpperCase() === code.toUpperCase()
+      );
+      if (!stUser) {
+        return NextResponse.json(
+          { error: 'Mã sinh viên không có trong danh sách lớp được phân bổ.' },
+          { status: 401 }
+        );
+      }
+
+      // Tìm lớp sinh viên đang theo học
+      const enrolledClassIds = new Set(
+        db.enrollments
+          .filter(
+            (e) => e.student_id === stUser.id || (stUser.student_code && e.student_id === `st-${stUser.student_code}`)
+          )
+          .map((e) => e.class_id)
+      );
+
+      // Tìm các bài quiz mở cho các lớp của sinh viên
+      const availableQuizzes = db.quizzes.filter((q) => {
+        if (!q.is_published || q.is_active === false) return false;
+        const qClasses = Array.isArray(q.class_ids) ? q.class_ids : [];
+        return qClasses.some((cId) => enrolledClassIds.has(cId));
+      });
+
+      if (availableQuizzes.length === 0) {
+        return NextResponse.json(
+          { error: 'Lớp học phần của bạn hiện chưa có bài thi nào đang mở.' },
+          { status: 404 }
+        );
+      }
+
+      // Khớp bài quiz
+      let targetQuiz = availableQuizzes.find((q) => {
+        const qPass = (q.passcode || '').trim().toUpperCase();
+        return qPass && qPass === passcode;
+      });
+
+      if (!targetQuiz) {
+        const requirePassQuiz = availableQuizzes.find((q) => !!q.passcode);
+        if (requirePassQuiz && (!passcode || (requirePassQuiz.passcode || '').trim().toUpperCase() !== passcode)) {
+          return NextResponse.json(
+            { error: 'Mã phòng thi không chính xác hoặc bài thi yêu cầu mã phòng thi hợp lệ.' },
+            { status: 403 }
+          );
+        }
+        targetQuiz = availableQuizzes[0];
+      }
+
+      // Kiểm tra xem đã nộp bài thi này chưa
+      const existingScore = db.scores.find((s) => {
+        if (s.quiz_id !== targetQuiz!.id || !s.submitted_at) return false;
+        if (s.student_id === stUser.id) return true;
+        if (stUser.student_code && s.student_id === `st-${stUser.student_code}`) return true;
+        return false;
+      });
+
+      if (existingScore) {
+        return NextResponse.json(
+          { error: 'Bạn đã hoàn thành bài thi này rồi và không thể làm lại.' },
+          { status: 409 }
+        );
+      }
+
+      user = {
+        id: stUser.id,
+        email: stUser.email,
+        student_code: stUser.student_code,
+        full_name: stUser.full_name,
+        role: 'student' as const,
+      };
+
+      // Đăng nhập phiên + phát vé phòng thi
+      const { createSession, updateSessionToken } = await import('@/lib/server/backend');
+      const { signJwt, SESSION_COOKIE, SESSION_TTL_SECONDS, examTicketCookie, EXAM_TICKET_TTL_SECONDS } = await import(
+        '@/lib/auth/jwt'
+      );
+
+      const provisional = await signJwt(
+        { sub: user.id, sid: 'pending', role: user.role, code: user.student_code, name: user.full_name },
+        SESSION_TTL_SECONDS
+      );
+      const sessionId = await createSession(user.id, provisional, request.headers.get('user-agent'));
+      const token = await signJwt(
+        {
+          sub: user.id,
+          sid: sessionId,
+          role: user.role,
+          code: user.student_code,
+          name: user.full_name,
+          email: user.email,
+        },
+        SESSION_TTL_SECONDS
+      );
+      await updateSessionToken(sessionId, token);
+
+      const ticket = await signJwt({ sub: user.id, quiz: targetQuiz.id }, EXAM_TICKET_TTL_SECONDS);
+
+      const response = NextResponse.json({
+        user: {
+          id: user.id,
+          full_name: user.full_name,
+          role: user.role,
+          student_code: user.student_code,
+          email: user.email,
+        },
+        redirect: `/student/exam/${targetQuiz.id}`,
+      });
+
+      response.cookies.set(SESSION_COOKIE, token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: SESSION_TTL_SECONDS,
+      });
+
+      response.cookies.set(examTicketCookie(targetQuiz.id), ticket, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: EXAM_TICKET_TTL_SECONDS,
+      });
+
+      return response;
+    }
+
+    const dob = normalizeDob(String(body.date_of_birth || ''));
+    if (!dob) {
+      return NextResponse.json({ error: 'Vui lòng nhập Ngày sinh (DDMMYYYY).' }, { status: 400 });
+    }
+
     user = await authenticateStudent(code, dob);
     if (!user) {
-      // Không phân biệt "sai MSSV" với "sai ngày sinh" để tránh dò tài khoản
       return NextResponse.json(
         { error: 'Mã sinh viên hoặc ngày sinh không đúng.' },
         { status: 401 }

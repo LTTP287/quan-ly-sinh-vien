@@ -67,6 +67,26 @@ export async function signInStudent(studentCode: string, dateOfBirth: string): P
   return postLogin(body);
 }
 
+/**
+ * Vào thi tại lớp siêu tốc: MSSV + Mã phòng thi (Room Passcode).
+ * Xác thực sinh viên thuộc lớp, kiểm tra mã phòng thi & cấp vé vào thẳng phòng thi.
+ */
+export async function joinInClassExam(studentCode: string, passcode: string): Promise<AuthResult> {
+  const body: any = {
+    role: 'student',
+    mode: 'in_class',
+    student_code: studentCode.trim(),
+    passcode: (passcode || '').trim(),
+  };
+  if (!isRemote) {
+    body.demo_students = local.getAllStoredStudents();
+    body.demo_classes = local.getStoredClasses();
+    body.demo_enrollments = local.getAllStoredEnrollments();
+    body.demo_quizzes = local.getStoredQuizzes();
+  }
+  return postLogin(body);
+}
+
 /** Đăng nhập giảng viên: email + mật khẩu. */
 export async function signInLecturer(email: string, password: string): Promise<AuthResult> {
   const body: any = { role: 'lecturer', email: email.trim(), password };
