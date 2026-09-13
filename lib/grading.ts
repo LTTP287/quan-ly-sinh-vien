@@ -28,9 +28,11 @@ export function gradeSubmission(
     const points = typeof q.points === 'number' ? q.points : 1;
     totalPoints += points;
 
-    const selectedOptionId = selectedAnswers[q.id] || null;
-    const selectedOption = q.options?.find((o) => o.id === selectedOptionId);
-    const isCorrect = !!selectedOption?.is_correct;
+    const isWritten = q.question_type === 'short_answer' || q.question_type === 'long_answer';
+    const answerVal = selectedAnswers[q.id]?.trim();
+    const selectedOptionId = isWritten ? null : (selectedAnswers[q.id] || null);
+    const selectedOption = !isWritten ? q.options?.find((o) => o.id === selectedOptionId) : undefined;
+    const isCorrect = isWritten ? !!(answerVal && answerVal.length > 0) : !!selectedOption?.is_correct;
 
     if (isCorrect) {
       earnedPoints += points;
@@ -42,7 +44,8 @@ export function gradeSubmission(
       submission_id: submissionId,
       question_id: q.id,
       selected_option_id: selectedOptionId,
-      is_correct: selectedOptionId ? isCorrect : null,
+      answer_text: isWritten ? (answerVal || '') : undefined,
+      is_correct: (isWritten ? answerVal : selectedOptionId) ? isCorrect : null,
       score_awarded: isCorrect ? points : 0,
     });
   });

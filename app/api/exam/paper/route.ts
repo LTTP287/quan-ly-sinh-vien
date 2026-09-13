@@ -87,8 +87,15 @@ export async function POST(request: Request) {
       ? [...quiz.questions]
       : [...DEFAULT_QUESTION_BANK];
 
-    const questionsPerStudent = quiz?.questions_per_student || 5;
-    const sampling = quiz?.section_sampling;
+    const hasSpecialSections = questions.some((q) => q.question_type === 'short_answer' || q.question_type === 'long_answer');
+    let sampling = quiz?.section_sampling;
+    if (!sampling && hasSpecialSections) {
+      sampling = {
+        multiple_choice: questions.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false').length,
+        short_answer: questions.filter((q) => q.question_type === 'short_answer').length,
+        long_answer: questions.filter((q) => q.question_type === 'long_answer').length,
+      };
+    }
 
     // Rút ngẫu nhiên theo từng phần (section_sampling) nếu có cấu hình:
     // Ví dụ: phần 1 rút 20 câu, phần 2 rút 3 câu, phần 3 rút 1 câu
@@ -113,6 +120,10 @@ export async function POST(request: Request) {
         ...longPool.slice(0, longTake),
       ];
     } else {
+      const questionsPerStudent = quiz?.questions_per_student && quiz.questions_per_student > 0
+        ? quiz.questions_per_student
+        : questions.length;
+
       // Xáo trộn thứ tự các câu hỏi trong bộ câu hỏi
       if (quiz?.shuffle_questions !== false) {
         questions = shuffleArray(questions, rng);

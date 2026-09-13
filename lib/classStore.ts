@@ -477,7 +477,13 @@ export function createDefaultMidtermQuiz(): Quiz {
     shuffle_questions: true,
     shuffle_options: true,
     prevent_previous: true,
+    passcode: 'LOG888',
     questions_per_student: 24,
+    section_sampling: {
+      multiple_choice: 20,
+      short_answer: 3,
+      long_answer: 1,
+    },
     created_at: now.toISOString(),
     questions: allQuestions,
   };
@@ -503,7 +509,29 @@ export function getStoredQuizzes(): Quiz[] {
       return initial;
     }
 
-    return parsed;
+    const updated = parsed.map((q) => {
+      const isMidterm = q.id === 'midterm-scm-2026' || (q.title && q.title.toLowerCase().includes('midterm'));
+      const hasSections = q.questions?.some((x) => x.question_type === 'short_answer' || x.question_type === 'long_answer');
+      if (isMidterm || hasSections) {
+        const mcCount = q.questions?.filter((x) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20;
+        const shortCount = q.questions?.filter((x) => x.question_type === 'short_answer').length || 3;
+        const longCount = q.questions?.filter((x) => x.question_type === 'long_answer').length || 1;
+        const totalSample = mcCount + shortCount + longCount;
+        return {
+          ...q,
+          passcode: q.passcode || 'LOG888',
+          questions_per_student: q.questions_per_student && q.questions_per_student >= totalSample ? q.questions_per_student : totalSample,
+          section_sampling: q.section_sampling || {
+            multiple_choice: mcCount,
+            short_answer: shortCount,
+            long_answer: longCount,
+          },
+        };
+      }
+      return q;
+    });
+
+    return updated;
   } catch (e) {
     return [createDefaultMidtermQuiz()];
   }

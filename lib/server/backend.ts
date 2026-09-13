@@ -408,18 +408,26 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           }
           return false;
         });
-        const assignedClass = classes.find((c) => q.class_ids.includes(c.id)) || classes[0];
+        const studentClass = classes.find((c) => q.class_ids.includes(c.id)) || classes[0];
+        const classSchedule = studentClass ? q.class_schedules?.[studentClass.id] : undefined;
+        const effectivePasscode = (classSchedule?.access_code && classSchedule.access_code.trim())
+          || (q.passcode && q.passcode.trim())
+          || '';
+        const startAt = classSchedule?.start_at || q.start_at;
+        const endAt = classSchedule?.end_at || q.end_at;
+        const isActive = classSchedule ? classSchedule.is_active !== false : q.is_active;
+
         return {
           id: q.id,
           title: q.title,
           description: q.description,
           time_limit_minutes: q.time_limit_minutes,
-          state: classifyQuiz(q.start_at, q.end_at, q.is_active),
-          start_at: q.start_at,
-          end_at: q.end_at,
-          requires_passcode: !!q.passcode,
+          state: classifyQuiz(startAt, endAt, isActive),
+          start_at: startAt,
+          end_at: endAt,
+          requires_passcode: !!effectivePasscode,
           passcode_expires_at: q.passcode_expires_at,
-          class_name: assignedClass?.name || assignedClass?.code || 'Introduction to Logistics & SCM',
+          class_name: studentClass?.name || studentClass?.code || 'Introduction to Logistics & SCM',
           submitted: !!score?.submitted_at,
           score: q.show_results ? score?.total_score ?? null : null,
           show_results: q.show_results,
@@ -473,7 +481,7 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
     const { data: assignments } = await supabase
       .from('quiz_classes')
       .select(
-        'class_id, start_at, end_at, is_active, quiz:quizzes(id, title, description, time_limit_minutes, is_published, show_results, passcode, passcode_expires_at)'
+        'class_id, start_at, end_at, is_active, access_code, quiz:quizzes(id, title, description, time_limit_minutes, is_published, show_results, passcode, passcode_expires_at)'
       )
       .in('class_id', classIds);
 
@@ -488,6 +496,9 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
       .filter((a: any) => a.quiz?.is_published)
       .map((a: any) => {
         const sub = subByQuiz.get(a.quiz.id);
+        const effectivePasscode = (a.access_code && String(a.access_code).trim())
+          || (a.quiz?.passcode && String(a.quiz.passcode).trim())
+          || '';
         return {
           id: a.quiz.id,
           title: a.quiz.title,
@@ -497,7 +508,7 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           start_at: a.start_at,
           end_at: a.end_at,
           // chỉ trả cờ boolean, KHÔNG trả mã phòng thi
-          requires_passcode: !!(a.quiz.passcode && String(a.quiz.passcode).trim()),
+          requires_passcode: !!effectivePasscode,
           passcode_expires_at: a.quiz.passcode_expires_at,
           class_name: classes.find((c) => c.id === a.class_id)?.name || '',
           submitted: !!sub?.submitted_at,
@@ -605,20 +616,31 @@ export async function checkQuizPasscode(
     if (!isAllowed) {
       return { ok: false, reason: 'NOT_ASSIGNED' };
     }
-    if (!quiz.is_active) return { ok: false, reason: 'ROOM_CLOSED' };
+
+    const assignedClassId = myClassIds.find((id) => quiz.class_ids.includes(id));
+    const classSchedule = assignedClassId ? quiz.class_schedules?.[assignedClassId] : undefined;
+    const startAt = classSchedule?.start_at || quiz.start_at;
+    const endAt = classSchedule?.end_at || quiz.end_at;
+    const isActive = classSchedule ? classSchedule.is_active !== false : quiz.is_active;
+
+    if (!isActive) return { ok: false, reason: 'ROOM_CLOSED' };
 
     const now = Date.now();
-    if (now < new Date(quiz.start_at).getTime()) return { ok: false, reason: 'NOT_STARTED' };
-    if (now > new Date(quiz.end_at).getTime()) return { ok: false, reason: 'ENDED' };
+    if (now < new Date(startAt).getTime()) return { ok: false, reason: 'NOT_STARTED' };
+    if (now > new Date(endAt).getTime()) return { ok: false, reason: 'ENDED' };
     if (quiz.passcode_expires_at && now > new Date(quiz.passcode_expires_at).getTime()) {
       return { ok: false, reason: 'PASSCODE_EXPIRED' };
     }
+
     // Kiểm tra mã PIN phòng thi:
-    // 1. Nếu đề KHÔNG đặt mã PIN -> Cho vào làm bài trực tiếp.
-    // 2. Nếu đề CÓ đặt mã PIN -> Bắt buộc sinh viên phải nhập đúng mã PIN đã cài đặt.
-    if (quiz.passcode && quiz.passcode.trim()) {
+    // Kiểm tra mã PIN của lịch thi theo lớp (classSchedule.access_code) hoặc mã PIN chung (quiz.passcode)
+    const expectedPasscode = (classSchedule?.access_code && classSchedule.access_code.trim())
+      || (quiz.passcode && quiz.passcode.trim())
+      || '';
+
+    if (expectedPasscode) {
       const input = (passcode || '').trim().toUpperCase();
-      const expected = quiz.passcode.trim().toUpperCase();
+      const expected = expectedPasscode.trim().toUpperCase();
       if (!input || input !== expected) {
         return { ok: false, reason: 'WRONG_PASSCODE' };
       }

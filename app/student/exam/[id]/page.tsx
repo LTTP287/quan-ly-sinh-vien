@@ -164,11 +164,44 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
       }
       const bank = (found.questions && found.questions.length > 0) ? found.questions : DEFAULT_QUESTION_BANK;
 
-      let sampled = [...bank];
-      if (found.questions_per_student && found.questions_per_student < bank.length) {
-        sampled = shuffleArray(bank).slice(0, found.questions_per_student);
-      } else if (found.shuffle_questions) {
-        sampled = shuffleArray(bank);
+      const hasSpecialSections = bank.some((q) => q.question_type === 'short_answer' || q.question_type === 'long_answer');
+      let sampling = found.section_sampling;
+      if (!sampling && hasSpecialSections) {
+        sampling = {
+          multiple_choice: bank.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false').length,
+          short_answer: bank.filter((q) => q.question_type === 'short_answer').length,
+          long_answer: bank.filter((q) => q.question_type === 'long_answer').length,
+        };
+      }
+
+      let sampled: Question[] = [];
+      if (sampling && (typeof sampling.multiple_choice === 'number' || typeof sampling.short_answer === 'number' || typeof sampling.long_answer === 'number')) {
+        let mcPool = bank.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
+        let shortPool = bank.filter((q) => q.question_type === 'short_answer');
+        let longPool = bank.filter((q) => q.question_type === 'long_answer');
+
+        if (found.shuffle_questions !== false) {
+          mcPool = shuffleArray(mcPool);
+          shortPool = shuffleArray(shortPool);
+          longPool = shuffleArray(longPool);
+        }
+
+        const mcTake = Math.min(mcPool.length, Math.max(0, sampling.multiple_choice ?? mcPool.length));
+        const shortTake = Math.min(shortPool.length, Math.max(0, sampling.short_answer ?? shortPool.length));
+        const longTake = Math.min(longPool.length, Math.max(0, sampling.long_answer ?? longPool.length));
+
+        sampled = [
+          ...mcPool.slice(0, mcTake),
+          ...shortPool.slice(0, shortTake),
+          ...longPool.slice(0, longTake),
+        ];
+      } else {
+        sampled = [...bank];
+        if (found.questions_per_student && found.questions_per_student < bank.length) {
+          sampled = shuffleArray(bank).slice(0, found.questions_per_student);
+        } else if (found.shuffle_questions) {
+          sampled = shuffleArray(bank);
+        }
       }
       if (found.shuffle_options) {
         sampled = sampled.map((q) => ({ ...q, options: q.options ? shuffleArray(q.options) : [] }));

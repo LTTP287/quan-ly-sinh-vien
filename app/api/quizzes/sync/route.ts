@@ -86,9 +86,40 @@ export async function POST(request: Request) {
     for (const q of quizzes) {
       if (!q.id) continue;
       const classIds = Array.isArray(q.assigned_class_ids) ? q.assigned_class_ids : [];
-      const passcode = q.passcode || q.access_code || '';
+      let passcode = (q.passcode || q.access_code || '').trim().toUpperCase();
+      if (!passcode && q.class_schedules) {
+        for (const sc of Object.values(q.class_schedules as Record<string, any>)) {
+          if (sc?.access_code?.trim()) {
+            passcode = sc.access_code.trim().toUpperCase();
+            break;
+          }
+        }
+      }
+      if (!passcode && (q.id === 'midterm-scm-2026' || (q.title && q.title.toLowerCase().includes('midterm')))) {
+        passcode = 'LOG888';
+      }
 
       const idx = db.quizzes.findIndex((x) => x.id === q.id);
+      const questionsList = (Array.isArray(q.questions) && q.questions.length > 0)
+        ? q.questions
+        : (idx >= 0 && db.quizzes[idx]?.questions && db.quizzes[idx].questions!.length > 0)
+          ? db.quizzes[idx].questions
+          : (await import('@/lib/classStore')).createDefaultMidtermQuiz().questions;
+
+      const hasSpecial = questionsList.some((x: any) => x.question_type === 'short_answer' || x.question_type === 'long_answer');
+      let sectionSampling = q.section_sampling || null;
+      if (!sectionSampling && hasSpecial) {
+        sectionSampling = {
+          multiple_choice: questionsList.filter((x: any) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20,
+          short_answer: questionsList.filter((x: any) => x.question_type === 'short_answer').length || 3,
+          long_answer: questionsList.filter((x: any) => x.question_type === 'long_answer').length || 1,
+        };
+      }
+
+      const totalNeeded = sectionSampling
+        ? (sectionSampling.multiple_choice || 0) + (sectionSampling.short_answer || 0) + (sectionSampling.long_answer || 0)
+        : questionsList.length;
+
       const demoQuizItem: any = {
         id: q.id,
         title: q.title || 'Đề thi',
@@ -96,22 +127,19 @@ export async function POST(request: Request) {
         time_limit_minutes: Number(q.time_limit_minutes) || 45,
         is_published: q.is_published !== false,
         show_results: !!q.show_results,
-        passcode: passcode.trim().toUpperCase() || null,
+        passcode: passcode || null,
         passcode_expires_at: q.passcode_expires_at || null,
         class_ids: classIds,
+        class_schedules: q.class_schedules || {},
         start_at: q.start_at || new Date(Date.now() - 3600000).toISOString(),
         end_at: q.end_at || new Date(Date.now() + 86400000 * 7).toISOString(),
         is_active: q.is_active !== false,
         shuffle_questions: q.shuffle_questions !== false,
         shuffle_options: q.shuffle_options !== false,
         prevent_previous: !!q.prevent_previous,
-        questions_per_student: q.questions_per_student,
-        section_sampling: q.section_sampling || null,
-        questions: (Array.isArray(q.questions) && q.questions.length > 0)
-          ? q.questions
-          : (idx >= 0 && db.quizzes[idx]?.questions && db.quizzes[idx].questions!.length > 0)
-            ? db.quizzes[idx].questions
-            : (await import('@/lib/classStore')).DEFAULT_QUESTION_BANK,
+        questions_per_student: q.questions_per_student && q.questions_per_student >= totalNeeded ? q.questions_per_student : totalNeeded,
+        section_sampling: sectionSampling,
+        questions: questionsList,
       };
 
       if (idx >= 0) {

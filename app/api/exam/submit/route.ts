@@ -85,10 +85,17 @@ export async function POST(request: Request) {
         if (q) {
           const qPoints = typeof q.points === 'number' && q.points > 0 ? q.points : (10 / totalTestedQuestions);
           maxPoints += qPoints;
-          const opt = (q.options || []).find((o: any) => o.id === a.option_id);
-          if (opt && opt.is_correct) {
-            correctCount++;
-            earnedPoints += qPoints;
+          if (q.question_type === 'short_answer' || q.question_type === 'long_answer') {
+            if (a.answer_text && a.answer_text.trim().length > 0) {
+              correctCount++;
+              earnedPoints += qPoints;
+            }
+          } else {
+            const opt = (q.options || []).find((o: any) => o.id === a.option_id);
+            if (opt && opt.is_correct) {
+              correctCount++;
+              earnedPoints += qPoints;
+            }
           }
         }
       }

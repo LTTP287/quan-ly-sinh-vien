@@ -29,6 +29,7 @@ export interface DemoSession {
 
 import fs from 'fs';
 import path from 'path';
+import { createDefaultMidtermQuiz } from '@/lib/classStore';
 
 export interface DemoQuestionOption {
   id: string;
@@ -42,7 +43,7 @@ export interface DemoQuestion {
   id: string;
   quiz_id: string;
   question_text: string;
-  question_type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay';
+  question_type: 'multiple_choice' | 'true_false' | 'short_answer' | 'long_answer' | 'essay';
   points: number;
   order_index: number;
   image_url?: string | null;
@@ -59,6 +60,7 @@ export interface DemoQuiz {
   passcode: string | null;
   passcode_expires_at: string | null;
   class_ids: string[];
+  class_schedules?: Record<string, { class_id: string; start_at: string; end_at: string; access_code?: string | null; is_active?: boolean }>;
   start_at: string;
   end_at: string;
   is_active: boolean;
@@ -252,11 +254,46 @@ function seed(): DemoDb {
     questions: chapter3Questions,
   };
 
+  const midterm = createDefaultMidtermQuiz();
+  const midtermQuiz: DemoQuiz = {
+    id: midterm.id,
+    title: midterm.title,
+    description: midterm.description || '',
+    time_limit_minutes: midterm.time_limit_minutes,
+    is_published: true,
+    show_results: false,
+    passcode: 'LOG888',
+    passcode_expires_at: null,
+    class_ids: ['class-scm201-i'],
+    class_schedules: {
+      'class-scm201-i': {
+        class_id: 'class-scm201-i',
+        start_at: new Date(Date.now() - 3600000).toISOString().slice(0, 16),
+        end_at: new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 16),
+        access_code: 'LOG888',
+        is_active: true,
+      },
+    },
+    start_at: new Date(Date.now() - 3600000).toISOString(),
+    end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+    is_active: true,
+    shuffle_questions: true,
+    shuffle_options: true,
+    prevent_previous: true,
+    questions_per_student: 24,
+    section_sampling: {
+      multiple_choice: 20,
+      short_answer: 3,
+      long_answer: 1,
+    },
+    questions: (midterm.questions || []) as DemoQuestion[],
+  };
+
   return {
     users: [...lecturers, defaultStudent],
     classes: [defaultClass],
     enrollments: [{ class_id: 'class-scm201-i', student_id: 'st-123456789' }],
-    quizzes: [defaultQuiz],
+    quizzes: [defaultQuiz, midtermQuiz],
     sessions: [],
     scores: [],
   };
@@ -298,7 +335,84 @@ export function demoDb(): DemoDb {
       saveDemoDb();
     }
   }
-  return globalStore.__uniquizDemoDb;
+
+  // Tự động nâng cấp / đồng bộ cấu hình nếu các đề thi thiếu section_sampling hoặc passcode
+  const db = globalStore.__uniquizDemoDb!;
+  let modified = false;
+
+  // Đảm bảo midterm quiz luôn có mặt
+  if (!db.quizzes.some((q) => q.id === 'midterm-scm-2026' || q.title.toLowerCase().includes('midterm'))) {
+    const midterm = createDefaultMidtermQuiz();
+    db.quizzes.push({
+      id: midterm.id,
+      title: midterm.title,
+      description: midterm.description || '',
+      time_limit_minutes: midterm.time_limit_minutes,
+      is_published: true,
+      show_results: false,
+      passcode: 'LOG888',
+      passcode_expires_at: null,
+      class_ids: db.classes.map((c) => c.id),
+      class_schedules: db.classes.reduce((acc, c) => {
+        acc[c.id] = {
+          class_id: c.id,
+          start_at: new Date(Date.now() - 3600000).toISOString().slice(0, 16),
+          end_at: new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 16),
+          access_code: 'LOG888',
+          is_active: true,
+        };
+        return acc;
+      }, {} as Record<string, any>),
+      start_at: new Date(Date.now() - 3600000).toISOString(),
+      end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+      is_active: true,
+      shuffle_questions: true,
+      shuffle_options: true,
+      prevent_previous: true,
+      questions_per_student: 24,
+      section_sampling: {
+        multiple_choice: 20,
+        short_answer: 3,
+        long_answer: 1,
+      },
+      questions: (midterm.questions || []) as DemoQuestion[],
+    });
+    modified = true;
+  }
+
+  for (const q of db.quizzes) {
+    const isMidterm = q.id === 'midterm-scm-2026' || q.title.toLowerCase().includes('midterm');
+    const hasSpecial = q.questions?.some((x) => x.question_type === 'short_answer' || x.question_type === 'long_answer');
+    if (isMidterm || hasSpecial) {
+      const mcCount = q.questions?.filter((x) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20;
+      const shortCount = q.questions?.filter((x) => x.question_type === 'short_answer').length || 3;
+      const longCount = q.questions?.filter((x) => x.question_type === 'long_answer').length || 1;
+      const totalSample = mcCount + shortCount + longCount;
+
+      if (!q.passcode) {
+        q.passcode = 'LOG888';
+        modified = true;
+      }
+      if (!q.section_sampling) {
+        q.section_sampling = {
+          multiple_choice: mcCount,
+          short_answer: shortCount,
+          long_answer: longCount,
+        };
+        modified = true;
+      }
+      if (!q.questions_per_student || q.questions_per_student < totalSample) {
+        q.questions_per_student = totalSample;
+        modified = true;
+      }
+    }
+  }
+
+  if (modified) {
+    saveDemoDb();
+  }
+
+  return db;
 }
 
 /** Ngày sinh -> chuỗi mật khẩu DDMMYYYY */
