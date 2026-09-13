@@ -84,7 +84,13 @@ export interface DemoScore {
   status: 'in_progress' | 'submitted' | 'timed_out';
   tab_violations_count: number;
   warning_history?: { timestamp: string; event: string; message: string }[];
-  answers?: { question_id: string; option_id?: string | null; answer_text?: string }[];
+  answers?: {
+    question_id: string;
+    option_id?: string | null;
+    answer_text?: string;
+    score_awarded?: number;
+    feedback?: string;
+  }[];
 }
 
 export interface DemoDb {

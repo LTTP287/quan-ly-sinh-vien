@@ -6,7 +6,8 @@ import * as XLSX from 'xlsx';
 import { 
   ArrowLeft, FileSpreadsheet, Download, Eye, EyeOff, 
   Award, TrendingUp, Users, ShieldAlert, CheckCircle2, Lock,
-  X, CheckCircle, XCircle, FileText, Clock, AlertTriangle
+  X, CheckCircle, XCircle, FileText, Clock, AlertTriangle,
+  Edit3, Save, MessageSquare, Check, Sparkles
 } from 'lucide-react';
 import { Quiz, Submission } from '@/types/database';
 import { getQuiz, listSubmissions, setShowResults } from '@/lib/data';
@@ -21,6 +22,11 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
   const [selectedStudentSubmission, setSelectedStudentSubmission] = useState<any | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // State phục vụ Giảng viên chấm câu hỏi ngắn & tự luận dài
+  const [manualGrades, setManualGrades] = useState<Record<string, { score: number; feedback: string }>>({});
+  const [isSavingGrade, setIsSavingGrade] = useState(false);
+  const [gradeSuccessMsg, setGradeSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -38,15 +44,121 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
   const handleOpenDetail = async (studentId: string) => {
     setLoadingDetail(true);
     setShowDetailModal(true);
+    setGradeSuccessMsg(null);
     try {
       const res = await fetch(`/api/lecturer/submission-detail?quiz_id=${params.id}&student_id=${studentId}`);
       if (!res.ok) throw new Error('Không tải được chi tiết bài làm.');
       const data = await res.json();
       setSelectedStudentSubmission(data);
+
+      const initialGrades: Record<string, { score: number; feedback: string }> = {};
+      if (Array.isArray(data.questions)) {
+        data.questions.forEach((q: any) => {
+          const defaultScore = (q.score_awarded !== null && q.score_awarded !== undefined)
+            ? Number(q.score_awarded)
+            : (q.question_type === 'short_answer' || q.question_type === 'long_answer')
+              ? (q.answer_text?.trim() ? Number(q.points) || 1 : 0)
+              : (q.is_correct ? Number(q.points) || 0.2 : 0);
+          initialGrades[q.id] = {
+            score: defaultScore,
+            feedback: q.feedback || '',
+          };
+        });
+      }
+      setManualGrades(initialGrades);
     } catch (err: any) {
       alert(err?.message || 'Lỗi tải bài làm');
     } finally {
       setLoadingDetail(false);
+    }
+  };
+
+  const handleScoreChange = (questionId: string, value: number, maxPoints: number) => {
+    const valid = Math.min(maxPoints, Math.max(0, Math.round(value * 100) / 100));
+    setManualGrades((prev) => ({
+      ...prev,
+      [questionId]: {
+        score: valid,
+        feedback: prev[questionId]?.feedback || '',
+      },
+    }));
+  };
+
+  const handleFeedbackChange = (questionId: string, feedback: string) => {
+    setManualGrades((prev) => ({
+      ...prev,
+      [questionId]: {
+        score: prev[questionId]?.score ?? 0,
+        feedback,
+      },
+    }));
+  };
+
+  const calculateCurrentTotalScore = () => {
+    if (!selectedStudentSubmission?.questions) return 0;
+    let sum = 0;
+    selectedStudentSubmission.questions.forEach((q: any) => {
+      if (manualGrades[q.id]?.score !== undefined) {
+        sum += manualGrades[q.id].score;
+      } else if (q.score_awarded !== null && q.score_awarded !== undefined) {
+        sum += Number(q.score_awarded);
+      } else if (q.is_correct) {
+        sum += Number(q.points) || 0.2;
+      }
+    });
+    return Math.min(10, Math.max(0, Math.round(sum * 10) / 10));
+  };
+
+  const handleSaveGrades = async () => {
+    if (!selectedStudentSubmission) return;
+    setIsSavingGrade(true);
+    setGradeSuccessMsg(null);
+    try {
+      const gradesPayload = Object.entries(manualGrades).map(([qId, g]) => ({
+        question_id: qId,
+        score_awarded: g.score,
+        feedback: g.feedback,
+      }));
+
+      const res = await fetch('/api/lecturer/grade-submission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quiz_id: params.id,
+          student_id: selectedStudentSubmission.student.id,
+          grades: gradesPayload,
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || 'Không thể lưu điểm chấm.');
+
+      const newScore = resData.total_score;
+      setGradeSuccessMsg(`Đã lưu điểm chấm thành công! Tổng điểm mới của sinh viên: ${newScore}/10 điểm.`);
+
+      setSelectedStudentSubmission((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          submission: {
+            ...prev.submission,
+            total_score: newScore,
+          },
+        };
+      });
+
+      setSubmissions((prev) =>
+        prev.map((s) => {
+          if (s.student_id === selectedStudentSubmission.student.id || s.student?.id === selectedStudentSubmission.student.id) {
+            return { ...s, total_score: newScore };
+          }
+          return s;
+        })
+      );
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi lưu điểm');
+    } finally {
+      setIsSavingGrade(false);
     }
   };
 
@@ -261,8 +373,8 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
                         onClick={() => handleOpenDetail(s.student_id)}
                         className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 text-xs font-semibold inline-flex items-center space-x-1.5 transition-colors"
                       >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Xem Bài Làm</span>
+                        <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Chấm & Xem Bài</span>
                       </button>
                     </td>
                   </tr>
@@ -378,96 +490,227 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
                     )}
                   </div>
 
-                  {/* Question Paper Review Section */}
+                  {/* Question Paper Review & Manual Grading Section */}
                   <div className="space-y-4 pt-2">
-                    <h4 className="font-bold text-sm text-white uppercase tracking-wider">
-                      Chi Tiết Đề Thi & Phương Án Sinh Viên Đã Chọn ({selectedStudentSubmission.questions.length} câu)
-                    </h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-sm text-white uppercase tracking-wider flex items-center space-x-2">
+                        <Sparkles className="w-4 h-4 text-indigo-400" />
+                        <span>Chi Tiết Đề Thi & Chấm Bài ({selectedStudentSubmission.questions.length} câu)</span>
+                      </h4>
+                      <span className="text-xs text-slate-400">
+                        Phần trắc nghiệm tự động chấm · Phần câu ngắn & tự luận Giảng viên có thể điều chỉnh điểm
+                      </span>
+                    </div>
 
-                    {selectedStudentSubmission.questions.map((q: any, qIdx: number) => (
-                      <div key={q.id || qIdx} className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start space-x-2">
-                            <span className="px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
-                              Câu {qIdx + 1}
-                            </span>
-                            <span className="font-medium text-sm text-white leading-relaxed">
-                              {q.question_text}
-                            </span>
-                          </div>
-                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border shrink-0 ${
-                            q.is_correct
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          }`}>
-                            {q.is_correct ? `+${q.points} điểm` : '0 điểm'}
-                          </span>
-                        </div>
+                    {selectedStudentSubmission.questions.map((q: any, qIdx: number) => {
+                      const isManualGradable = q.question_type === 'short_answer' || q.question_type === 'long_answer';
+                      const currentScore = manualGrades[q.id]?.score ?? (q.score_awarded !== null && q.score_awarded !== undefined ? q.score_awarded : (q.is_correct ? q.points : 0));
+                      const currentFeedback = manualGrades[q.id]?.feedback ?? q.feedback ?? '';
 
-                        <div className="pt-2">
-                          {(q.question_type === 'short_answer' || q.question_type === 'long_answer') ? (
-                            <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-300 italic whitespace-pre-wrap">
-                              {q.answer_text || <span className="text-slate-600">(Sinh viên không trả lời)</span>}
+                      return (
+                        <div key={q.id || qIdx} className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start space-x-2.5">
+                              <span className="px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                                Câu {qIdx + 1}
+                              </span>
+                              <div>
+                                {q.question_type === 'short_answer' && (
+                                  <span className="inline-block mr-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    Câu hỏi ngắn
+                                  </span>
+                                )}
+                                {q.question_type === 'long_answer' && (
+                                  <span className="inline-block mr-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                    Tự luận dài
+                                  </span>
+                                )}
+                                <span className="font-medium text-sm text-white leading-relaxed">
+                                  {q.question_text}
+                                </span>
+                              </div>
                             </div>
-                          ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                              {q.options?.map((opt: any, optIdx: number) => {
-                                const label = String.fromCharCode(65 + optIdx);
-                                const isSelected = opt.is_selected;
-                                const isCorrect = opt.is_correct;
 
-                                let style = 'border-slate-800 bg-slate-950/60 text-slate-400';
-                                if (isSelected && isCorrect) {
-                                  style = 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300 font-semibold ring-1 ring-emerald-500/30';
-                                } else if (isSelected && !isCorrect) {
-                                  style = 'border-rose-500/50 bg-rose-500/15 text-rose-300 font-semibold ring-1 ring-rose-500/30';
-                                } else if (isCorrect) {
-                                  style = 'border-emerald-500/40 bg-emerald-500/5 text-emerald-400';
-                                }
+                            <div className="shrink-0 text-right">
+                              {isManualGradable ? (
+                                <span className="text-xs font-bold px-3 py-1 rounded-full border bg-indigo-500/10 text-indigo-300 border-indigo-500/30">
+                                  {currentScore} / {q.points} điểm
+                                </span>
+                              ) : (
+                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full border shrink-0 ${
+                                  q.is_correct
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                }`}>
+                                  {q.is_correct ? `+${q.points} điểm` : '0 điểm'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-                                return (
-                                  <div
-                                    key={opt.id || optIdx}
-                                    className={`p-3 rounded-xl border text-xs flex items-start space-x-2 ${style}`}
-                                  >
-                                    <span className="font-mono font-bold shrink-0">{label}.</span>
-                                    <div className="flex-1">
-                                      <span>{opt.option_text}</span>
-                                      {isSelected && (
-                                        <span className="block mt-1 text-[10px] font-sans font-bold text-indigo-300">
-                                          [Sinh viên chọn]
-                                        </span>
-                                      )}
-                                      {isCorrect && !isSelected && (
-                                        <span className="block mt-1 text-[10px] font-sans text-emerald-400">
-                                          [Đáp án đúng]
-                                        </span>
-                                      )}
+                          <div className="pt-2">
+                            {isManualGradable ? (
+                              <div className="space-y-3">
+                                {/* Student's text answer */}
+                                <div>
+                                  <p className="text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+                                    Bài làm của sinh viên:
+                                  </p>
+                                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap font-sans">
+                                    {q.answer_text?.trim() ? (
+                                      q.answer_text
+                                    ) : (
+                                      <span className="text-slate-500 italic">(Sinh viên không nhập câu trả lời)</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Lecturer grading controls */}
+                                <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/30 space-y-3">
+                                  <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex items-center space-x-2">
+                                      <Edit3 className="w-4 h-4 text-indigo-400" />
+                                      <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                                        Chấm điểm câu này:
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max={q.points}
+                                        step="0.1"
+                                        value={manualGrades[q.id]?.score ?? currentScore}
+                                        onChange={(e) => handleScoreChange(q.id, parseFloat(e.target.value) || 0, q.points)}
+                                        className="w-20 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-indigo-500/40 text-center font-mono font-bold text-emerald-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                      />
+                                      <span className="text-xs font-semibold text-slate-400">/ {q.points}đ</span>
+
+                                      {/* Quick point buttons */}
+                                      <div className="flex items-center space-x-1 pl-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleScoreChange(q.id, 0, q.points)}
+                                          className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-400 transition-colors"
+                                        >
+                                          0đ
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleScoreChange(q.id, Math.round((q.points * 0.5) * 10) / 10, q.points)}
+                                          className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-amber-400 transition-colors"
+                                        >
+                                          50% ({Math.round((q.points * 0.5) * 10) / 10}đ)
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleScoreChange(q.id, q.points, q.points)}
+                                          className="px-2 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-[11px] font-bold text-emerald-400 border border-emerald-500/30 transition-colors"
+                                        >
+                                          Tối đa ({q.points}đ)
+                                        </button>
+                                      </div>
                                     </div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
+
+                                  {/* Lecturer feedback */}
+                                  <div>
+                                    <textarea
+                                      rows={2}
+                                      placeholder="Nhập nhận xét / lời phê cho câu trả lời này (tùy chọn)..."
+                                      value={manualGrades[q.id]?.feedback ?? currentFeedback}
+                                      onChange={(e) => handleFeedbackChange(q.id, e.target.value)}
+                                      className="w-full bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                {q.options?.map((opt: any, optIdx: number) => {
+                                  const label = String.fromCharCode(65 + optIdx);
+                                  const isSelected = opt.is_selected;
+                                  const isCorrect = opt.is_correct;
+
+                                  let style = 'border-slate-800 bg-slate-950/60 text-slate-400';
+                                  if (isSelected && isCorrect) {
+                                    style = 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300 font-semibold ring-1 ring-emerald-500/30';
+                                  } else if (isSelected && !isCorrect) {
+                                    style = 'border-rose-500/50 bg-rose-500/15 text-rose-300 font-semibold ring-1 ring-rose-500/30';
+                                  } else if (isCorrect) {
+                                    style = 'border-emerald-500/40 bg-emerald-500/5 text-emerald-400';
+                                  }
+
+                                  return (
+                                    <div
+                                      key={opt.id || optIdx}
+                                      className={`p-3 rounded-xl border text-xs flex items-start space-x-2 ${style}`}
+                                    >
+                                      <span className="font-mono font-bold shrink-0">{label}.</span>
+                                      <div className="flex-1">
+                                        <span>{opt.option_text}</span>
+                                        {isSelected && (
+                                          <span className="block mt-1 text-[10px] font-sans font-bold text-indigo-300">
+                                            [Sinh viên chọn]
+                                          </span>
+                                        )}
+                                        {isCorrect && !isSelected && (
+                                          <span className="block mt-1 text-[10px] font-sans text-emerald-400">
+                                            [Đáp án đúng]
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               ) : null}
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-800 bg-slate-900/60 text-right">
-              <button
-                onClick={() => {
-                  setShowDetailModal(false);
-                  setSelectedStudentSubmission(null);
-                }}
-                className="gradient-button px-5 py-2 rounded-xl text-xs font-bold"
-              >
-                Đóng Cửa Sổ
-              </button>
+            {/* Modal Footer with Live Score and Save Button */}
+            <div className="p-4 border-t border-slate-800 bg-slate-900/80 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center space-x-2">
+                  <span className="text-xs text-slate-400">Tổng điểm sau chấm:</span>
+                  <span className="text-lg font-black font-mono text-emerald-400">
+                    {calculateCurrentTotalScore()}
+                  </span>
+                  <span className="text-xs text-slate-500">/ 10.0</span>
+                </div>
+                {gradeSuccessMsg && (
+                  <span className="text-xs font-semibold text-emerald-400 animate-in fade-in flex items-center space-x-1">
+                    <CheckCircle className="w-4 h-4 shrink-0" />
+                    <span>{gradeSuccessMsg}</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleSaveGrades}
+                  disabled={isSavingGrade}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/20 flex items-center space-x-2 disabled:opacity-50 transition-all"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSavingGrade ? 'Đang lưu điểm...' : 'Lưu Điểm Chấm & Nhận Xét'}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedStudentSubmission(null);
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-colors"
+                >
+                  Đóng Cửa Sổ
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -50,32 +50,46 @@ export async function GET(request: Request) {
     };
 
     const effectiveQuiz = quiz || localQuiz;
-    const questions = localQuiz?.questions || [];
+    const allQuestions = (effectiveQuiz?.questions && effectiveQuiz.questions.length > 0)
+      ? effectiveQuiz.questions
+      : (localQuiz?.questions || []);
 
     // Map answers
-    const answersMap: Record<string, { option_id?: string; answer_text?: string }> = {};
+    const answersMap: Record<string, { option_id?: string; answer_text?: string; score_awarded?: number; feedback?: string }> = {};
     if (localSub?.answers) {
-      localSub.answers.forEach((a) => {
+      localSub.answers.forEach((a: any) => {
         answersMap[a.question_id] = {
           option_id: a.selected_option_id || undefined,
           answer_text: a.answer_text || undefined,
+          score_awarded: a.score_awarded !== undefined ? a.score_awarded : undefined,
+          feedback: a.feedback || undefined,
         };
       });
     } else if (score?.answers) {
-      score.answers.forEach((a) => {
+      score.answers.forEach((a: any) => {
         if (a.question_id) {
           answersMap[a.question_id] = {
             option_id: a.option_id || undefined,
             answer_text: a.answer_text || undefined,
+            score_awarded: a.score_awarded !== undefined ? a.score_awarded : undefined,
+            feedback: a.feedback || undefined,
           };
         }
       });
     }
 
-    const detailedQuestions = questions.map((q) => {
+    // Nếu sinh viên chỉ được phát một phần câu hỏi (ví dụ 24 câu từ ngân hàng 51 câu), chỉ hiển thị các câu trong bài thi của SV
+    const targetQuestions = Object.keys(answersMap).length > 0
+      ? allQuestions.filter((q) => q.id in answersMap)
+      : allQuestions;
+
+    const detailedQuestions = targetQuestions.map((q) => {
       const selectedOptionId = answersMap[q.id]?.option_id || null;
       const answerText = answersMap[q.id]?.answer_text || null;
       const isCorrect = q.options?.some((o) => o.id === selectedOptionId && o.is_correct) || false;
+      const scoreAwarded = answersMap[q.id]?.score_awarded !== undefined ? answersMap[q.id]?.score_awarded : null;
+      const feedback = answersMap[q.id]?.feedback || null;
+
       return {
         id: q.id,
         question_text: q.question_text,
@@ -83,6 +97,8 @@ export async function GET(request: Request) {
         points: q.points || 1,
         selected_option_id: selectedOptionId,
         answer_text: answerText,
+        score_awarded: scoreAwarded,
+        feedback: feedback,
         is_correct: selectedOptionId ? isCorrect : false,
         options: (q.options || []).map((o) => ({
           id: o.id,

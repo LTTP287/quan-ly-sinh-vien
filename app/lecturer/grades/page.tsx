@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 import {
   ArrowLeft, Award, FileSpreadsheet, Download, Search,
   Users, CheckCircle2, AlertTriangle, ShieldAlert, Clock,
-  Filter, Eye, RefreshCw
+  Filter, Eye, RefreshCw, Edit3
 } from 'lucide-react';
 import { ClassModule, Quiz, Submission } from '@/types/database';
 import { listClasses, listQuizzes, listSubmissions } from '@/lib/data';
@@ -269,6 +269,7 @@ export default function LecturerGradesSummaryPage() {
                     <th className="p-4 text-center">Vi Phạm Tab</th>
                     <th className="p-4">Thời Gian Nộp</th>
                     <th className="p-4 text-center">Trạng Thái</th>
+                    <th className="p-4 text-right">Chấm / Xem Bài</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-medium">
@@ -319,6 +320,15 @@ export default function LecturerGradesSummaryPage() {
                           <span className="text-[11px] font-semibold px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300">
                             {s.status === 'submitted' ? 'Đã nộp bài' : (s.status === 'timed_out' ? 'Hết giờ' : 'Đang làm')}
                           </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <Link
+                            href={`/lecturer/quizzes/${s.quiz_id}/analytics`}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 text-xs font-semibold inline-flex items-center space-x-1.5 transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                            <span>Chấm bài</span>
+                          </Link>
                         </td>
                       </tr>
                     );
