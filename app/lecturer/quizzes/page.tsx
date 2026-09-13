@@ -49,23 +49,64 @@ export default function LecturerTestBankPage() {
       };
     }
     const mc = questions.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
+    const short = questions.filter((q) => q.question_type === 'short_answer');
+    const long = questions.filter((q) => q.question_type === 'long_answer');
+
+    const isMultiSection = !!(
+      (quiz.section_sampling && (
+        (typeof quiz.section_sampling.short_answer === 'number' && quiz.section_sampling.short_answer > 0) ||
+        (typeof quiz.section_sampling.long_answer === 'number' && quiz.section_sampling.long_answer > 0)
+      )) ||
+      short.length > 0 ||
+      long.length > 0
+    );
+
+    if (!isMultiSection) {
+      const targetCount = (quiz.questions_per_student && quiz.questions_per_student > 0)
+        ? quiz.questions_per_student
+        : (questions.length || 5);
+      const unitPrice = questions.length > 0 && typeof questions[0].points === 'number' && questions[0].points > 0
+        ? Number(questions[0].points)
+        : (targetCount > 0 ? Math.round((10 / targetCount) * 100) / 100 : 2.0);
+      const totalPts = Math.round((targetCount * unitPrice) * 10) / 10;
+
+      return {
+        isMultiSection: false,
+        totalPts: totalPts > 0 ? totalPts : 10,
+        targetCount,
+        unitPrice,
+        totalQuestionsCount: questions.length,
+        mcCount: mc.length,
+        mcUnitPrice: unitPrice,
+        mcPts: totalPts,
+        shortCount: 0,
+        shortUnitPrice: 0,
+        shortPts: 0,
+        longCount: 0,
+        longUnitPrice: 0,
+        longPts: 0,
+        sampleMc: targetCount,
+        sampleShort: 0,
+        sampleEssay: 0,
+      };
+    }
+
     const mcUnitPrice = mc.length > 0 ? Number(mc[0].points) || 0.2 : 0.2;
-    const sampleMc = quiz.section_sampling?.multiple_choice ?? (mc.length > 0 ? mc.length : 20);
+    const sampleMc = quiz.section_sampling?.multiple_choice ?? (mc.length > 0 ? Math.min(mc.length, 20) : 20);
     const mcPts = Math.round((sampleMc * mcUnitPrice) * 10) / 10;
 
-    const short = questions.filter((q) => q.question_type === 'short_answer');
     const shortUnitPrice = short.length > 0 ? Number(short[0].points) || 1.0 : 1.0;
-    const sampleShort = quiz.section_sampling?.short_answer ?? (short.length > 0 ? short.length : 3);
+    const sampleShort = quiz.section_sampling?.short_answer ?? (short.length > 0 ? Math.min(short.length, 3) : 0);
     const shortPts = Math.round((sampleShort * shortUnitPrice) * 10) / 10;
 
-    const long = questions.filter((q) => q.question_type === 'long_answer');
     const longUnitPrice = long.length > 0 ? Number(long[0].points) || 3.0 : 3.0;
-    const sampleEssay = quiz.section_sampling?.long_answer ?? (long.length > 0 ? long.length : 1);
+    const sampleEssay = quiz.section_sampling?.long_answer ?? (long.length > 0 ? Math.min(long.length, 1) : 0);
     const longPts = Math.round((sampleEssay * longUnitPrice) * 10) / 10;
 
     const totalPts = Math.round((mcPts + shortPts + longPts) * 10) / 10;
 
     return {
+      isMultiSection: true,
       totalPts: totalPts > 0 ? totalPts : 10,
       mcCount: mc.length,
       mcUnitPrice,
@@ -79,6 +120,9 @@ export default function LecturerTestBankPage() {
       sampleMc,
       sampleShort,
       sampleEssay,
+      targetCount: sampleMc + sampleShort + sampleEssay,
+      totalQuestionsCount: questions.length,
+      unitPrice: mcUnitPrice,
     };
   };
 
@@ -379,12 +423,14 @@ export default function LecturerTestBankPage() {
                     <h3 className="text-lg font-bold text-white mb-2">{quiz.title}</h3>
                     <p className="text-xs text-slate-400 leading-relaxed mb-4">{quiz.description}</p>
 
-                    {/* THANG ĐIỂM & PHÂN BỔ 3 PHẦN TRÊN TỪNG ĐỀ THI */}
+                    {/* THANG ĐIỂM & PHÂN BỔ ĐỀ THI */}
                     <div className="p-4 rounded-xl bg-slate-900/90 border border-indigo-500/30 space-y-2.5 mb-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <Calculator className="w-4 h-4 text-indigo-400" />
-                          <span className="text-xs font-bold text-white uppercase tracking-wider">Thang Điểm Bài Thi</span>
+                          <span className="text-xs font-bold text-white uppercase tracking-wider">
+                            {pts.isMultiSection ? 'Thang Điểm Đề Thi (3 Phần)' : 'Thang Điểm Bài Quiz Tiêu Chuẩn'}
+                          </span>
                         </div>
                         <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                           Math.abs(pts.totalPts - 10) < 0.05
@@ -395,33 +441,53 @@ export default function LecturerTestBankPage() {
                         </span>
                       </div>
 
-                      {/* 3 Phần phân bổ */}
-                      <div className="grid grid-cols-3 gap-2 text-[11px] pt-1">
-                        <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                          <span className="block text-[10px] font-bold text-indigo-400">P1. Trắc Nghiệm</span>
-                          <span className="font-bold text-white text-xs">{pts.mcPts}đ</span>
-                          <span className="block text-[10px] text-indigo-300">Rút {pts.sampleMc}/{pts.mcCount}</span>
+                      {pts.isMultiSection ? (
+                        /* 3 Phần phân bổ */
+                        <div className="grid grid-cols-3 gap-2 text-[11px] pt-1">
+                          <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
+                            <span className="block text-[10px] font-bold text-indigo-400">P1. Trắc Nghiệm</span>
+                            <span className="font-bold text-white text-xs">{pts.mcPts}đ</span>
+                            <span className="block text-[10px] text-indigo-300">Rút {pts.sampleMc}/{pts.mcCount}</span>
+                          </div>
+                          <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
+                            <span className="block text-[10px] font-bold text-emerald-400">P2. Câu Ngắn</span>
+                            <span className="font-bold text-white text-xs">{pts.shortPts}đ</span>
+                            <span className="block text-[10px] text-emerald-300">Rút {pts.sampleShort}/{pts.shortCount}</span>
+                          </div>
+                          <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
+                            <span className="block text-[10px] font-bold text-amber-400">P3. Tự Luận</span>
+                            <span className="font-bold text-white text-xs">{pts.longPts}đ</span>
+                            <span className="block text-[10px] text-amber-300">Rút {pts.sampleEssay}/{pts.longCount}</span>
+                          </div>
                         </div>
-                        <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                          <span className="block text-[10px] font-bold text-emerald-400">P2. Câu Ngắn</span>
-                          <span className="font-bold text-white text-xs">{pts.shortPts}đ</span>
-                          <span className="block text-[10px] text-emerald-300">Rút {pts.sampleShort}/{pts.shortCount}</span>
+                      ) : (
+                        /* Simple Mode Badge */
+                        <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                          <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex flex-col">
+                            <span className="text-[10px] text-slate-400">Số câu rút mỗi SV:</span>
+                            <span className="font-bold text-purple-400 text-sm mt-0.5">{pts.targetCount} câu hỏi</span>
+                            <span className="text-[10px] text-slate-500">từ ngân hàng {pts.totalQuestionsCount} câu</span>
+                          </div>
+                          <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex flex-col">
+                            <span className="text-[10px] text-slate-400">Đơn giá mỗi câu:</span>
+                            <span className="font-bold text-emerald-400 text-sm mt-0.5">{pts.unitPrice}đ / câu</span>
+                            <span className="text-[10px] text-slate-500">{pts.targetCount} &times; {pts.unitPrice}đ = {pts.totalPts}đ</span>
+                          </div>
                         </div>
-                        <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                          <span className="block text-[10px] font-bold text-amber-400">P3. Tự Luận</span>
-                          <span className="font-bold text-white text-xs">{pts.longPts}đ</span>
-                          <span className="block text-[10px] text-amber-300">Rút {pts.sampleEssay}/{pts.longCount}</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
                     <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span>🎲 Rút ngẫu nhiên/SV: <strong className="text-purple-400">{pts.sampleMc + pts.sampleShort + pts.sampleEssay} câu</strong></span>
+                        <span>🎲 Rút ngẫu nhiên/SV: <strong className="text-purple-400">{pts.targetCount} câu</strong></span>
                         <span>🔒 Trộn đề & Khóa câu trước</span>
                       </div>
                       <div className="text-[11px] text-slate-400">
-                        <span>Phân bổ: <strong>{pts.sampleMc} TN</strong> ({pts.mcPts}đ) &bull; <strong>{pts.sampleShort} Ngắn</strong> ({pts.shortPts}đ) &bull; <strong>{pts.sampleEssay} Tự luận</strong> ({pts.longPts}đ)</span>
+                        {pts.isMultiSection ? (
+                          <span>Phân bổ: <strong>{pts.sampleMc} TN</strong> ({pts.mcPts}đ) &bull; <strong>{pts.sampleShort} Ngắn</strong> ({pts.shortPts}đ) &bull; <strong>{pts.sampleEssay} Tự luận</strong> ({pts.longPts}đ)</span>
+                        ) : (
+                          <span>Cấu hình: Rút ngẫu nhiên <strong>{pts.targetCount} câu</strong> &bull; Mỗi câu <strong>{pts.unitPrice} điểm</strong> &bull; Tổng điểm <strong>{pts.totalPts} / 10.0đ</strong></span>
+                        )}
                       </div>
                     </div>
                   </div>

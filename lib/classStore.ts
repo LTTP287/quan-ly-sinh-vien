@@ -614,9 +614,13 @@ export function getStoredQuizzes(): Quiz[] {
     parsed = parsed.filter((q) => q.id !== 'quiz-midterm-logistics' && !q.title.includes('Đề Thi Giữa Kỳ (Midterm Exam)'));
 
     const updated = parsed.map((q) => {
-      const isMidterm = q.id === 'midterm-scm-2026' || (q.title && q.title.toLowerCase().includes('midterm'));
-      const hasSections = q.questions?.some((x) => x.question_type === 'short_answer' || x.question_type === 'long_answer');
-      if (isMidterm || hasSections) {
+      const isMidterm = q.id === 'midterm-scm-2026';
+      const hasExplicitSections = q.section_sampling && (
+        typeof q.section_sampling.multiple_choice === 'number' ||
+        typeof q.section_sampling.short_answer === 'number' ||
+        typeof q.section_sampling.long_answer === 'number'
+      );
+      if (isMidterm || hasExplicitSections) {
         const mcCount = q.questions?.filter((x) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20;
         const shortCount = q.questions?.filter((x) => x.question_type === 'short_answer').length || 3;
         const longCount = q.questions?.filter((x) => x.question_type === 'long_answer').length || 1;
@@ -631,7 +635,7 @@ export function getStoredQuizzes(): Quiz[] {
 
         return {
           ...q,
-          passcode: q.passcode || 'LOG888',
+          passcode: q.passcode || (isMidterm ? 'LOG888' : q.passcode),
           questions: updatedQuestions,
           questions_per_student: Number(q.questions_per_student) > 0 ? Number(q.questions_per_student) : (isMidterm ? 24 : totalSample),
           section_sampling: q.section_sampling || {

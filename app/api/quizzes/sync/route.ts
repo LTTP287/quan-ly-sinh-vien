@@ -99,7 +99,7 @@ export async function POST(request: Request) {
           }
         }
       }
-      const isMidterm = q.id === 'midterm-scm-2026' || (q.title && q.title.toLowerCase().includes('midterm'));
+      const isMidterm = q.id === 'midterm-scm-2026';
       if (!passcode && isMidterm) {
         passcode = 'LOG888';
       }
@@ -111,13 +111,12 @@ export async function POST(request: Request) {
           ? db.quizzes[idx].questions
           : (await import('@/lib/classStore')).createDefaultMidtermQuiz().questions;
 
-      const hasSpecial = questionsList.some((x: any) => x.question_type === 'short_answer' || x.question_type === 'long_answer');
       let sectionSampling = q.section_sampling || null;
-      if (!sectionSampling && (hasSpecial || isMidterm)) {
+      if (!sectionSampling && isMidterm) {
         sectionSampling = {
-          multiple_choice: isMidterm ? 20 : (questionsList.filter((x: any) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20),
-          short_answer: questionsList.filter((x: any) => x.question_type === 'short_answer').length || 3,
-          long_answer: questionsList.filter((x: any) => x.question_type === 'long_answer').length || 1,
+          multiple_choice: 20,
+          short_answer: 3,
+          long_answer: 1,
         };
       }
 

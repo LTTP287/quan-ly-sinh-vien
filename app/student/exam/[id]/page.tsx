@@ -170,12 +170,11 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
       let shortPool = bank.filter((q) => q.question_type === 'short_answer');
       let longPool = bank.filter((q) => q.question_type === 'long_answer');
 
-      const hasSpecialSections = shortPool.length > 0 || longPool.length > 0;
-      const isMidterm = found.id === 'midterm-scm-2026' || (found.title && found.title.toLowerCase().includes('midterm'));
+      const isMidterm = found.id === 'midterm-scm-2026';
       let sampling = found.section_sampling;
-      if (!sampling && (hasSpecialSections || isMidterm)) {
+      if (!sampling && isMidterm) {
         sampling = {
-          multiple_choice: isMidterm ? Math.min(mcPool.length, 20) : mcPool.length,
+          multiple_choice: Math.min(mcPool.length, 20),
           short_answer: Math.min(shortPool.length, 3),
           long_answer: Math.min(longPool.length, 1),
         };

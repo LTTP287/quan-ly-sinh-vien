@@ -91,15 +91,34 @@ export default function EditQuizPage({ params }: { params: { id: string } }) {
           if (existingQuiz.questions && existingQuiz.questions.length > 0) {
             setQuestions(existingQuiz.questions);
           }
-          if (existingQuiz.section_sampling) {
-            if (typeof existingQuiz.section_sampling.multiple_choice === 'number') {
-              setSampleMcCount(existingQuiz.section_sampling.multiple_choice);
+          const hasMultiSection = !!(
+            (existingQuiz.section_sampling && (
+              (existingQuiz.section_sampling.short_answer && existingQuiz.section_sampling.short_answer > 0) ||
+              (existingQuiz.section_sampling.long_answer && existingQuiz.section_sampling.long_answer > 0)
+            )) ||
+            (existingQuiz.questions && existingQuiz.questions.some((q) => q.question_type === 'short_answer' || q.question_type === 'long_answer'))
+          );
+
+          if (hasMultiSection) {
+            setQuizStructure('sections');
+            if (existingQuiz.section_sampling) {
+              if (typeof existingQuiz.section_sampling.multiple_choice === 'number') {
+                setSampleMcCount(existingQuiz.section_sampling.multiple_choice);
+              }
+              if (typeof existingQuiz.section_sampling.short_answer === 'number') {
+                setSampleShortCount(existingQuiz.section_sampling.short_answer);
+              }
+              if (typeof existingQuiz.section_sampling.long_answer === 'number') {
+                setSampleEssayCount(existingQuiz.section_sampling.long_answer);
+              }
             }
-            if (typeof existingQuiz.section_sampling.short_answer === 'number') {
-              setSampleShortCount(existingQuiz.section_sampling.short_answer);
+          } else {
+            setQuizStructure('simple');
+            if (existingQuiz.questions_per_student) {
+              setSimpleQuestionsCount(existingQuiz.questions_per_student);
             }
-            if (typeof existingQuiz.section_sampling.long_answer === 'number') {
-              setSampleEssayCount(existingQuiz.section_sampling.long_answer);
+            if (existingQuiz.questions && existingQuiz.questions.length > 0 && existingQuiz.questions[0].points) {
+              setSimplePointsPerQuestion(existingQuiz.questions[0].points);
             }
           }
           if (existingQuiz.assigned_class_ids && existingQuiz.assigned_class_ids.length > 0) {
@@ -132,7 +151,14 @@ export default function EditQuizPage({ params }: { params: { id: string } }) {
     }
   };
 
-  // Thang Điểm Phân Bổ Theo Loại Câu Hỏi
+  // Cấu trúc đề thi: 'simple' (Bài Quiz tiêu chuẩn) | 'sections' (Đề thi 3 phần Midterm/Final)
+  const [quizStructure, setQuizStructure] = useState<'simple' | 'sections'>('simple');
+
+  // Chế độ 1: Bài Quiz Đơn Giản / Tiêu Chuẩn (Rút N câu ngẫu nhiên = 10 điểm)
+  const [simpleQuestionsCount, setSimpleQuestionsCount] = useState<number>(5);
+  const [simplePointsPerQuestion, setSimplePointsPerQuestion] = useState<number>(2.0);
+
+  // Chế độ 2: Đề Thi Phức Hợp 3 Phần (Midterm / Final Exam)
   const [batchMcPoints, setBatchMcPoints] = useState<number>(0.2);
   const [batchShortPoints, setBatchShortPoints] = useState<number>(1.0);
   const [batchEssayPoints, setBatchEssayPoints] = useState<number>(3.0);
@@ -234,7 +260,8 @@ B. Sai`);
           if (optC) options.push({ id: `${qId}-optC`, question_id: qId, option_text: String(optC).replace(/^\*/, '').trim(), is_correct: isCorrectC, order_index: 2 });
           if (optD) options.push({ id: `${qId}-optD`, question_id: qId, option_text: String(optD).replace(/^\*/, '').trim(), is_correct: isCorrectD, order_index: 3 });
 
-          const rowPoints = Number(row['Điểm'] || row['Thang điểm'] || row['Số điểm'] || row['Points']) || batchMcPoints;
+          const defaultPts = quizStructure === 'simple' ? simplePointsPerQuestion : batchMcPoints;
+          const rowPoints = Number(row['Điểm'] || row['Thang điểm'] || row['Số điểm'] || row['Points']) || defaultPts;
 
           newParsedQuestions.push({
             id: qId,
@@ -344,13 +371,14 @@ B. Sai`);
           order_index: optIdx,
         }));
 
+        const defaultPts = quizStructure === 'simple' ? simplePointsPerQuestion : batchMcPoints;
         if (options.length > 0) {
           parsedList.push({
             id: qId,
             quiz_id: 'new',
             question_text: qText,
             question_type: options.length > 2 ? 'multiple_choice' : 'true_false',
-            points: batchMcPoints,
+            points: defaultPts,
             order_index: questions.length + idx,
             options,
           });
@@ -386,10 +414,31 @@ B. Sai`);
   const plannedMcPoints = Math.round((sampleMcCount * batchMcPoints) * 10) / 10;
   const plannedShortPoints = Math.round((sampleShortCount * batchShortPoints) * 10) / 10;
   const plannedEssayPoints = Math.round((sampleEssayCount * batchEssayPoints) * 10) / 10;
-  const examTotalPoints = Math.round((plannedMcPoints + plannedShortPoints + plannedEssayPoints) * 10) / 10;
+  const sectionsTotalPoints = Math.round((plannedMcPoints + plannedShortPoints + plannedEssayPoints) * 10) / 10;
+  const simpleTotalPoints = Math.round((simpleQuestionsCount * simplePointsPerQuestion) * 10) / 10;
+
+  const examTotalPoints = quizStructure === 'simple' ? simpleTotalPoints : sectionsTotalPoints;
 
   const updateQuestionPoints = (qId: string, pts: number) => {
     setQuestions(questions.map((q) => (q.id === qId ? { ...q, points: Math.max(0, Number(pts) || 0) } : q)));
+  };
+
+  const handleApplySimplePreset = (count: number, pt: number) => {
+    setSimpleQuestionsCount(count);
+    setSimplePointsPerQuestion(pt);
+    setQuestionsPerStudent(count);
+    setQuestions((prev) => prev.map((q) => ({ ...q, points: pt })));
+  };
+
+  const handleApplySimpleEvenly = () => {
+    const count = simpleQuestionsCount > 0 ? simpleQuestionsCount : (questions.length || 5);
+    const pt = Math.round((10 / count) * 100) / 100;
+    setSimplePointsPerQuestion(pt);
+    setQuestions((prev) => prev.map((q) => ({ ...q, points: pt })));
+  };
+
+  const handleApplySimplePointsToAll = () => {
+    setQuestions((prev) => prev.map((q) => ({ ...q, points: simplePointsPerQuestion })));
   };
 
   const handleApplyBatchPoints = () => {
@@ -408,6 +457,7 @@ B. Sai`);
   };
 
   const handleApplyMidtermPreset = () => {
+    setQuizStructure('sections');
     setBatchMcPoints(0.2);
     setBatchShortPoints(1.0);
     setBatchEssayPoints(3.0);
@@ -506,26 +556,45 @@ B. Sai`);
     let defaultOptions: QuestionOption[] = [];
     let initialPoints = 1.0;
 
-    if (type === 'multiple_choice') {
-      initialPoints = batchMcPoints;
-      defaultOptions = [
-        { id: `opt-${Date.now()}-1`, question_id: newQId, option_text: 'Lựa chọn A', is_correct: true, order_index: 0 },
-        { id: `opt-${Date.now()}-2`, question_id: newQId, option_text: 'Lựa chọn B', is_correct: false, order_index: 1 },
-        { id: `opt-${Date.now()}-3`, question_id: newQId, option_text: 'Lựa chọn C', is_correct: false, order_index: 2 },
-        { id: `opt-${Date.now()}-4`, question_id: newQId, option_text: 'Lựa chọn D', is_correct: false, order_index: 3 },
-      ];
-    } else if (type === 'true_false') {
-      initialPoints = batchMcPoints;
-      defaultOptions = [
-        { id: `opt-tf-1`, question_id: newQId, option_text: 'Đúng', is_correct: true, order_index: 0 },
-        { id: `opt-tf-2`, question_id: newQId, option_text: 'Sai', is_correct: false, order_index: 1 },
-      ];
-    } else if (type === 'short_answer') {
-      initialPoints = batchShortPoints;
-      defaultOptions = [];
-    } else if (type === 'long_answer') {
-      initialPoints = batchEssayPoints;
-      defaultOptions = [];
+    if (quizStructure === 'simple') {
+      initialPoints = simplePointsPerQuestion;
+      if (type === 'multiple_choice') {
+        defaultOptions = [
+          { id: `opt-${Date.now()}-1`, question_id: newQId, option_text: 'Lựa chọn A', is_correct: true, order_index: 0 },
+          { id: `opt-${Date.now()}-2`, question_id: newQId, option_text: 'Lựa chọn B', is_correct: false, order_index: 1 },
+          { id: `opt-${Date.now()}-3`, question_id: newQId, option_text: 'Lựa chọn C', is_correct: false, order_index: 2 },
+          { id: `opt-${Date.now()}-4`, question_id: newQId, option_text: 'Lựa chọn D', is_correct: false, order_index: 3 },
+        ];
+      } else if (type === 'true_false') {
+        defaultOptions = [
+          { id: `opt-tf-1`, question_id: newQId, option_text: 'Đúng', is_correct: true, order_index: 0 },
+          { id: `opt-tf-2`, question_id: newQId, option_text: 'Sai', is_correct: false, order_index: 1 },
+        ];
+      } else {
+        defaultOptions = [];
+      }
+    } else {
+      if (type === 'multiple_choice') {
+        initialPoints = batchMcPoints;
+        defaultOptions = [
+          { id: `opt-${Date.now()}-1`, question_id: newQId, option_text: 'Lựa chọn A', is_correct: true, order_index: 0 },
+          { id: `opt-${Date.now()}-2`, question_id: newQId, option_text: 'Lựa chọn B', is_correct: false, order_index: 1 },
+          { id: `opt-${Date.now()}-3`, question_id: newQId, option_text: 'Lựa chọn C', is_correct: false, order_index: 2 },
+          { id: `opt-${Date.now()}-4`, question_id: newQId, option_text: 'Lựa chọn D', is_correct: false, order_index: 3 },
+        ];
+      } else if (type === 'true_false') {
+        initialPoints = batchMcPoints;
+        defaultOptions = [
+          { id: `opt-tf-1`, question_id: newQId, option_text: 'Đúng', is_correct: true, order_index: 0 },
+          { id: `opt-tf-2`, question_id: newQId, option_text: 'Sai', is_correct: false, order_index: 1 },
+        ];
+      } else if (type === 'short_answer') {
+        initialPoints = batchShortPoints;
+        defaultOptions = [];
+      } else if (type === 'long_answer') {
+        initialPoints = batchEssayPoints;
+        defaultOptions = [];
+      }
     }
 
     const newQ: Question = {
@@ -593,8 +662,13 @@ B. Sai`);
       return;
     }
 
-    if (questionsPerStudent > questions.length) {
-      alert(`Số câu rút ngẫu nhiên (${questionsPerStudent}) đang lớn hơn số câu trong ngân hàng đề (${questions.length}).`);
+    const isSimple = quizStructure === 'simple';
+    const finalQuestionsPerStudent = isSimple
+      ? simpleQuestionsCount
+      : (sampleMcCount + sampleShortCount + sampleEssayCount);
+
+    if (finalQuestionsPerStudent > questions.length) {
+      alert(`Số câu rút ngẫu nhiên (${finalQuestionsPerStudent} câu) đang lớn hơn tổng số câu hiện có trong ngân hàng đề (${questions.length} câu). Thầy/Cô vui lòng thêm câu hỏi hoặc giảm số câu rút.`);
       return;
     }
 
@@ -607,6 +681,13 @@ B. Sai`);
         access_code: accessCode.trim().toUpperCase() || existingSc?.access_code || null,
       };
     });
+
+    const finalQuestions = isSimple
+      ? questions.map((q) => ({
+          ...q,
+          points: (typeof q.points === 'number' && q.points > 0) ? q.points : simplePointsPerQuestion,
+        }))
+      : questions;
 
     try {
       await updateQuiz(
@@ -621,16 +702,18 @@ B. Sai`);
           shuffle_questions: shuffleQuestions,
           shuffle_options: shuffleOptions,
           prevent_previous: preventPrevious,
-          questions_per_student: (sampleMcCount + sampleShortCount + sampleEssayCount > 0) ? (sampleMcCount + sampleShortCount + sampleEssayCount) : questionsPerStudent,
-          section_sampling: {
-            multiple_choice: sampleMcCount,
-            short_answer: sampleShortCount,
-            long_answer: sampleEssayCount,
-          },
+          questions_per_student: finalQuestionsPerStudent,
+          section_sampling: isSimple
+            ? null
+            : {
+                multiple_choice: sampleMcCount,
+                short_answer: sampleShortCount,
+                long_answer: sampleEssayCount,
+              },
           passcode: accessCode.trim().toUpperCase() || null,
           passcode_expires_at: passcodeExpiresAt ? new Date(passcodeExpiresAt).toISOString() : null,
         },
-        questions,
+        finalQuestions,
         assignments
       );
 
@@ -866,17 +949,37 @@ B. Sai`);
                 <Dice5 className="w-3.5 h-3.5 text-purple-400" />
                 <span>Số Câu Hỏi Rút Ngẫu Nhiên Cho Mỗi SV</span>
               </label>
-              <input
-                type="number"
-                min={1}
-                max={Math.max(1, questions.length)}
-                value={questionsPerStudent}
-                onChange={(e) => setQuestionsPerStudent(Number(e.target.value))}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 font-bold text-purple-400"
-              />
-              <p className="text-[11px] text-slate-400 mt-1.5">
-                💡 Ngân hàng đề hiện có <strong className="text-white">{questions.length} câu</strong>. Mỗi SV khi làm bài sẽ rút ngẫu nhiên <strong className="text-purple-400">{questionsPerStudent} câu</strong>.
-              </p>
+              {quizStructure === 'simple' ? (
+                <>
+                  <input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, questions.length)}
+                    value={simpleQuestionsCount}
+                    onChange={(e) => {
+                      const val = Math.max(1, Number(e.target.value) || 1);
+                      setSimpleQuestionsCount(val);
+                      setQuestionsPerStudent(val);
+                    }}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 font-bold text-purple-400"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    💡 Ngân hàng đề hiện có <strong className="text-white">{questions.length} câu</strong>. Mỗi SV khi làm bài sẽ rút ngẫu nhiên <strong className="text-purple-400">{simpleQuestionsCount} câu</strong> ({simplePointsPerQuestion}đ/câu = {Math.round(simpleQuestionsCount * simplePointsPerQuestion * 10) / 10}đ).
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="w-full bg-slate-900/80 border border-amber-500/40 rounded-xl px-4 py-2.5 text-sm font-bold text-amber-300 flex items-center justify-between">
+                    <span>{sampleMcCount + sampleShortCount + sampleEssayCount} câu hỏi rút</span>
+                    <span className="text-[11px] font-normal text-slate-400">
+                      ({sampleMcCount} Trắc nghiệm + {sampleShortCount} Ngắn + {sampleEssayCount} Tự luận)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    💡 Chế độ 3 phần: Tự động tổng hợp số câu từ 3 phần trắc nghiệm, câu ngắn và tự luận bên dưới.
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -1104,7 +1207,7 @@ B. Sai`);
           )}
 
           {/* SECTION: THANG ĐIỂM & PHÂN BỔ ĐIỂM THI */}
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 p-6 rounded-2xl border border-indigo-500/30 shadow-xl space-y-5">
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 p-6 rounded-2xl border border-indigo-500/30 shadow-xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-500/20 pb-4">
               <div className="flex items-center space-x-3">
                 <div className="p-2.5 bg-indigo-500/20 text-indigo-400 rounded-xl border border-indigo-500/30">
@@ -1119,237 +1222,435 @@ B. Sai`);
                         : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                     }`}>
                       {Math.abs(examTotalPoints - 10) < 0.05
-                        ? `✓ Chuẩn đề thi 10.0 điểm (${questionsPerStudent} câu rút)`
+                        ? `✓ Chuẩn đề thi 10.0 điểm (${quizStructure === 'simple' ? simpleQuestionsCount : (sampleMcCount + sampleShortCount + sampleEssayCount)} câu rút)`
                         : `Chưa tròn 10 điểm (Hiện tại: ${examTotalPoints}đ)`}
                     </span>
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Phân bổ điểm theo 3 phần: Trắc nghiệm (4đ) + Câu ngắn (3đ) + Tự luận (3đ) = 10.0 điểm
+                    {quizStructure === 'simple'
+                      ? `Chế độ Bài Quiz: Rút ${simpleQuestionsCount} câu ngẫu nhiên × ${simplePointsPerQuestion}đ/câu = ${examTotalPoints} điểm`
+                      : `Chế độ Đề Thi 3 Phần: Trắc nghiệm (${plannedMcPoints}đ) + Câu ngắn (${plannedShortPoints}đ) + Tự luận (${plannedEssayPoints}đ) = ${examTotalPoints} điểm`}
                   </p>
                 </div>
               </div>
-
-              {/* Quick Presets Buttons */}
-              <div className="flex items-center flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={handleApplyMidtermPreset}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm"
-                  title="Áp dụng thang điểm Midterm: Trắc nghiệm 0.2đ, Câu ngắn 1.0đ, Tự luận 3.0đ"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Mẫu Midterm (4đ - 3đ - 3đ)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDistributeEvenly}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium flex items-center space-x-1.5 transition-all"
-                  title="Chia đều 10.0 điểm cho tất cả các câu hiện có"
-                >
-                  <Sliders className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Chia Đều 10 Điểm</span>
-                </button>
-              </div>
             </div>
 
-            {/* 3-Section Breakdown Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Phần 1 */}
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-                    Phần 1: Trắc Nghiệm
-                  </span>
-                  <span className="text-xs font-bold text-white bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30">
-                    {Math.round((sampleMcCount * batchMcPoints) * 10) / 10} điểm
-                  </span>
+            {/* CẤU TRÚC ĐỀ THI: SELECTOR CHẾ ĐỘ 1 (QUIZ ĐƠN GIẢN) VS CHẾ ĐỘ 2 (ĐỀ THI 3 PHẦN) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1.5 bg-slate-950/80 rounded-xl border border-indigo-500/20">
+              <button
+                type="button"
+                onClick={() => {
+                  setQuizStructure('simple');
+                  setQuestionsPerStudent(simpleQuestionsCount);
+                }}
+                className={`p-3 rounded-lg text-left transition-all flex items-start space-x-3 ${
+                  quizStructure === 'simple'
+                    ? 'bg-purple-600/20 border border-purple-500/50 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                }`}
+              >
+                <div className={`p-2 rounded-lg ${quizStructure === 'simple' ? 'bg-purple-500/30 text-purple-300' : 'bg-slate-800 text-slate-400'}`}>
+                  <Sparkles className="w-5 h-5" />
                 </div>
-                <div className="flex items-baseline justify-between text-xs text-slate-400">
-                  <span>Kho ngân hàng: <strong className="text-white">{mcQuestions.length} câu</strong></span>
-                  <span>Đơn giá: <strong className="text-indigo-300">{batchMcPoints}đ/câu</strong></span>
-                </div>
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                  <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
-                  <div className="flex items-center space-x-1.5">
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0"
-                      value={batchMcPoints}
-                      onChange={(e) => setBatchMcPoints(Number(e.target.value) || 0)}
-                      className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-indigo-500"
-                    />
-                    <span className="text-[11px] text-slate-500">đ</span>
-                  </div>
-                </div>
-                {/* Rút Ngẫu Nhiên Phần 1 */}
-                <div className="pt-1.5 flex items-center justify-between bg-indigo-500/10 p-2 rounded-lg border border-indigo-500/20">
-                  <div className="flex items-center space-x-1">
-                    <Dice5 className="w-3.5 h-3.5 text-indigo-400" />
-                    <label className="text-[11px] font-semibold text-indigo-200">Rút ngẫu nhiên:</label>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <input
-                      type="number"
-                      min={0}
-                      max={Math.max(1, mcQuestions.length)}
-                      value={sampleMcCount}
-                      onChange={(e) => {
-                        const val = Math.max(0, Number(e.target.value) || 0);
-                        setSampleMcCount(val);
-                        setQuestionsPerStudent(val + sampleShortCount + sampleEssayCount);
-                      }}
-                      className="w-16 bg-slate-950 border border-indigo-500/50 font-bold rounded-lg px-2 py-1 text-xs text-indigo-300 text-right focus:outline-none focus:border-indigo-400"
-                    />
-                    <span className="text-[11px] text-indigo-300 font-medium">câu</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Phần 2 */}
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    Phần 2: Câu Hỏi Ngắn
-                  </span>
-                  <span className="text-xs font-bold text-white bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                    {Math.round((sampleShortCount * batchShortPoints) * 10) / 10} điểm
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between text-xs text-slate-400">
-                  <span>Kho ngân hàng: <strong className="text-white">{shortQuestions.length} câu</strong></span>
-                  <span>Đơn giá: <strong className="text-emerald-300">{batchShortPoints}đ/câu</strong></span>
-                </div>
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                  <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
-                  <div className="flex items-center space-x-1.5">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={batchShortPoints}
-                      onChange={(e) => setBatchShortPoints(Number(e.target.value) || 0)}
-                      className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-emerald-500"
-                    />
-                    <span className="text-[11px] text-slate-500">đ</span>
-                  </div>
-                </div>
-                {/* Rút Ngẫu Nhiên Phần 2 */}
-                <div className="pt-1.5 flex items-center justify-between bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
-                  <div className="flex items-center space-x-1">
-                    <Dice5 className="w-3.5 h-3.5 text-emerald-400" />
-                    <label className="text-[11px] font-semibold text-emerald-200">Rút ngẫu nhiên:</label>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <input
-                      type="number"
-                      min={0}
-                      max={Math.max(1, shortQuestions.length)}
-                      value={sampleShortCount}
-                      onChange={(e) => {
-                        const val = Math.max(0, Number(e.target.value) || 0);
-                        setSampleShortCount(val);
-                        setQuestionsPerStudent(sampleMcCount + val + sampleEssayCount);
-                      }}
-                      className="w-16 bg-slate-950 border border-emerald-500/50 font-bold rounded-lg px-2 py-1 text-xs text-emerald-300 text-right focus:outline-none focus:border-emerald-400"
-                    />
-                    <span className="text-[11px] text-emerald-300 font-medium">câu</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Phần 3 */}
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                    Phần 3: Tự Luận Dài
-                  </span>
-                  <span className="text-xs font-bold text-white bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/30">
-                    {Math.round((sampleEssayCount * batchEssayPoints) * 10) / 10} điểm
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between text-xs text-slate-400">
-                  <span>Kho ngân hàng: <strong className="text-white">{longQuestions.length} câu</strong></span>
-                  <span>Đơn giá: <strong className="text-amber-300">{batchEssayPoints}đ/câu</strong></span>
-                </div>
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                  <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
-                  <div className="flex items-center space-x-1.5">
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      value={batchEssayPoints}
-                      onChange={(e) => setBatchEssayPoints(Number(e.target.value) || 0)}
-                      className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-amber-500"
-                    />
-                    <span className="text-[11px] text-slate-500">đ</span>
-                  </div>
-                </div>
-                {/* Rút Ngẫu Nhiên Phần 3 */}
-                <div className="pt-1.5 flex items-center justify-between bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
-                  <div className="flex items-center space-x-1">
-                    <Dice5 className="w-3.5 h-3.5 text-amber-400" />
-                    <label className="text-[11px] font-semibold text-amber-200">Rút ngẫu nhiên:</label>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <input
-                      type="number"
-                      min={0}
-                      max={Math.max(1, longQuestions.length)}
-                      value={sampleEssayCount}
-                      onChange={(e) => {
-                        const val = Math.max(0, Number(e.target.value) || 0);
-                        setSampleEssayCount(val);
-                        setQuestionsPerStudent(sampleMcCount + sampleShortCount + val);
-                      }}
-                      className="w-16 bg-slate-950 border border-amber-500/50 font-bold rounded-lg px-2 py-1 text-xs text-amber-300 text-right focus:outline-none focus:border-amber-400"
-                    />
-                    <span className="text-[11px] text-amber-300 font-medium">câu</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick apply button row & summary bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
-              <div className="text-xs text-slate-400 space-y-1">
                 <div>
-                  Đề thi sinh viên nhận ({questionsPerStudent} câu rút):{' '}
-                  <strong className={Math.abs(examTotalPoints - 10) < 0.05 ? 'text-emerald-400 font-bold text-sm' : 'text-amber-400 font-bold text-sm'}>
-                    {examTotalPoints} / 10.0 điểm
-                  </strong>
-                  <span className="text-[11px] text-slate-500 ml-2">
-                    ({sampleMcCount} TN &times; {batchMcPoints}đ + {sampleShortCount} Ngắn &times; {batchShortPoints}đ + {sampleEssayCount} Tự luận &times; {batchEssayPoints}đ)
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-300">1. Bài Quiz Tiêu Chuẩn / Đơn Phần</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">Khuyên dùng</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                    Rút ngẫu nhiên <strong>N câu hỏi</strong> (VD: 5 câu × 2.0đ = 10.0đ). Phù hợp cho kiểm tra thường kỳ, test trắc nghiệm nhanh 15–45 phút.
+                  </p>
                 </div>
-                <div className="text-[11px] text-slate-500">
-                  Kho ngân hàng hiện có: <strong className="text-slate-300">{questions.length} câu</strong> (Trắc nghiệm: {mcQuestions.length}, Ngắn: {shortQuestions.length}, Tự luận: {longQuestions.length}) &bull; Tổng điểm tất cả câu trong kho: <strong className="text-slate-300">{totalPoints}đ</strong>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setQuizStructure('sections');
+                  setQuestionsPerStudent(sampleMcCount + sampleShortCount + sampleEssayCount);
+                }}
+                className={`p-3 rounded-lg text-left transition-all flex items-start space-x-3 ${
+                  quizStructure === 'sections'
+                    ? 'bg-amber-600/20 border border-amber-500/50 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                }`}
+              >
+                <div className={`p-2 rounded-lg ${quizStructure === 'sections' ? 'bg-amber-500/30 text-amber-300' : 'bg-slate-800 text-slate-400'}`}>
+                  <Layers className="w-5 h-5" />
                 </div>
-              </div>
-
-              <div className="flex items-center flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={handleApplyBatchPoints}
-                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md hover:shadow-indigo-500/20 transition-all flex items-center space-x-1.5"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Áp Dụng Phân Bổ Cho Các Câu</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleScaffoldMidtermTemplate}
-                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all flex items-center space-x-1.5"
-                  title="Tạo khung mẫu đề thi Midterm đầy đủ: 20 trắc nghiệm (4đ) + 3 câu ngắn (3đ) + 1 tự luận (3đ)"
-                >
-                  <FilePlus2 className="w-3.5 h-3.5" />
-                  <span>Khởi Tạo Khung Đề Midterm Chuẩn (10đ)</span>
-                </button>
-              </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-300">2. Đề Thi Phân Bổ 3 Phần (Midterm / Final)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                    Phân bổ chi tiết: <strong>Trắc nghiệm (4đ) + Câu ngắn (3đ) + Tự luận (3đ)</strong> = 10.0đ. Phù hợp cho thi Giữa kỳ / Cuối kỳ.
+                  </p>
+                </div>
+              </button>
             </div>
+
+            {/* GIAO DIỆN CHẾ ĐỘ 1: BÀI QUIZ TIÊU CHUẨN */}
+            {quizStructure === 'simple' && (
+              <div className="space-y-5 pt-1">
+                {/* Dải nút Preset */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Chọn nhanh mẫu phân bổ điểm:</span>
+                  </span>
+
+                  <div className="flex items-center flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplySimplePreset(5, 2.0)}
+                      className="px-3 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center space-x-1 transition-all"
+                    >
+                      <span>⚡ 5 câu (2.0đ = 10đ)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplySimplePreset(10, 1.0)}
+                      className="px-3 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center space-x-1 transition-all"
+                    >
+                      <span>⚡ 10 câu (1.0đ = 10đ)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplySimplePreset(20, 0.5)}
+                      className="px-3 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center space-x-1 transition-all"
+                    >
+                      <span>⚡ 20 câu (0.5đ = 10đ)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleApplySimpleEvenly}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium flex items-center space-x-1 transition-all"
+                    >
+                      <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>⚡ Chia đều 10 điểm</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid cấu hình Số câu & Đơn giá điểm */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center space-x-1.5">
+                        <Dice5 className="w-4 h-4 text-purple-400" />
+                        <span>Số Câu Rút Ngẫu Nhiên</span>
+                      </span>
+                      <span className="text-xs font-bold text-white bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/30">
+                        {simpleQuestionsCount} câu
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Mỗi sinh viên khi bắt đầu làm bài sẽ được rút ngẫu nhiên số câu này từ ngân hàng đề.
+                    </p>
+                    <div className="pt-2 flex items-center space-x-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={Math.max(1, questions.length)}
+                        value={simpleQuestionsCount}
+                        onChange={(e) => {
+                          const val = Math.max(1, Number(e.target.value) || 1);
+                          setSimpleQuestionsCount(val);
+                          setQuestionsPerStudent(val);
+                        }}
+                        className="w-full bg-slate-950 border border-purple-500/40 rounded-lg px-3 py-2 text-sm text-white font-bold text-purple-300 focus:outline-none focus:border-purple-400"
+                      />
+                      <span className="text-xs text-slate-400 shrink-0">câu hỏi</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center space-x-1.5">
+                        <Calculator className="w-4 h-4 text-emerald-400" />
+                        <span>Điểm Cho Mỗi Câu Hỏi</span>
+                      </span>
+                      <span className="text-xs font-bold text-white bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                        {simplePointsPerQuestion}đ / câu
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Đơn giá điểm chuẩn áp dụng cho từng câu hỏi khi chấm điểm bài thi sinh viên.
+                    </p>
+                    <div className="pt-2 flex items-center space-x-2">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min={0}
+                        value={simplePointsPerQuestion}
+                        onChange={(e) => setSimplePointsPerQuestion(Math.max(0, Number(e.target.value) || 0))}
+                        className="w-full bg-slate-950 border border-emerald-500/40 rounded-lg px-3 py-2 text-sm text-white font-bold text-emerald-300 focus:outline-none focus:border-emerald-400"
+                      />
+                      <span className="text-xs text-slate-400 shrink-0">điểm / câu</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Thanh tóm tắt & Nút đồng bộ điểm */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+                  <div className="text-xs text-slate-400 space-y-1">
+                    <div>
+                      Đề thi sinh viên nhận ({simpleQuestionsCount} câu rút):{' '}
+                      <strong className={Math.abs(simpleTotalPoints - 10) < 0.05 ? 'text-emerald-400 font-bold text-sm' : 'text-amber-400 font-bold text-sm'}>
+                        {simpleTotalPoints} / 10.0 điểm
+                      </strong>
+                      <span className="text-[11px] text-slate-500 ml-2">
+                        ({simpleQuestionsCount} câu &times; {simplePointsPerQuestion}đ/câu)
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Kho ngân hàng hiện có: <strong className="text-slate-300">{questions.length} câu</strong> &bull; Sinh viên sẽ nhận <strong className="text-purple-400">{simpleQuestionsCount} câu ngẫu nhiên</strong> từ kho này.
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleApplySimplePointsToAll}
+                    className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md transition-all flex items-center space-x-1.5 shrink-0"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Áp Dụng {simplePointsPerQuestion}đ Cho Toàn Bộ {questions.length} Câu Trong Kho</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* GIAO DIỆN CHẾ ĐỘ 2: ĐỀ THI PHỨC HỢP 3 PHẦN */}
+            {quizStructure === 'sections' && (
+              <div className="space-y-5 pt-1">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Cấu hình phân bổ chi tiết 3 phần:</span>
+                  </span>
+
+                  <div className="flex items-center flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleApplyMidtermPreset}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm"
+                      title="Áp dụng thang điểm Midterm: Trắc nghiệm 0.2đ, Câu ngắn 1.0đ, Tự luận 3.0đ"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Mẫu Midterm (4đ - 3đ - 3đ)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDistributeEvenly}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium flex items-center space-x-1.5 transition-all"
+                      title="Chia đều 10.0 điểm cho tất cả các câu hiện có"
+                    >
+                      <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Chia Đều 10 Điểm</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3-Section Breakdown Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Phần 1 */}
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                        Phần 1: Trắc Nghiệm
+                      </span>
+                      <span className="text-xs font-bold text-white bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30">
+                        {Math.round((sampleMcCount * batchMcPoints) * 10) / 10} điểm
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between text-xs text-slate-400">
+                      <span>Kho ngân hàng: <strong className="text-white">{mcQuestions.length} câu</strong></span>
+                      <span>Đơn giá: <strong className="text-indigo-300">{batchMcPoints}đ/câu</strong></span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                      <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
+                      <div className="flex items-center space-x-1.5">
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="0"
+                          value={batchMcPoints}
+                          onChange={(e) => setBatchMcPoints(Number(e.target.value) || 0)}
+                          className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-indigo-500"
+                        />
+                        <span className="text-[11px] text-slate-500">đ</span>
+                      </div>
+                    </div>
+                    {/* Rút Ngẫu Nhiên Phần 1 */}
+                    <div className="pt-1.5 flex items-center justify-between bg-indigo-500/10 p-2 rounded-lg border border-indigo-500/20">
+                      <div className="flex items-center space-x-1">
+                        <Dice5 className="w-3.5 h-3.5 text-indigo-400" />
+                        <label className="text-[11px] font-semibold text-indigo-200">Rút ngẫu nhiên:</label>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={Math.max(1, mcQuestions.length)}
+                          value={sampleMcCount}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value) || 0);
+                            setSampleMcCount(val);
+                            setQuestionsPerStudent(val + sampleShortCount + sampleEssayCount);
+                          }}
+                          className="w-16 bg-slate-950 border border-indigo-500/50 font-bold rounded-lg px-2 py-1 text-xs text-indigo-300 text-right focus:outline-none focus:border-indigo-400"
+                        />
+                        <span className="text-[11px] text-indigo-300 font-medium">câu</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Phần 2 */}
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                        Phần 2: Câu Hỏi Ngắn
+                      </span>
+                      <span className="text-xs font-bold text-white bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                        {Math.round((sampleShortCount * batchShortPoints) * 10) / 10} điểm
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between text-xs text-slate-400">
+                      <span>Kho ngân hàng: <strong className="text-white">{shortQuestions.length} câu</strong></span>
+                      <span>Đơn giá: <strong className="text-emerald-300">{batchShortPoints}đ/câu</strong></span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                      <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
+                      <div className="flex items-center space-x-1.5">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={batchShortPoints}
+                          onChange={(e) => setBatchShortPoints(Number(e.target.value) || 0)}
+                          className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-emerald-500"
+                        />
+                        <span className="text-[11px] text-slate-500">đ</span>
+                      </div>
+                    </div>
+                    {/* Rút Ngẫu Nhiên Phần 2 */}
+                    <div className="pt-1.5 flex items-center justify-between bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
+                      <div className="flex items-center space-x-1">
+                        <Dice5 className="w-3.5 h-3.5 text-emerald-400" />
+                        <label className="text-[11px] font-semibold text-emerald-200">Rút ngẫu nhiên:</label>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={Math.max(1, shortQuestions.length)}
+                          value={sampleShortCount}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value) || 0);
+                            setSampleShortCount(val);
+                            setQuestionsPerStudent(sampleMcCount + val + sampleEssayCount);
+                          }}
+                          className="w-16 bg-slate-950 border border-emerald-500/50 font-bold rounded-lg px-2 py-1 text-xs text-emerald-300 text-right focus:outline-none focus:border-emerald-400"
+                        />
+                        <span className="text-[11px] text-emerald-300 font-medium">câu</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Phần 3 */}
+                  <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                        Phần 3: Tự Luận Dài
+                      </span>
+                      <span className="text-xs font-bold text-white bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/30">
+                        {Math.round((sampleEssayCount * batchEssayPoints) * 10) / 10} điểm
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between text-xs text-slate-400">
+                      <span>Kho ngân hàng: <strong className="text-white">{longQuestions.length} câu</strong></span>
+                      <span>Đơn giá: <strong className="text-amber-300">{batchEssayPoints}đ/câu</strong></span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                      <label className="text-[11px] text-slate-400 shrink-0">Điểm mỗi câu:</label>
+                      <div className="flex items-center space-x-1.5">
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={batchEssayPoints}
+                          onChange={(e) => setBatchEssayPoints(Number(e.target.value) || 0)}
+                          className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-amber-500"
+                        />
+                        <span className="text-[11px] text-slate-500">đ</span>
+                      </div>
+                    </div>
+                    {/* Rút Ngẫu Nhiên Phần 3 */}
+                    <div className="pt-1.5 flex items-center justify-between bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                      <div className="flex items-center space-x-1">
+                        <Dice5 className="w-3.5 h-3.5 text-amber-400" />
+                        <label className="text-[11px] font-semibold text-amber-200">Rút ngẫu nhiên:</label>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={Math.max(1, longQuestions.length)}
+                          value={sampleEssayCount}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value) || 0);
+                            setSampleEssayCount(val);
+                            setQuestionsPerStudent(sampleMcCount + sampleShortCount + val);
+                          }}
+                          className="w-16 bg-slate-950 border border-amber-500/50 font-bold rounded-lg px-2 py-1 text-xs text-amber-300 text-right focus:outline-none focus:border-amber-400"
+                        />
+                        <span className="text-[11px] text-amber-300 font-medium">câu</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick apply button row & summary bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+                  <div className="text-xs text-slate-400 space-y-1">
+                    <div>
+                      Đề thi sinh viên nhận ({questionsPerStudent} câu rút):{' '}
+                      <strong className={Math.abs(examTotalPoints - 10) < 0.05 ? 'text-emerald-400 font-bold text-sm' : 'text-amber-400 font-bold text-sm'}>
+                        {examTotalPoints} / 10.0 điểm
+                      </strong>
+                      <span className="text-[11px] text-slate-500 ml-2">
+                        ({sampleMcCount} TN &times; {batchMcPoints}đ + {sampleShortCount} Ngắn &times; {batchShortPoints}đ + {sampleEssayCount} Tự luận &times; {batchEssayPoints}đ)
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Kho ngân hàng hiện có: <strong className="text-slate-300">{questions.length} câu</strong> (Trắc nghiệm: {mcQuestions.length}, Ngắn: {shortQuestions.length}, Tự luận: {longQuestions.length}) &bull; Tổng điểm tất cả câu trong kho: <strong className="text-slate-300">{totalPoints}đ</strong>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleApplyBatchPoints}
+                      className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md hover:shadow-indigo-500/20 transition-all flex items-center space-x-1.5"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Áp Dụng Phân Bổ Cho Các Câu</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleScaffoldMidtermTemplate}
+                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all flex items-center space-x-1.5"
+                      title="Tạo khung mẫu đề thi Midterm đầy đủ: 20 trắc nghiệm (4đ) + 3 câu ngắn (3đ) + 1 tự luận (3đ)"
+                    >
+                      <FilePlus2 className="w-3.5 h-3.5" />
+                      <span>Khởi Tạo Khung Đề Midterm Chuẩn (10đ)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* QUESTION BANK LIST */}
