@@ -88,14 +88,21 @@ export async function POST(request: Request) {
       : [...DEFAULT_QUESTION_BANK];
 
     const hasSpecialSections = questions.some((q) => q.question_type === 'short_answer' || q.question_type === 'long_answer');
+    const isMidterm = quiz?.id === 'midterm-scm-2026' || (quiz?.title && quiz.title.toLowerCase().includes('midterm'));
     let sampling = quiz?.section_sampling;
-    if (!sampling && hasSpecialSections) {
+    if (!sampling && (hasSpecialSections || isMidterm)) {
       sampling = {
-        multiple_choice: questions.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false').length,
-        short_answer: questions.filter((q) => q.question_type === 'short_answer').length,
-        long_answer: questions.filter((q) => q.question_type === 'long_answer').length,
+        multiple_choice: isMidterm ? 20 : questions.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false').length,
+        short_answer: questions.filter((q) => q.question_type === 'short_answer').length || 3,
+        long_answer: questions.filter((q) => q.question_type === 'long_answer').length || 1,
       };
     }
+
+    const targetTotal = (quiz?.questions_per_student && quiz.questions_per_student > 0)
+      ? quiz.questions_per_student
+      : (sampling
+          ? (Number(sampling.multiple_choice) || 0) + (Number(sampling.short_answer) || 0) + (Number(sampling.long_answer) || 0)
+          : (isMidterm ? 24 : questions.length));
 
     // Rút ngẫu nhiên theo từng phần (section_sampling) nếu có cấu hình:
     // Ví dụ: phần 1 rút 20 câu, phần 2 rút 3 câu, phần 3 rút 1 câu
@@ -110,9 +117,16 @@ export async function POST(request: Request) {
         longPool = shuffleArray(longPool, rng);
       }
 
-      const mcTake = Math.min(mcPool.length, Math.max(0, sampling.multiple_choice ?? mcPool.length));
       const shortTake = Math.min(shortPool.length, Math.max(0, sampling.short_answer ?? shortPool.length));
       const longTake = Math.min(longPool.length, Math.max(0, sampling.long_answer ?? longPool.length));
+
+      const desiredMc = typeof sampling.multiple_choice === 'number'
+        ? sampling.multiple_choice
+        : Math.max(0, targetTotal - shortTake - longTake);
+      let mcTake = Math.min(mcPool.length, Math.max(0, desiredMc));
+      if (targetTotal > 0 && mcTake + shortTake + longTake > targetTotal) {
+        mcTake = Math.max(0, targetTotal - shortTake - longTake);
+      }
 
       questions = [
         ...mcPool.slice(0, mcTake),
@@ -120,19 +134,20 @@ export async function POST(request: Request) {
         ...longPool.slice(0, longTake),
       ];
     } else {
-      const questionsPerStudent = quiz?.questions_per_student && quiz.questions_per_student > 0
-        ? quiz.questions_per_student
-        : questions.length;
-
       // Xáo trộn thứ tự các câu hỏi trong bộ câu hỏi
       if (quiz?.shuffle_questions !== false) {
         questions = shuffleArray(questions, rng);
       }
 
       // Rút ngẫu nhiên số câu hỏi phân bổ cho sinh viên nếu có cấu hình
-      if (questionsPerStudent > 0 && questionsPerStudent < questions.length) {
-        questions = questions.slice(0, questionsPerStudent);
+      if (targetTotal > 0 && targetTotal < questions.length) {
+        questions = questions.slice(0, targetTotal);
       }
+    }
+
+    // Bảo đảm số câu thực tế không bao giờ vượt quá chỉ tiêu câu hỏi (ví dụ 24 câu)
+    if (targetTotal > 0 && questions.length > targetTotal) {
+      questions = questions.slice(0, targetTotal);
     }
 
     // Ẩn đáp án đúng is_correct để sinh viên không thể F12 gian lận

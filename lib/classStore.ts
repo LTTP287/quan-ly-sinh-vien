@@ -495,20 +495,24 @@ const DEFAULT_QUIZZES: Quiz[] = [];
 
 export function getStoredQuizzes(): Quiz[] {
   if (typeof window === 'undefined') return [];
+  const initKey = 'uniquiz_quizzes_initialized_v2';
   const stored = localStorage.getItem(STORAGE_KEYS.QUIZZES) || localStorage.getItem('uni_quiz_testbank_v1');
   if (!stored) {
+    if (localStorage.getItem(initKey) === '1') {
+      return [];
+    }
     const initial = [createDefaultMidtermQuiz()];
     localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(initial));
+    localStorage.setItem(initKey, '1');
     return initial;
   }
   try {
     let parsed: Quiz[] = JSON.parse(stored);
     localStorage.removeItem('uni_quiz_testbank_v1');
+    localStorage.setItem(initKey, '1');
 
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      const initial = [createDefaultMidtermQuiz()];
-      localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(initial));
-      return initial;
+      return [];
     }
 
     const updated = parsed.map((q) => {
@@ -518,7 +522,8 @@ export function getStoredQuizzes(): Quiz[] {
         const mcCount = q.questions?.filter((x) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20;
         const shortCount = q.questions?.filter((x) => x.question_type === 'short_answer').length || 3;
         const longCount = q.questions?.filter((x) => x.question_type === 'long_answer').length || 1;
-        const totalSample = mcCount + shortCount + longCount;
+        const defaultSamplingMc = isMidterm ? 20 : mcCount;
+        const totalSample = defaultSamplingMc + shortCount + longCount;
         const defaultMidterm = createDefaultMidtermQuiz();
         const updatedQuestions = (q.questions || []).map((quest) => {
           if (quest.image_url) return quest;
@@ -530,9 +535,9 @@ export function getStoredQuizzes(): Quiz[] {
           ...q,
           passcode: q.passcode || 'LOG888',
           questions: updatedQuestions,
-          questions_per_student: q.questions_per_student && q.questions_per_student >= totalSample ? q.questions_per_student : totalSample,
+          questions_per_student: Number(q.questions_per_student) > 0 ? Number(q.questions_per_student) : (isMidterm ? 24 : totalSample),
           section_sampling: q.section_sampling || {
-            multiple_choice: mcCount,
+            multiple_choice: defaultSamplingMc,
             short_answer: shortCount,
             long_answer: longCount,
           },
@@ -543,7 +548,7 @@ export function getStoredQuizzes(): Quiz[] {
 
     return updated;
   } catch (e) {
-    return [createDefaultMidtermQuiz()];
+    return [];
   }
 }
 

@@ -339,47 +339,6 @@ export function demoDb(): DemoDb {
   // Tự động nâng cấp / đồng bộ cấu hình nếu các đề thi thiếu section_sampling hoặc passcode
   const db = globalStore.__uniquizDemoDb!;
   let modified = false;
-
-  // Đảm bảo midterm quiz luôn có mặt
-  if (!db.quizzes.some((q) => q.id === 'midterm-scm-2026' || q.title.toLowerCase().includes('midterm'))) {
-    const midterm = createDefaultMidtermQuiz();
-    db.quizzes.push({
-      id: midterm.id,
-      title: midterm.title,
-      description: midterm.description || '',
-      time_limit_minutes: midterm.time_limit_minutes,
-      is_published: true,
-      show_results: false,
-      passcode: 'LOG888',
-      passcode_expires_at: null,
-      class_ids: db.classes.map((c) => c.id),
-      class_schedules: db.classes.reduce((acc, c) => {
-        acc[c.id] = {
-          class_id: c.id,
-          start_at: new Date(Date.now() - 3600000).toISOString().slice(0, 16),
-          end_at: new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 16),
-          access_code: 'LOG888',
-          is_active: true,
-        };
-        return acc;
-      }, {} as Record<string, any>),
-      start_at: new Date(Date.now() - 3600000).toISOString(),
-      end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
-      is_active: true,
-      shuffle_questions: true,
-      shuffle_options: true,
-      prevent_previous: true,
-      questions_per_student: 24,
-      section_sampling: {
-        multiple_choice: 20,
-        short_answer: 3,
-        long_answer: 1,
-      },
-      questions: (midterm.questions || []) as DemoQuestion[],
-    });
-    modified = true;
-  }
-
   for (const q of db.quizzes) {
     const isMidterm = q.id === 'midterm-scm-2026' || q.title.toLowerCase().includes('midterm');
     const hasSpecial = q.questions?.some((x) => x.question_type === 'short_answer' || x.question_type === 'long_answer');
@@ -387,7 +346,8 @@ export function demoDb(): DemoDb {
       const mcCount = q.questions?.filter((x) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20;
       const shortCount = q.questions?.filter((x) => x.question_type === 'short_answer').length || 3;
       const longCount = q.questions?.filter((x) => x.question_type === 'long_answer').length || 1;
-      const totalSample = mcCount + shortCount + longCount;
+      const defaultSamplingMc = isMidterm ? 20 : mcCount;
+      const totalSample = defaultSamplingMc + shortCount + longCount;
 
       if (!q.passcode) {
         q.passcode = 'LOG888';
@@ -395,14 +355,14 @@ export function demoDb(): DemoDb {
       }
       if (!q.section_sampling) {
         q.section_sampling = {
-          multiple_choice: mcCount,
+          multiple_choice: defaultSamplingMc,
           short_answer: shortCount,
           long_answer: longCount,
         };
         modified = true;
       }
-      if (!q.questions_per_student || q.questions_per_student < totalSample) {
-        q.questions_per_student = totalSample;
+      if (!q.questions_per_student || q.questions_per_student <= 0) {
+        q.questions_per_student = isMidterm ? 24 : totalSample;
         modified = true;
       }
 

@@ -166,15 +166,22 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
       }
       const bank = (found.questions && found.questions.length > 0) ? found.questions : DEFAULT_QUESTION_BANK;
 
+      const isMidterm = found.id === 'midterm-scm-2026' || (found.title && found.title.toLowerCase().includes('midterm'));
       const hasSpecialSections = bank.some((q) => q.question_type === 'short_answer' || q.question_type === 'long_answer');
       let sampling = found.section_sampling;
-      if (!sampling && hasSpecialSections) {
+      if (!sampling && (hasSpecialSections || isMidterm)) {
         sampling = {
-          multiple_choice: bank.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false').length,
-          short_answer: bank.filter((q) => q.question_type === 'short_answer').length,
-          long_answer: bank.filter((q) => q.question_type === 'long_answer').length,
+          multiple_choice: isMidterm ? 20 : (bank.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false').length || 20),
+          short_answer: bank.filter((q) => q.question_type === 'short_answer').length || 3,
+          long_answer: bank.filter((q) => q.question_type === 'long_answer').length || 1,
         };
       }
+
+      const targetTotal = (found.questions_per_student && found.questions_per_student > 0)
+        ? found.questions_per_student
+        : (sampling
+            ? (Number(sampling.multiple_choice) || 0) + (Number(sampling.short_answer) || 0) + (Number(sampling.long_answer) || 0)
+            : (isMidterm ? 24 : bank.length));
 
       let sampled: Question[] = [];
       if (sampling && (typeof sampling.multiple_choice === 'number' || typeof sampling.short_answer === 'number' || typeof sampling.long_answer === 'number')) {
@@ -188,9 +195,16 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
           longPool = shuffleArray(longPool);
         }
 
-        const mcTake = Math.min(mcPool.length, Math.max(0, sampling.multiple_choice ?? mcPool.length));
         const shortTake = Math.min(shortPool.length, Math.max(0, sampling.short_answer ?? shortPool.length));
         const longTake = Math.min(longPool.length, Math.max(0, sampling.long_answer ?? longPool.length));
+
+        const desiredMc = typeof sampling.multiple_choice === 'number'
+          ? sampling.multiple_choice
+          : Math.max(0, targetTotal - shortTake - longTake);
+        let mcTake = Math.min(mcPool.length, Math.max(0, desiredMc));
+        if (targetTotal > 0 && mcTake + shortTake + longTake > targetTotal) {
+          mcTake = Math.max(0, targetTotal - shortTake - longTake);
+        }
 
         sampled = [
           ...mcPool.slice(0, mcTake),
@@ -199,12 +213,17 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
         ];
       } else {
         sampled = [...bank];
-        if (found.questions_per_student && found.questions_per_student < bank.length) {
-          sampled = shuffleArray(bank).slice(0, found.questions_per_student);
+        if (targetTotal > 0 && targetTotal < bank.length) {
+          sampled = shuffleArray(bank).slice(0, targetTotal);
         } else if (found.shuffle_questions) {
           sampled = shuffleArray(bank);
         }
       }
+
+      if (targetTotal > 0 && sampled.length > targetTotal) {
+        sampled = sampled.slice(0, targetTotal);
+      }
+
       if (found.shuffle_options) {
         sampled = sampled.map((q) => ({ ...q, options: q.options ? shuffleArray(q.options) : [] }));
       }

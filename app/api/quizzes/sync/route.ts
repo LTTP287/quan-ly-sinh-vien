@@ -77,7 +77,11 @@ export async function POST(request: Request) {
   }
 
   // 3. Đồng bộ đề thi (kèm đầy đủ Ngân hàng câu hỏi & đáp án)
-  if (quizzes.length > 0) {
+  if (Array.isArray(quizzes)) {
+    const activeQuizIds = new Set(quizzes.map((q: any) => q.id).filter(Boolean));
+    // Dọn sạch các đề thi đã bị xóa khỏi danh sách của giảng viên
+    db.quizzes = db.quizzes.filter((q) => activeQuizIds.has(q.id));
+
     // Nếu giảng viên đã tạo đề thi thật (không phải đề mẫu Logistics), dọn sạch các đề mẫu cũ
     if (quizzes.some((q: any) => !q.id.startsWith('quiz-logistics-'))) {
       db.quizzes = db.quizzes.filter((q) => !q.id.startsWith('quiz-logistics-'));
@@ -95,7 +99,8 @@ export async function POST(request: Request) {
           }
         }
       }
-      if (!passcode && (q.id === 'midterm-scm-2026' || (q.title && q.title.toLowerCase().includes('midterm')))) {
+      const isMidterm = q.id === 'midterm-scm-2026' || (q.title && q.title.toLowerCase().includes('midterm'));
+      if (!passcode && isMidterm) {
         passcode = 'LOG888';
       }
 
@@ -108,9 +113,9 @@ export async function POST(request: Request) {
 
       const hasSpecial = questionsList.some((x: any) => x.question_type === 'short_answer' || x.question_type === 'long_answer');
       let sectionSampling = q.section_sampling || null;
-      if (!sectionSampling && hasSpecial) {
+      if (!sectionSampling && (hasSpecial || isMidterm)) {
         sectionSampling = {
-          multiple_choice: questionsList.filter((x: any) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20,
+          multiple_choice: isMidterm ? 20 : (questionsList.filter((x: any) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20),
           short_answer: questionsList.filter((x: any) => x.question_type === 'short_answer').length || 3,
           long_answer: questionsList.filter((x: any) => x.question_type === 'long_answer').length || 1,
         };
@@ -119,6 +124,10 @@ export async function POST(request: Request) {
       const totalNeeded = sectionSampling
         ? (sectionSampling.multiple_choice || 0) + (sectionSampling.short_answer || 0) + (sectionSampling.long_answer || 0)
         : questionsList.length;
+
+      const questionsPerStudent = Number(q.questions_per_student) > 0
+        ? Number(q.questions_per_student)
+        : (isMidterm ? 24 : totalNeeded);
 
       const demoQuizItem: any = {
         id: q.id,
@@ -137,7 +146,7 @@ export async function POST(request: Request) {
         shuffle_questions: q.shuffle_questions !== false,
         shuffle_options: q.shuffle_options !== false,
         prevent_previous: !!q.prevent_previous,
-        questions_per_student: q.questions_per_student && q.questions_per_student >= totalNeeded ? q.questions_per_student : totalNeeded,
+        questions_per_student: questionsPerStudent,
         section_sampling: sectionSampling,
         questions: questionsList.map((item: any) => ({
           id: item.id,
