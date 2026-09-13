@@ -139,7 +139,16 @@ export async function POST(request: Request) {
         prevent_previous: !!q.prevent_previous,
         questions_per_student: q.questions_per_student && q.questions_per_student >= totalNeeded ? q.questions_per_student : totalNeeded,
         section_sampling: sectionSampling,
-        questions: questionsList,
+        questions: questionsList.map((item: any) => ({
+          id: item.id,
+          quiz_id: q.id,
+          question_text: item.question_text,
+          question_type: item.question_type,
+          points: item.points,
+          order_index: item.order_index,
+          image_url: item.image_url || null,
+          options: Array.isArray(item.options) ? item.options : [],
+        })),
       };
 
       if (idx >= 0) {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Clock, ShieldAlert, AlertTriangle, ArrowRight, ArrowLeft, Send,
-  AlertCircle, Lock, ShieldBan, Dice5, CheckCircle2,
+  AlertCircle, Lock, ShieldBan, Dice5, CheckCircle2, Image as ImageIcon, Maximize2, X,
 } from 'lucide-react';
 import { Question, Quiz, Submission, UserProfile, TabViolationRecord } from '@/types/database';
 import { getQuiz, getCurrentUser, saveSubmissionLocal } from '@/lib/data';
@@ -59,6 +59,7 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
 
   const [violationsCount, setViolationsCount] = useState(0);
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
 
   const violationKey = `exam_violations_${params.id}`;
   const draftKey = `uniquiz_draft_${params.id}`;
@@ -114,6 +115,7 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
             question_type: q.question_type,
             points: q.points,
             order_index: idx,
+            image_url: q.image_url || null,
             options: (q.options || []).map((o: any, oi: number) => ({
               id: o.id,
               question_id: q.id,
@@ -507,12 +509,32 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
             <h2 className="text-lg font-semibold text-white leading-relaxed">{currentQ.question_text}</h2>
 
             {currentQ.image_url && (
-              <div className="my-3 p-2 rounded-xl bg-slate-900 border border-slate-800 inline-block">
-                <img
-                  src={currentQ.image_url}
-                  alt="Hình ảnh câu hỏi"
-                  className="max-h-72 max-w-full rounded-lg object-contain"
-                />
+              <div className="my-4 p-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 shadow-lg space-y-2.5">
+                <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                  <span className="flex items-center space-x-1.5 font-medium text-sky-400">
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Hình ảnh / Sơ đồ minh họa câu hỏi:</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setZoomImageUrl(currentQ.image_url || null)}
+                    className="text-[11px] text-sky-300 hover:text-white flex items-center space-x-1 bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 rounded-lg border border-sky-500/20 transition-colors"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                    <span>Phóng to ảnh</span>
+                  </button>
+                </div>
+                <div
+                  className="cursor-zoom-in overflow-hidden rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-2.5 group transition-all hover:border-sky-500/50"
+                  onClick={() => setZoomImageUrl(currentQ.image_url || null)}
+                  title="Nhấp vào để xem ảnh phóng to"
+                >
+                  <img
+                    src={currentQ.image_url}
+                    alt="Hình ảnh đính kèm câu hỏi"
+                    className="max-h-80 max-w-full rounded-lg object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                  />
+                </div>
               </div>
             )}
 
@@ -676,6 +698,42 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
             >
               Tôi Đã Hiểu - Tiếp Tục Làm Bài
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox / Zoom Modal for Question Images */}
+      {zoomImageUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setZoomImageUrl(null)}
+        >
+          <div
+            className="relative max-w-5xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between pb-3 mb-2 border-b border-slate-800">
+              <span className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
+                <ImageIcon className="w-4 h-4 text-sky-400" />
+                <span>Hình ảnh / Sơ đồ câu hỏi (Kích thước lớn)</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoomImageUrl(null)}
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                title="Đóng (Esc)"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-auto max-h-[75vh] w-full flex items-center justify-center rounded-xl bg-slate-950 p-2">
+              <img
+                src={zoomImageUrl}
+                alt="Hình ảnh phóng to"
+                className="max-h-[72vh] max-w-full object-contain rounded-lg shadow-lg"
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2">Nhấp ra ngoài ảnh hoặc ấn nút đóng để quay lại bài làm</p>
           </div>
         </div>
       )}

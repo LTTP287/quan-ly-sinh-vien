@@ -405,6 +405,20 @@ export function demoDb(): DemoDb {
         q.questions_per_student = totalSample;
         modified = true;
       }
+
+      // Bổ sung sơ đồ minh họa cho câu hỏi nếu thiếu
+      const defaultMidterm = createDefaultMidtermQuiz();
+      if (q.questions) {
+        for (const quest of q.questions) {
+          if (!quest.image_url) {
+            const match = defaultMidterm.questions?.find((d) => d.id === quest.id);
+            if (match?.image_url) {
+              quest.image_url = match.image_url;
+              modified = true;
+            }
+          }
+        }
+      }
     }
   }
 

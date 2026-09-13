@@ -550,6 +550,7 @@ export async function createQuiz(
         question_type: q.question_type,
         points: q.points,
         order_index: q.order_index,
+        image_url: q.image_url || null,
       })
       .select('id')
       .single();
@@ -652,6 +653,7 @@ export async function updateQuiz(
           question_type: q.question_type,
           points: q.points,
           order_index: q.order_index,
+          image_url: q.image_url || null,
         })
         .select('id')
         .single();

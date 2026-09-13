@@ -247,7 +247,8 @@ export function createDefaultMidtermQuiz(): Quiz {
     },
     {
       id: 'midterm-mc-2', quiz_id: quizId, question_type: 'multiple_choice', points: 0.2, order_index: 1,
-      question_text: 'Mô hình Bullwhip Effect mô tả hiện tượng nào sau đây?',
+      question_text: 'Quan sát sơ đồ Bullwhip Effect bên dưới: Hiện tượng này mô tả sự biến động nhu cầu gia tăng như thế nào khi đơn hàng di chuyển ngược từ bán lẻ về phía nhà sản xuất?',
+      image_url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 200" width="700" height="200"><rect width="700" height="200" rx="14" fill="%230f172a"/><text x="350" y="28" fill="%2338bdf8" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">SƠ ĐỒ BIỂU DIỄN HIỆU ỨNG CHIẾC ROI DA (BULLWHIP EFFECT)</text><rect x="30" y="50" width="130" height="55" rx="8" fill="%231e293b" stroke="%2338bdf8" stroke-width="2"/><text x="95" y="75" fill="%23f8fafc" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">1. Khách Hàng</text><text x="95" y="93" fill="%2394a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Nhu cầu ổn định (±5%)</text><rect x="200" y="50" width="130" height="55" rx="8" fill="%231e293b" stroke="%23818cf8" stroke-width="2"/><text x="265" y="75" fill="%23f8fafc" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">2. Bán Lẻ (Retail)</text><text x="265" y="93" fill="%2394a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Biến động (±15%)</text><rect x="370" y="50" width="130" height="55" rx="8" fill="%231e293b" stroke="%23c084fc" stroke-width="2"/><text x="435" y="75" fill="%23f8fafc" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">3. Phân Phối (3PL)</text><text x="435" y="93" fill="%2394a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Biến động (±35%)</text><rect x="540" y="50" width="130" height="55" rx="8" fill="%231e293b" stroke="%23f43f5e" stroke-width="2"/><text x="605" y="75" fill="%23f8fafc" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">4. Nhà Sản Xuất</text><text x="605" y="93" fill="%2394a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Biến động (±80%)</text><path d="M165 77 L195 77 M335 77 L365 77 M505 77 L535 77" stroke="%2394a3b8" stroke-width="2"/><path d="M40 150 Q180 140 300 130 T500 115 T660 170" fill="none" stroke="%23f43f5e" stroke-width="3" stroke-dasharray="4,4"/><text x="350" y="175" fill="%23cbd5e1" font-family="sans-serif" font-size="11" text-anchor="middle">Đơn hàng bị phóng đại và méo mó dần khi truyền ngược về đầu nguồn cung ứng</text></svg>',
       options: [
         { id: 'opt-2-a', question_id: 'midterm-mc-2', option_text: 'Biến động nhu cầu gia tăng khi đi ngược lên phía trên Chuỗi cung ứng từ bán lẻ đến nhà sản xuất', is_correct: true, order_index: 0 },
         { id: 'opt-2-b', question_id: 'midterm-mc-2', option_text: 'Sự suy giảm liên tục của lượng tồn kho an toàn tại các nhà phân phối cấp 1', is_correct: false, order_index: 1 },
@@ -417,7 +418,8 @@ export function createDefaultMidtermQuiz(): Quiz {
     },
     {
       id: 'midterm-mc-19', quiz_id: quizId, question_type: 'multiple_choice', points: 0.2, order_index: 18,
-      question_text: 'Quy tắc sắp xếp kho hàng ABC (ABC Analysis) dựa trên nguyên lý Pareto phân loại hàng hóa dựa theo:',
+      question_text: 'Quan sát sơ đồ phân loại hàng tồn kho ABC theo nguyên lý Pareto bên dưới: Hàng hóa thuộc Nhóm A thường đặc trưng bởi yếu tố nào?',
+      image_url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 190" width="650" height="190"><rect width="650" height="190" rx="14" fill="%230f172a"/><text x="325" y="26" fill="%2338bdf8" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">MÔ HÌNH PHÂN TÍCH QUẢN TRỊ KHO HÀNG ABC (PARETO 80/20)</text><rect x="40" y="48" width="165" height="85" rx="8" fill="%231e293b" stroke="%2310b981" stroke-width="2"/><text x="122" y="72" fill="%2334d399" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">Nhóm A (Trọng Yếu)</text><text x="122" y="95" fill="%23f8fafc" font-family="sans-serif" font-size="11" text-anchor="middle">Giá trị: 70% - 80%</text><text x="122" y="115" fill="%2394a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Số lượng SKU: 15% - 20%</text><rect x="242" y="48" width="165" height="85" rx="8" fill="%231e293b" stroke="%23fbbf24" stroke-width="2"/><text x="325" y="72" fill="%23fcd34d" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">Nhóm B (Trung Bình)</text><text x="325" y="95" fill="%23f8fafc" font-family="sans-serif" font-size="11" text-anchor="middle">Giá trị: 15% - 20%</text><text x="325" y="115" fill="%2394a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Số lượng SKU: 30%</text><rect x="445" y="48" width="165" height="85" rx="8" fill="%231e293b" stroke="%2360a5fa" stroke-width="2"/><text x="527" y="72" fill="%2393c5fd" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">Nhóm C (Thông Thường)</text><text x="527" y="95" fill="%23f8fafc" font-family="sans-serif" font-size="11" text-anchor="middle">Giá trị: 5% - 10%</text><text x="527" y="115" fill="%2394a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">Số lượng SKU: 50% - 55%</text><text x="325" y="162" fill="%23cbd5e1" font-family="sans-serif" font-size="11" text-anchor="middle">Tập trung kiểm soát chặt chẽ nhóm A để giảm rủi ro ứ đọng vốn lưu động</text></svg>',
       options: [
         { id: 'opt-19-a', question_id: 'midterm-mc-19', option_text: 'Giá trị tiền tệ hoặc tần suất xuất nhập luân chuyển hàng năm của sản phẩm', is_correct: true, order_index: 0 },
         { id: 'opt-19-b', question_id: 'midterm-mc-19', option_text: 'Thứ tự bảng chữ cái tiếng Anh theo tên của thương hiệu sản xuất', is_correct: false, order_index: 1 },
@@ -517,9 +519,17 @@ export function getStoredQuizzes(): Quiz[] {
         const shortCount = q.questions?.filter((x) => x.question_type === 'short_answer').length || 3;
         const longCount = q.questions?.filter((x) => x.question_type === 'long_answer').length || 1;
         const totalSample = mcCount + shortCount + longCount;
+        const defaultMidterm = createDefaultMidtermQuiz();
+        const updatedQuestions = (q.questions || []).map((quest) => {
+          if (quest.image_url) return quest;
+          const matchDefault = defaultMidterm.questions?.find((d) => d.id === quest.id);
+          return matchDefault?.image_url ? { ...quest, image_url: matchDefault.image_url } : quest;
+        });
+
         return {
           ...q,
           passcode: q.passcode || 'LOG888',
+          questions: updatedQuestions,
           questions_per_student: q.questions_per_student && q.questions_per_student >= totalSample ? q.questions_per_student : totalSample,
           section_sampling: q.section_sampling || {
             multiple_choice: mcCount,
