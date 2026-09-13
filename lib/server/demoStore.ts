@@ -282,8 +282,8 @@ function seed(): DemoDb {
     prevent_previous: true,
     questions_per_student: 24,
     section_sampling: {
-      multiple_choice: 18,
-      short_answer: 5,
+      multiple_choice: 20,
+      short_answer: 3,
       long_answer: 1,
     },
     questions: (midterm.questions || []) as DemoQuestion[],
@@ -387,8 +387,8 @@ export function demoDb(): DemoDb {
       prevent_previous: true,
       questions_per_student: 24,
       section_sampling: {
-        multiple_choice: 18,
-        short_answer: 5,
+        multiple_choice: 20,
+        short_answer: 3,
         long_answer: 1,
       },
       questions: (defaultMidterm.questions || []) as DemoQuestion[],
@@ -404,8 +404,8 @@ export function demoDb(): DemoDb {
       const mcCount = q.questions?.filter((x) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 25;
       const shortCount = q.questions?.filter((x) => x.question_type === 'short_answer').length || 8;
       const longCount = q.questions?.filter((x) => x.question_type === 'long_answer').length || 3;
-      const defaultSamplingMc = isMidterm ? 18 : mcCount;
-      const defaultSamplingShort = isMidterm ? 5 : shortCount;
+      const defaultSamplingMc = isMidterm ? 20 : mcCount;
+      const defaultSamplingShort = isMidterm ? 3 : shortCount;
       const defaultSamplingLong = isMidterm ? 1 : longCount;
       const totalSample = defaultSamplingMc + defaultSamplingShort + defaultSamplingLong;
 
