@@ -256,10 +256,10 @@ function seed(): DemoDb {
 
   const midterm = createDefaultMidtermQuiz();
   const midtermQuiz: DemoQuiz = {
-    id: midterm.id,
-    title: midterm.title,
+    id: 'midterm-scm-2026',
+    title: 'Midterm',
     description: midterm.description || '',
-    time_limit_minutes: midterm.time_limit_minutes,
+    time_limit_minutes: 60,
     is_published: true,
     show_results: false,
     passcode: 'LOG888',
@@ -268,22 +268,22 @@ function seed(): DemoDb {
     class_schedules: {
       'class-scm201-i': {
         class_id: 'class-scm201-i',
-        start_at: new Date(Date.now() - 3600000).toISOString().slice(0, 16),
-        end_at: new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 16),
+        start_at: '2026-09-13T17:59',
+        end_at: '2026-09-20T17:59',
         access_code: 'LOG888',
         is_active: true,
       },
     },
-    start_at: new Date(Date.now() - 3600000).toISOString(),
-    end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+    start_at: '2026-09-13T17:59:00.000Z',
+    end_at: '2026-09-20T17:59:00.000Z',
     is_active: true,
     shuffle_questions: true,
     shuffle_options: true,
     prevent_previous: true,
     questions_per_student: 24,
     section_sampling: {
-      multiple_choice: 20,
-      short_answer: 3,
+      multiple_choice: 18,
+      short_answer: 5,
       long_answer: 1,
     },
     questions: (midterm.questions || []) as DemoQuestion[],
@@ -348,15 +348,66 @@ export function demoDb(): DemoDb {
   // Tự động nâng cấp / đồng bộ cấu hình nếu các đề thi thiếu section_sampling hoặc passcode
   const db = globalStore.__uniquizDemoDb!;
   let modified = false;
+
+  // 1. Luôn loại bỏ vĩnh viễn đề thi cũ đã bị xoá: 'quiz-midterm-logistics' / 'Đề Thi Giữa Kỳ (Midterm Exam)'
+  const beforeLen = db.quizzes.length;
+  db.quizzes = db.quizzes.filter((q) => q.id !== 'quiz-midterm-logistics' && !q.title.includes('Đề Thi Giữa Kỳ (Midterm Exam)'));
+  if (db.quizzes.length !== beforeLen) {
+    modified = true;
+  }
+
+  // 2. Bảo đảm đề thi 'Midterm' mà Giảng viên giữ luôn luôn có mặt
+  const hasMidterm = db.quizzes.some((q) => q.title.trim().toLowerCase() === 'midterm' || q.id === 'midterm-scm-2026');
+  if (!hasMidterm) {
+    const defaultMidterm = createDefaultMidtermQuiz();
+    const midQuiz: DemoQuiz = {
+      id: 'midterm-scm-2026',
+      title: 'Midterm',
+      description: defaultMidterm.description || '',
+      time_limit_minutes: 60,
+      is_published: true,
+      show_results: false,
+      passcode: 'LOG888',
+      passcode_expires_at: null,
+      class_ids: ['class-scm201-i'],
+      class_schedules: {
+        'class-scm201-i': {
+          class_id: 'class-scm201-i',
+          start_at: '2026-09-13T17:59',
+          end_at: '2026-09-20T17:59',
+          access_code: 'LOG888',
+          is_active: true,
+        },
+      },
+      start_at: '2026-09-13T17:59:00.000Z',
+      end_at: '2026-09-20T17:59:00.000Z',
+      is_active: true,
+      shuffle_questions: true,
+      shuffle_options: true,
+      prevent_previous: true,
+      questions_per_student: 24,
+      section_sampling: {
+        multiple_choice: 18,
+        short_answer: 5,
+        long_answer: 1,
+      },
+      questions: (defaultMidterm.questions || []) as DemoQuestion[],
+    };
+    db.quizzes.push(midQuiz);
+    modified = true;
+  }
+
   for (const q of db.quizzes) {
     const isMidterm = q.id === 'midterm-scm-2026' || q.title.toLowerCase().includes('midterm');
     const hasSpecial = q.questions?.some((x) => x.question_type === 'short_answer' || x.question_type === 'long_answer');
     if (isMidterm || hasSpecial) {
-      const mcCount = q.questions?.filter((x) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 20;
-      const shortCount = q.questions?.filter((x) => x.question_type === 'short_answer').length || 3;
-      const longCount = q.questions?.filter((x) => x.question_type === 'long_answer').length || 1;
-      const defaultSamplingMc = isMidterm ? 20 : mcCount;
-      const totalSample = defaultSamplingMc + shortCount + longCount;
+      const mcCount = q.questions?.filter((x) => x.question_type === 'multiple_choice' || x.question_type === 'true_false').length || 25;
+      const shortCount = q.questions?.filter((x) => x.question_type === 'short_answer').length || 8;
+      const longCount = q.questions?.filter((x) => x.question_type === 'long_answer').length || 3;
+      const defaultSamplingMc = isMidterm ? 18 : mcCount;
+      const defaultSamplingShort = isMidterm ? 5 : shortCount;
+      const defaultSamplingLong = isMidterm ? 1 : longCount;
+      const totalSample = defaultSamplingMc + defaultSamplingShort + defaultSamplingLong;
 
       if (!q.passcode) {
         q.passcode = 'LOG888';
@@ -365,8 +416,8 @@ export function demoDb(): DemoDb {
       if (!q.section_sampling) {
         q.section_sampling = {
           multiple_choice: defaultSamplingMc,
-          short_answer: shortCount,
-          long_answer: longCount,
+          short_answer: defaultSamplingShort,
+          long_answer: defaultSamplingLong,
         };
         modified = true;
       }

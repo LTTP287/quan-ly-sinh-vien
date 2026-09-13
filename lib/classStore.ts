@@ -230,9 +230,9 @@ export const DEFAULT_QUESTION_BANK: Question[] = [
 ];
 
 export function createDefaultMidtermQuiz(): Quiz {
-  const quizId = 'quiz-midterm-logistics';
-  const now = new Date();
-  const end = new Date(Date.now() + 86400000 * 30);
+  const quizId = 'midterm-scm-2026';
+  const now = new Date('2026-09-13T17:59:00.000Z');
+  const end = new Date('2026-09-20T17:59:00.000Z');
 
   const mcQuestions: Question[] = [
     {
@@ -554,11 +554,11 @@ export function createDefaultMidtermQuiz(): Quiz {
 
   return {
     id: quizId,
-    title: 'Đề Thi Giữa Kỳ (Midterm Exam) - Logistics & Supply Chain Management',
-    description: 'Đề thi Midterm phân bố chuẩn 3 phần (Thang điểm 10.0): Phần 1: Trắc nghiệm 20 câu (0.2đ x 20 = 4.0đ) | Phần 2: Câu hỏi ngắn 3 câu (1.0đ x 3 = 3.0đ) | Phần 3: Tự luận dài (3.0đ).',
+    title: 'Midterm',
+    description: 'Đề thi Midterm (Thang điểm 10.0): Rút ngẫu nhiên 18 câu trắc nghiệm (0.2đ x 18 = 3.6đ), 5 câu hỏi ngắn (1.0đ x 5 = 5.0đ), và 1 câu tự luận dài (1.4đ). Tổng 24 câu = 10.0 điểm.',
     time_limit_minutes: 60,
-    start_at: now.toISOString(),
-    end_at: end.toISOString(),
+    start_at: '2026-09-13T17:59:00.000Z',
+    end_at: '2026-09-20T17:59:00.000Z',
     is_published: true,
     show_results: false,
     shuffle_questions: true,
@@ -567,9 +567,19 @@ export function createDefaultMidtermQuiz(): Quiz {
     passcode: 'LOG888',
     questions_per_student: 24,
     section_sampling: {
-      multiple_choice: 20,
-      short_answer: 3,
+      multiple_choice: 18,
+      short_answer: 5,
       long_answer: 1,
+    },
+    assigned_class_ids: ['class-scm201-i'],
+    class_schedules: {
+      'class-scm201-i': {
+        class_id: 'class-scm201-i',
+        start_at: '2026-09-13T17:59',
+        end_at: '2026-09-20T17:59',
+        access_code: 'LOG888',
+        is_active: true,
+      },
     },
     created_at: now.toISOString(),
     questions: allQuestions,
@@ -599,6 +609,9 @@ export function getStoredQuizzes(): Quiz[] {
     if (!Array.isArray(parsed) || parsed.length === 0) {
       return [];
     }
+
+    // Luôn lọc bỏ đề thi cũ đã bị xoá khỏi test bank: 'quiz-midterm-logistics' hoặc tên dài 'Đề Thi Giữa Kỳ (Midterm Exam)'
+    parsed = parsed.filter((q) => q.id !== 'quiz-midterm-logistics' && !q.title.includes('Đề Thi Giữa Kỳ (Midterm Exam)'));
 
     const updated = parsed.map((q) => {
       const isMidterm = q.id === 'midterm-scm-2026' || (q.title && q.title.toLowerCase().includes('midterm'));
