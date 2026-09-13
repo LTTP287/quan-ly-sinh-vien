@@ -14,6 +14,19 @@ import {
 import { Question, QuestionOption, Quiz, ClassModule } from '@/types/database';
 import { listClasses, createQuiz } from '@/lib/data';
 
+function toDatetimeLocalValue(dateStr?: string): string {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateStr)) return dateStr;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr.slice(0, 16);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return '';
+  }
+}
+
 export default function NewQuizPage() {
   const router = useRouter();
 
@@ -34,6 +47,8 @@ export default function NewQuizPage() {
   const [shuffleOptions, setShuffleOptions] = useState(true);
   const [preventPrevious, setPreventPrevious] = useState(true);
   const [accessCode, setAccessCode] = useState('');
+  const [startAt, setStartAt] = useState(() => toDatetimeLocalValue(new Date().toISOString()));
+  const [endAt, setEndAt] = useState(() => toDatetimeLocalValue(new Date(Date.now() + 86400000 * 7).toISOString()));
   const [passcodeExpiresAt, setPasscodeExpiresAt] = useState(() => {
     const d = new Date(Date.now() + 86400000 * 7);
     return d.toISOString().slice(0, 16);
@@ -533,8 +548,8 @@ B. Sai`);
       return;
     }
 
-    const now = new Date();
-    const end = new Date(Date.now() + 86400000 * 7);
+    const quizStart = startAt ? new Date(startAt).toISOString() : new Date().toISOString();
+    const quizEnd = endAt ? new Date(endAt).toISOString() : new Date(Date.now() + 86400000 * 7).toISOString();
 
     try {
       await createQuiz(
@@ -542,8 +557,8 @@ B. Sai`);
           title: title.trim(),
           description: description.trim(),
           time_limit_minutes: timeLimit,
-          start_at: now.toISOString(),
-          end_at: end.toISOString(),
+          start_at: quizStart,
+          end_at: quizEnd,
           is_published: true,
           show_results: showResults,
           shuffle_questions: shuffleQuestions,
@@ -561,8 +576,8 @@ B. Sai`);
         questions,
         selectedClassIds.map((classId) => ({
           class_id: classId,
-          start_at: now.toISOString(),
-          end_at: end.toISOString(),
+          start_at: quizStart,
+          end_at: quizEnd,
           access_code: accessCode.trim().toUpperCase() || null,
         }))
       );
@@ -742,6 +757,38 @@ B. Sai`);
               />
               <p className="text-[11px] text-slate-500 mt-2">
                 Đọc mã này tại lớp để sinh viên không mở bài thi từ nhà. Mã được đối chiếu trên server.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center space-x-1">
+                <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Thời Gian Mở Đề Thi (Start Time)</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={startAt}
+                onChange={(e) => setStartAt(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+              />
+              <p className="text-[11px] text-slate-500 mt-2">
+                Trước thời điểm này, bài thi sẽ hiển thị ở trạng thái &quot;Sắp Mở&quot; trên cổng sinh viên.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center space-x-1">
+                <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Thời Gian Đóng Đề Thi (End Time)</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={endAt}
+                onChange={(e) => setEndAt(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+              />
+              <p className="text-[11px] text-slate-500 mt-2">
+                Sau thời điểm này, bài thi sẽ tự động kết thúc &quot;Đã Đóng&quot;.
               </p>
             </div>
 

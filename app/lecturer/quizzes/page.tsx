@@ -12,6 +12,19 @@ import {
 import { Quiz, ClassModule, ClassQuizSchedule } from '@/types/database';
 import { listQuizzes, listClasses, saveQuizSchedules, deleteQuiz, isRemote } from '@/lib/data';
 
+function toDatetimeLocalValue(dateStr?: string): string {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateStr)) return dateStr;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr.slice(0, 16);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return '';
+  }
+}
+
 export default function LecturerTestBankPage() {
   const router = useRouter();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -134,6 +147,8 @@ export default function LecturerTestBankPage() {
     })();
   }, []);
 
+  const [saveStatus, setSaveStatus] = useState<Record<string, string>>({});
+
   const handleToggleAssignClass = async (quizId: string, classId: string) => {
     const targetQuiz = quizzes.find((q) => q.id === quizId);
     if (!targetQuiz) return;
@@ -148,9 +163,9 @@ export default function LecturerTestBankPage() {
       assigned = [...assigned, classId];
       schedules[classId] = {
         class_id: classId,
-        start_at: new Date().toISOString().slice(0, 16),
-        end_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
-        access_code: '',
+        start_at: targetQuiz.start_at || new Date().toISOString(),
+        end_at: targetQuiz.end_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+        access_code: targetQuiz.passcode || '',
         is_active: true,
       };
     }
@@ -167,19 +182,40 @@ export default function LecturerTestBankPage() {
     if (!targetQuiz) return;
 
     const schedules = { ...(targetQuiz.class_schedules || {}) };
+    const current = schedules[classId] || {
+      class_id: classId,
+      start_at: targetQuiz.start_at || new Date().toISOString(),
+      end_at: targetQuiz.end_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+      access_code: targetQuiz.passcode || '',
+      is_active: (targetQuiz as any).is_active !== false,
+    };
     schedules[classId] = {
-      ...(schedules[classId] || {
-        class_id: classId,
-        start_at: new Date().toISOString().slice(0, 16),
-        end_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
-        access_code: '',
-        is_active: true,
-      }),
+      ...current,
       ...updates,
     };
 
+    // Cập nhật ngay trên giao diện để mượt mà (Optimistic UI)
+    setQuizzes((prev) =>
+      prev.map((q) =>
+        q.id === quizId
+          ? {
+              ...q,
+              class_schedules: schedules,
+              assigned_class_ids: q.assigned_class_ids?.includes(classId)
+                ? q.assigned_class_ids
+                : [...(q.assigned_class_ids || []), classId],
+            }
+          : q
+      )
+    );
+
     try {
-      setQuizzes(await saveQuizSchedules(quizId, schedules));
+      const refreshed = await saveQuizSchedules(quizId, schedules);
+      setQuizzes(refreshed);
+      setSaveStatus((prev) => ({
+        ...prev,
+        [`${quizId}_${classId}`]: `Đã lưu thành công (${new Date().toLocaleTimeString('vi-VN')})`,
+      }));
     } catch (err: any) {
       alert(`Không lưu được lịch thi: ${err?.message || err}`);
     }
@@ -407,11 +443,13 @@ export default function LecturerTestBankPage() {
                     const isAssigned = quiz.assigned_class_ids?.includes(cls.id);
                     const schedule = quiz.class_schedules?.[cls.id] || {
                       class_id: cls.id,
-                      start_at: new Date().toISOString().slice(0, 16),
-                      end_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
-                      access_code: '',
-                      is_active: true,
+                      start_at: quiz.start_at || new Date().toISOString(),
+                      end_at: quiz.end_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+                      access_code: quiz.passcode || '',
+                      is_active: (quiz as any).is_active !== false,
                     };
+
+                    const statusKey = `${quiz.id}_${cls.id}`;
 
                     return (
                       <div
@@ -458,45 +496,63 @@ export default function LecturerTestBankPage() {
 
                         {/* Inline Per-Class Schedule Settings */}
                         {isAssigned && (
-                          <div className="mt-3 pt-3 border-t border-slate-800/60 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                            <div>
-                              <label className="block text-[10px] text-slate-400 mb-1">Mở lúc (Start):</label>
-                              <input
-                                type="datetime-local"
-                                value={schedule.start_at}
-                                onChange={(e) =>
-                                  handleUpdateSchedule(quiz.id, cls.id, { start_at: e.target.value })
-                                }
-                                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500"
-                              />
+                          <div className="mt-3 pt-3 border-t border-slate-800/60 space-y-2.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                              <div>
+                                <label className="block text-[10px] text-slate-400 mb-1">Mở lúc (Start):</label>
+                                <input
+                                  type="datetime-local"
+                                  value={toDatetimeLocalValue(schedule.start_at)}
+                                  onChange={(e) =>
+                                    handleUpdateSchedule(quiz.id, cls.id, { start_at: e.target.value })
+                                  }
+                                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] text-slate-400 mb-1">Đóng lúc (End):</label>
+                                <input
+                                  type="datetime-local"
+                                  value={toDatetimeLocalValue(schedule.end_at)}
+                                  onChange={(e) =>
+                                    handleUpdateSchedule(quiz.id, cls.id, { end_at: e.target.value })
+                                  }
+                                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] text-slate-400 mb-1 flex items-center space-x-1">
+                                  <KeyRound className="w-3 h-3 text-amber-400" />
+                                  <span>Mã PIN Vào Phòng Thi:</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="VD: LOG888"
+                                  value={schedule.access_code || ''}
+                                  onChange={(e) =>
+                                    handleUpdateSchedule(quiz.id, cls.id, { access_code: e.target.value })
+                                  }
+                                  className="w-full bg-slate-950 border border-amber-500/40 rounded-lg px-2 py-1.5 text-[11px] font-mono font-bold text-amber-400 focus:outline-none uppercase"
+                                />
+                              </div>
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] text-slate-400 mb-1">Đóng lúc (End):</label>
-                              <input
-                                type="datetime-local"
-                                value={schedule.end_at}
-                                onChange={(e) =>
-                                  handleUpdateSchedule(quiz.id, cls.id, { end_at: e.target.value })
-                                }
-                                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[10px] text-slate-400 mb-1 flex items-center space-x-1">
-                                <KeyRound className="w-3 h-3 text-amber-400" />
-                                <span>Mã PIN Vào Phòng Thi:</span>
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="VD: LOG888"
-                                value={schedule.access_code || ''}
-                                onChange={(e) =>
-                                  handleUpdateSchedule(quiz.id, cls.id, { access_code: e.target.value })
-                                }
-                                className="w-full bg-slate-950 border border-amber-500/40 rounded-lg px-2 py-1 text-[11px] font-mono font-bold text-amber-400 focus:outline-none uppercase"
-                              />
+                            <div className="flex items-center justify-between pt-1">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateSchedule(quiz.id, cls.id, {})}
+                                className="px-3 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-300 text-[11px] font-semibold transition-colors flex items-center space-x-1"
+                              >
+                                <span>💾 Lưu Khung Giờ & Mã PIN Lớp Này</span>
+                              </button>
+                              {saveStatus[statusKey] && (
+                                <span className="text-[11px] text-emerald-400 font-medium flex items-center space-x-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                  <span>{saveStatus[statusKey]}</span>
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}

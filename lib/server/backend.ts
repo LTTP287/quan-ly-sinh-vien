@@ -332,11 +332,17 @@ export interface StudentDashboard {
   }[];
 }
 
-function classifyQuiz(startAt: string, endAt: string, isActive: boolean): QuizState {
-  if (isActive) return 'open';
+function classifyQuiz(startAt?: string, endAt?: string, isActive?: boolean): QuizState {
+  if (isActive === false) return 'closed';
   const now = Date.now();
-  if (startAt && now < new Date(startAt).getTime()) return 'upcoming';
-  if (endAt && now > new Date(endAt).getTime()) return 'closed';
+  if (startAt) {
+    const sTime = new Date(startAt).getTime();
+    if (!isNaN(sTime) && now < sTime) return 'upcoming';
+  }
+  if (endAt) {
+    const eTime = new Date(endAt).getTime();
+    if (!isNaN(eTime) && now > eTime) return 'closed';
+  }
   return 'open';
 }
 
@@ -408,14 +414,31 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           }
           return false;
         });
-        const studentClass = classes.find((c) => q.class_ids.includes(c.id)) || classes[0];
-        const classSchedule = studentClass ? q.class_schedules?.[studentClass.id] : undefined;
+        let studentClass = classes.find((c) => q.class_ids.includes(c.id));
+        if (!studentClass && myClassIds.length > 0) {
+          studentClass = classes.find((c) => myClassIds.includes(c.id));
+        }
+        if (!studentClass) studentClass = classes[0];
+
+        let classSchedule = studentClass ? q.class_schedules?.[studentClass.id] : undefined;
+        if (!classSchedule && q.class_schedules) {
+          for (const cid of myClassIds) {
+            if (q.class_schedules[cid]) {
+              classSchedule = q.class_schedules[cid];
+              break;
+            }
+          }
+          if (!classSchedule) {
+            classSchedule = Object.values(q.class_schedules)[0];
+          }
+        }
+
         const effectivePasscode = (classSchedule?.access_code && classSchedule.access_code.trim())
           || (q.passcode && q.passcode.trim())
           || '';
         const startAt = classSchedule?.start_at || q.start_at;
         const endAt = classSchedule?.end_at || q.end_at;
-        const isActive = classSchedule ? classSchedule.is_active !== false : q.is_active;
+        const isActive = classSchedule ? classSchedule.is_active !== false : q.is_active !== false;
 
         return {
           id: q.id,
@@ -617,17 +640,34 @@ export async function checkQuizPasscode(
       return { ok: false, reason: 'NOT_ASSIGNED' };
     }
 
-    const assignedClassId = myClassIds.find((id) => quiz.class_ids.includes(id));
-    const classSchedule = assignedClassId ? quiz.class_schedules?.[assignedClassId] : undefined;
+    const assignedClassId = myClassIds.find((id) => quiz.class_ids.includes(id)) || myClassIds[0];
+    let classSchedule = assignedClassId ? quiz.class_schedules?.[assignedClassId] : undefined;
+    if (!classSchedule && quiz.class_schedules) {
+      for (const cid of myClassIds) {
+        if (quiz.class_schedules[cid]) {
+          classSchedule = quiz.class_schedules[cid];
+          break;
+        }
+      }
+      if (!classSchedule) {
+        classSchedule = Object.values(quiz.class_schedules)[0];
+      }
+    }
     const startAt = classSchedule?.start_at || quiz.start_at;
     const endAt = classSchedule?.end_at || quiz.end_at;
-    const isActive = classSchedule ? classSchedule.is_active !== false : quiz.is_active;
+    const isActive = classSchedule ? classSchedule.is_active !== false : quiz.is_active !== false;
 
     if (!isActive) return { ok: false, reason: 'ROOM_CLOSED' };
 
     const now = Date.now();
-    if (now < new Date(startAt).getTime()) return { ok: false, reason: 'NOT_STARTED' };
-    if (now > new Date(endAt).getTime()) return { ok: false, reason: 'ENDED' };
+    if (startAt) {
+      const sTime = new Date(startAt).getTime();
+      if (!isNaN(sTime) && now < sTime) return { ok: false, reason: 'NOT_STARTED' };
+    }
+    if (endAt) {
+      const eTime = new Date(endAt).getTime();
+      if (!isNaN(eTime) && now > eTime) return { ok: false, reason: 'ENDED' };
+    }
     if (quiz.passcode_expires_at && now > new Date(quiz.passcode_expires_at).getTime()) {
       return { ok: false, reason: 'PASSCODE_EXPIRED' };
     }

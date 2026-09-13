@@ -609,16 +609,24 @@ export async function updateQuiz(
     }
 
     const updatedQuestions = questions !== undefined ? questions : existing.questions || [];
+    const scheduleList = Object.values(schedules);
+    const starts = scheduleList.map((s) => s?.start_at).filter(Boolean).map((d) => new Date(d).getTime()).filter((t) => !isNaN(t));
+    const ends = scheduleList.map((s) => s?.end_at).filter(Boolean).map((d) => new Date(d).getTime()).filter((t) => !isNaN(t));
+    const commonStartAt = quiz.start_at || (starts.length > 0 ? new Date(Math.min(...starts)).toISOString() : existing.start_at);
+    const commonEndAt = quiz.end_at || (ends.length > 0 ? new Date(Math.max(...ends)).toISOString() : existing.end_at);
+
     local.saveStoredQuiz({
       ...existing,
       ...quiz,
+      start_at: commonStartAt,
+      end_at: commonEndAt,
       questions: updatedQuestions,
       questions_count: updatedQuestions.length,
       assigned_class_ids: assignments ? assignments.map((a) => a.class_id) : existing.assigned_class_ids,
       assigned_classes_count: assignments ? assignments.length : existing.assigned_classes_count,
       class_schedules: schedules,
     });
-    syncDemoQuizzesToServer();
+    await syncDemoQuizzesToServer();
     return;
   }
 
@@ -710,13 +718,22 @@ export async function saveQuizSchedules(
   if (!isRemote) {
     const quiz = local.getStoredQuizById(quizId);
     if (!quiz) return local.getStoredQuizzes();
+
+    const scheduleList = Object.values(schedules);
+    const starts = scheduleList.map((s) => s?.start_at).filter(Boolean).map((d) => new Date(d).getTime()).filter((t) => !isNaN(t));
+    const ends = scheduleList.map((s) => s?.end_at).filter(Boolean).map((d) => new Date(d).getTime()).filter((t) => !isNaN(t));
+    const commonStartAt = starts.length > 0 ? new Date(Math.min(...starts)).toISOString() : quiz.start_at;
+    const commonEndAt = ends.length > 0 ? new Date(Math.max(...ends)).toISOString() : quiz.end_at;
+
     const updated = local.saveStoredQuiz({
       ...quiz,
       class_schedules: schedules,
       assigned_class_ids: classIds,
       assigned_classes_count: classIds.length,
+      start_at: commonStartAt,
+      end_at: commonEndAt,
     });
-    syncDemoQuizzesToServer();
+    await syncDemoQuizzesToServer();
     return updated;
   }
 

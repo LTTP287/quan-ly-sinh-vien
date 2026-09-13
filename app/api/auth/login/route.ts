@@ -97,6 +97,7 @@ export async function POST(request: Request) {
             passcode: q.passcode || q.access_code || null,
             passcode_expires_at: q.passcode_expires_at || null,
             class_ids: classIds,
+            class_schedules: q.class_schedules || (idx >= 0 ? db.quizzes[idx]?.class_schedules : {}) || {},
             start_at: q.start_at || new Date(Date.now() - 3600000).toISOString(),
             end_at: q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
             is_active: q.is_active !== false,

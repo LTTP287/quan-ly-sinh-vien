@@ -42,6 +42,23 @@ interface DashboardData {
   }[];
 }
 
+function formatViDateTime(dateStr?: string): string {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 export default function StudentDashboard() {
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -269,7 +286,7 @@ export default function StudentDashboard() {
               emptyText="Không có bài thi nào sắp mở."
               renderAction={(q) => (
                 <div className="w-full text-center py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 font-medium">
-                  Mở lúc {new Date(q.start_at).toLocaleString('vi-VN')}
+                  Mở lúc {formatViDateTime(q.start_at)}
                 </div>
               )}
             />
@@ -468,7 +485,7 @@ function QuizSection({
 
                 <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 space-y-1 mb-4">
                   <div>
-                    Khung giờ: <strong className="text-white">{new Date(q.start_at).toLocaleString('vi-VN')} &rarr; {new Date(q.end_at).toLocaleString('vi-VN')}</strong>
+                    Khung giờ: <strong className="text-white">{formatViDateTime(q.start_at)} &rarr; {formatViDateTime(q.end_at)}</strong>
                   </div>
                 </div>
               </div>

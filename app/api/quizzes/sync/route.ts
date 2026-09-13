@@ -129,6 +129,16 @@ export async function POST(request: Request) {
         ? Number(q.questions_per_student)
         : (isMidterm ? 24 : totalNeeded);
 
+      let computedStartAt = q.start_at;
+      let computedEndAt = q.end_at;
+      if (q.class_schedules && Object.keys(q.class_schedules).length > 0) {
+        const scList = Object.values(q.class_schedules as Record<string, any>);
+        const starts = scList.map((s) => s?.start_at).filter(Boolean).map((d) => new Date(d).getTime()).filter((t) => !isNaN(t));
+        const ends = scList.map((s) => s?.end_at).filter(Boolean).map((d) => new Date(d).getTime()).filter((t) => !isNaN(t));
+        if (starts.length > 0) computedStartAt = new Date(Math.min(...starts)).toISOString();
+        if (ends.length > 0) computedEndAt = new Date(Math.max(...ends)).toISOString();
+      }
+
       const demoQuizItem: any = {
         id: q.id,
         title: q.title || 'Đề thi',
@@ -140,8 +150,8 @@ export async function POST(request: Request) {
         passcode_expires_at: q.passcode_expires_at || null,
         class_ids: classIds,
         class_schedules: q.class_schedules || {},
-        start_at: q.start_at || new Date(Date.now() - 3600000).toISOString(),
-        end_at: q.end_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+        start_at: computedStartAt || new Date(Date.now() - 3600000).toISOString(),
+        end_at: computedEndAt || new Date(Date.now() + 86400000 * 7).toISOString(),
         is_active: q.is_active !== false,
         shuffle_questions: q.shuffle_questions !== false,
         shuffle_options: q.shuffle_options !== false,
