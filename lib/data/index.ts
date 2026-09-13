@@ -62,7 +62,6 @@ export async function signInStudent(studentCode: string, dateOfBirth: string): P
     body.demo_students = local.getAllStoredStudents();
     body.demo_classes = local.getStoredClasses();
     body.demo_enrollments = local.getAllStoredEnrollments();
-    body.demo_quizzes = local.getStoredQuizzes();
   }
   return postLogin(body);
 }
@@ -695,7 +694,7 @@ export async function setShowResults(quizId: string, value: boolean): Promise<vo
 export async function deleteQuiz(quizId: string): Promise<Quiz[]> {
   if (!isRemote) {
     const updated = local.deleteStoredQuiz(quizId);
-    syncDemoQuizzesToServer();
+    await syncDemoQuizzesToServer();
     return updated;
   }
 

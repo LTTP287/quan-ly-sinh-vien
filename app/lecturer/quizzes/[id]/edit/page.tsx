@@ -449,8 +449,8 @@ B. Sai`);
     const scaffolded: Question[] = [];
     const timestamp = Date.now();
 
-    // 20 câu trắc nghiệm (0.2 x 20 = 4.0 điểm)
-    for (let i = 1; i <= 20; i++) {
+    // 25 câu trắc nghiệm (0.2 x 20 câu rút = 4.0 điểm)
+    for (let i = 1; i <= 25; i++) {
       const qId = `midterm-mc-${timestamp}-${i}`;
       scaffolded.push({
         id: qId,
@@ -460,7 +460,7 @@ B. Sai`);
         points: 0.2,
         order_index: i - 1,
         options: [
-          { id: `${qId}-opt-1`, question_id: qId, option_text: 'Phương án A', is_correct: true, order_index: 0 },
+          { id: `${qId}-opt-1`, question_id: qId, option_text: 'Phương án A (Đúng)', is_correct: true, order_index: 0 },
           { id: `${qId}-opt-2`, question_id: qId, option_text: 'Phương án B', is_correct: false, order_index: 1 },
           { id: `${qId}-opt-3`, question_id: qId, option_text: 'Phương án C', is_correct: false, order_index: 2 },
           { id: `${qId}-opt-4`, question_id: qId, option_text: 'Phương án D', is_correct: false, order_index: 3 },
@@ -468,8 +468,8 @@ B. Sai`);
       });
     }
 
-    // 3 câu ngắn (1.0 x 3 = 3.0 điểm)
-    for (let i = 1; i <= 3; i++) {
+    // 8 câu ngắn (1.0 điểm/câu)
+    for (let i = 1; i <= 8; i++) {
       const qId = `midterm-short-${timestamp}-${i}`;
       scaffolded.push({
         id: qId,
@@ -477,22 +477,24 @@ B. Sai`);
         question_text: `[Phần 2 - Câu hỏi ngắn] Câu hỏi tình huống / bài tập ngắn số ${i}...`,
         question_type: 'short_answer',
         points: 1.0,
-        order_index: 20 + (i - 1),
+        order_index: 25 + (i - 1),
         options: [],
       });
     }
 
-    // 1 câu tự luận dài (3.0 điểm)
-    const qIdLong = `midterm-long-${timestamp}-1`;
-    scaffolded.push({
-      id: qIdLong,
-      quiz_id: quizId,
-      question_text: `[Phần 3 - Tự luận dài] Trình bày phân tích tình huống thực tế hoặc bài toán chiến lược tổng hợp (3.0 điểm)...`,
-      question_type: 'long_answer',
-      points: 3.0,
-      order_index: 23,
-      options: [],
-    });
+    // 3 câu tự luận dài (3.0 điểm/câu)
+    for (let i = 1; i <= 3; i++) {
+      const qIdLong = `midterm-long-${timestamp}-${i}`;
+      scaffolded.push({
+        id: qIdLong,
+        quiz_id: quizId,
+        question_text: `[Phần 3 - Tự luận dài] Đề bài tự luận phân tích tình huống thực tế hoặc bài toán chiến lược số ${i} (3.0 điểm)...`,
+        question_type: 'long_answer',
+        points: 3.0,
+        order_index: 33 + (i - 1),
+        options: [],
+      });
+    }
 
     setQuestions(scaffolded);
     setQuestionsPerStudent(24);
@@ -619,7 +621,7 @@ B. Sai`);
           shuffle_questions: shuffleQuestions,
           shuffle_options: shuffleOptions,
           prevent_previous: preventPrevious,
-          questions_per_student: questionsPerStudent,
+          questions_per_student: (sampleMcCount + sampleShortCount + sampleEssayCount > 0) ? (sampleMcCount + sampleShortCount + sampleEssayCount) : questionsPerStudent,
           section_sampling: {
             multiple_choice: sampleMcCount,
             short_answer: sampleShortCount,

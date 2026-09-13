@@ -166,45 +166,42 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
       }
       const bank = (found.questions && found.questions.length > 0) ? found.questions : DEFAULT_QUESTION_BANK;
 
+      let mcPool = bank.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
+      let shortPool = bank.filter((q) => q.question_type === 'short_answer');
+      let longPool = bank.filter((q) => q.question_type === 'long_answer');
+
+      const hasSpecialSections = shortPool.length > 0 || longPool.length > 0;
       const isMidterm = found.id === 'midterm-scm-2026' || (found.title && found.title.toLowerCase().includes('midterm'));
-      const hasSpecialSections = bank.some((q) => q.question_type === 'short_answer' || q.question_type === 'long_answer');
       let sampling = found.section_sampling;
       if (!sampling && (hasSpecialSections || isMidterm)) {
         sampling = {
-          multiple_choice: isMidterm ? 20 : (bank.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false').length || 20),
-          short_answer: bank.filter((q) => q.question_type === 'short_answer').length || 3,
-          long_answer: bank.filter((q) => q.question_type === 'long_answer').length || 1,
+          multiple_choice: isMidterm ? Math.min(mcPool.length, 20) : mcPool.length,
+          short_answer: Math.min(shortPool.length, 3),
+          long_answer: Math.min(longPool.length, 1),
         };
       }
 
-      const targetTotal = (found.questions_per_student && found.questions_per_student > 0)
-        ? found.questions_per_student
-        : (sampling
-            ? (Number(sampling.multiple_choice) || 0) + (Number(sampling.short_answer) || 0) + (Number(sampling.long_answer) || 0)
-            : (isMidterm ? 24 : bank.length));
+      const hasExplicitSampling = !!(sampling && (
+        typeof sampling.multiple_choice === 'number' ||
+        typeof sampling.short_answer === 'number' ||
+        typeof sampling.long_answer === 'number'
+      ));
 
       let sampled: Question[] = [];
-      if (sampling && (typeof sampling.multiple_choice === 'number' || typeof sampling.short_answer === 'number' || typeof sampling.long_answer === 'number')) {
-        let mcPool = bank.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
-        let shortPool = bank.filter((q) => q.question_type === 'short_answer');
-        let longPool = bank.filter((q) => q.question_type === 'long_answer');
-
+      if (hasExplicitSampling && sampling) {
         if (found.shuffle_questions !== false) {
           mcPool = shuffleArray(mcPool);
           shortPool = shuffleArray(shortPool);
           longPool = shuffleArray(longPool);
         }
 
-        const shortTake = Math.min(shortPool.length, Math.max(0, sampling.short_answer ?? shortPool.length));
-        const longTake = Math.min(longPool.length, Math.max(0, sampling.long_answer ?? longPool.length));
+        const desiredShort = typeof sampling.short_answer === 'number' ? sampling.short_answer : shortPool.length;
+        const desiredLong = typeof sampling.long_answer === 'number' ? sampling.long_answer : longPool.length;
+        const desiredMc = typeof sampling.multiple_choice === 'number' ? sampling.multiple_choice : mcPool.length;
 
-        const desiredMc = typeof sampling.multiple_choice === 'number'
-          ? sampling.multiple_choice
-          : Math.max(0, targetTotal - shortTake - longTake);
-        let mcTake = Math.min(mcPool.length, Math.max(0, desiredMc));
-        if (targetTotal > 0 && mcTake + shortTake + longTake > targetTotal) {
-          mcTake = Math.max(0, targetTotal - shortTake - longTake);
-        }
+        const shortTake = Math.min(shortPool.length, Math.max(0, desiredShort));
+        const longTake = Math.min(longPool.length, Math.max(0, desiredLong));
+        const mcTake = Math.min(mcPool.length, Math.max(0, desiredMc));
 
         sampled = [
           ...mcPool.slice(0, mcTake),
@@ -212,16 +209,16 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
           ...longPool.slice(0, longTake),
         ];
       } else {
+        const targetTotal = (found.questions_per_student && found.questions_per_student > 0)
+          ? found.questions_per_student
+          : (isMidterm ? 24 : bank.length);
+
         sampled = [...bank];
         if (targetTotal > 0 && targetTotal < bank.length) {
           sampled = shuffleArray(bank).slice(0, targetTotal);
         } else if (found.shuffle_questions) {
           sampled = shuffleArray(bank);
         }
-      }
-
-      if (targetTotal > 0 && sampled.length > targetTotal) {
-        sampled = sampled.slice(0, targetTotal);
       }
 
       if (found.shuffle_options) {

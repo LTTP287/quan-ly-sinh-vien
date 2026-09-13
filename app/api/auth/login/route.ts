@@ -78,42 +78,6 @@ export async function POST(request: Request) {
           }
         }
       }
-      if (Array.isArray(body.demo_quizzes) && body.demo_quizzes.length > 0) {
-        const { DEFAULT_QUESTION_BANK } = await import('@/lib/classStore');
-        for (const q of body.demo_quizzes) {
-          if (!q.id) continue;
-          const idx = db.quizzes.findIndex((x) => x.id === q.id);
-          const classIds = Array.isArray(q.assigned_class_ids) && q.assigned_class_ids.length > 0
-            ? q.assigned_class_ids
-            : (q.class_id ? [q.class_id] : Object.keys(q.class_schedules || {}));
-
-          const demoQuizItem: any = {
-            id: q.id,
-            title: q.title || 'Quiz - 05',
-            description: q.description || '',
-            time_limit_minutes: Number(q.time_limit_minutes) || 5,
-            is_published: q.is_published !== false,
-            show_results: !!q.show_results,
-            passcode: q.passcode || q.access_code || null,
-            passcode_expires_at: q.passcode_expires_at || null,
-            class_ids: classIds,
-            class_schedules: q.class_schedules || (idx >= 0 ? db.quizzes[idx]?.class_schedules : {}) || {},
-            start_at: q.start_at || new Date(Date.now() - 3600000).toISOString(),
-            end_at: q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
-            is_active: q.is_active !== false,
-            shuffle_questions: q.shuffle_questions !== false,
-            shuffle_options: q.shuffle_options !== false,
-            prevent_previous: !!q.prevent_previous,
-            questions_per_student: q.questions_per_student,
-            questions: (Array.isArray(q.questions) && q.questions.length > 0) ? q.questions : (idx >= 0 && db.quizzes[idx]?.questions && db.quizzes[idx].questions!.length > 0 ? db.quizzes[idx].questions : DEFAULT_QUESTION_BANK),
-          };
-          if (idx >= 0) {
-            db.quizzes[idx] = { ...db.quizzes[idx], ...demoQuizItem };
-          } else {
-            db.quizzes.push(demoQuizItem);
-          }
-        }
-      }
       saveDemoDb();
     }
 

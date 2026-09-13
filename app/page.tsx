@@ -84,24 +84,11 @@ export default function Home() {
       {/* Hero Section */}
       <section className="text-center px-4 max-w-4xl mx-auto space-y-4 pt-8">
         <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-tight">
-          When School Gives You Quizzes... <br />
-          <span className="text-amber-400 block mt-2">Make Lemonade! 🍋</span>
+          Squeeze The Quizzes 🍋
         </h1>
         <p className="text-lg md:text-xl text-slate-400 font-medium">
           Học + Hỏi + Hiểu = <span className="text-rose-400 font-bold">10 điểm!.</span>
         </p>
-
-        {/* Lemonade & Squeezing Lemon Illustration */}
-        <div className="pt-2 flex justify-center">
-          <div className="relative group">
-            <div className="absolute -inset-1.5 bg-gradient-to-r from-amber-500/30 to-emerald-500/30 rounded-3xl blur-md group-hover:opacity-100 transition duration-500"></div>
-            <img
-              src="/lemonade.jpg"
-              alt="Squeeze the lemon and make lemonade illustration"
-              className="relative w-52 sm:w-64 md:w-72 h-auto rounded-2xl shadow-2xl border border-amber-500/30 object-cover"
-            />
-          </div>
-        </div>
       </section>
 
       {/* Main Interaction Area: 2-Tab Switching Area */}
@@ -119,7 +106,7 @@ export default function Home() {
               }`}
             >
               <UserCheck className="w-4 h-4" />
-              <span>Tab 1: Cổng Sinh Viên</span>
+              <span>Cổng Sinh Viên</span>
             </button>
 
             <button
@@ -132,7 +119,7 @@ export default function Home() {
               }`}
             >
               <GraduationCap className="w-4 h-4" />
-              <span>Tab 2: Cổng Giảng Viên</span>
+              <span>Cổng Giảng Viên</span>
             </button>
           </div>
 

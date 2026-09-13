@@ -326,13 +326,22 @@ export function loadDemoDb(): DemoDb | null {
 }
 
 export function demoDb(): DemoDb {
+  const fromDisk = loadDemoDb();
   if (!globalStore.__uniquizDemoDb) {
-    const fromDisk = loadDemoDb();
-    if (fromDisk && fromDisk.quizzes && fromDisk.quizzes.length > 0) {
+    if (fromDisk && Array.isArray(fromDisk.quizzes)) {
       globalStore.__uniquizDemoDb = fromDisk;
     } else {
       globalStore.__uniquizDemoDb = seed();
       saveDemoDb();
+    }
+  } else if (fromDisk && Array.isArray(fromDisk.quizzes)) {
+    // Luôn đồng bộ danh sách đề thi theo đúng file lưu trữ trên đĩa
+    globalStore.__uniquizDemoDb.quizzes = fromDisk.quizzes;
+    if (Array.isArray(fromDisk.classes)) {
+      globalStore.__uniquizDemoDb.classes = fromDisk.classes;
+    }
+    if (Array.isArray(fromDisk.enrollments)) {
+      globalStore.__uniquizDemoDb.enrollments = fromDisk.enrollments;
     }
   }
 

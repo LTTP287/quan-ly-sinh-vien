@@ -437,30 +437,115 @@ export function createDefaultMidtermQuiz(): Quiz {
         { id: 'opt-20-d', question_id: 'midterm-mc-20', option_text: 'Đặt hàng bổ sung tự động qua cổng điện tử EDI', is_correct: false, order_index: 3 },
       ],
     },
+    {
+      id: 'midterm-mc-21', quiz_id: quizId, question_type: 'multiple_choice', points: 0.2, order_index: 20,
+      question_text: 'Hệ thống WMS (Warehouse Management System) hỗ trợ chức năng cốt lõi nào trong kho hàng?',
+      options: [
+        { id: 'opt-21-a', question_id: 'midterm-mc-21', option_text: 'Quản lý vị trí lưu kho (Slotting), định tuyến lấy hàng (Picking) và kiểm kê tồn kho theo thời gian thực', is_correct: true, order_index: 0 },
+        { id: 'opt-21-b', question_id: 'midterm-mc-21', option_text: 'Tự động tính toán thuế thu nhập doanh nghiệp hàng quý', is_correct: false, order_index: 1 },
+        { id: 'opt-21-c', question_id: 'midterm-mc-21', option_text: 'Thiết kế mẫu mã bao bì sản phẩm phục vụ marketing bán lẻ', is_correct: false, order_index: 2 },
+        { id: 'opt-21-d', question_id: 'midterm-mc-21', option_text: 'Giám sát hành trình tàu biển trên vùng biển quốc tế', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'midterm-mc-22', quiz_id: quizId, question_type: 'multiple_choice', points: 0.2, order_index: 21,
+      question_text: 'Trong điều kiện thương mại Incoterms 2020, quy tắc FOB (Free On Board) quy định rủi ro chuyển giao từ người bán sang người mua khi nào?',
+      options: [
+        { id: 'opt-22-a', question_id: 'midterm-mc-22', option_text: 'Khi hàng hóa đã được xếp an toàn lên boong tàu tại cảng bốc hàng chỉ định', is_correct: true, order_index: 0 },
+        { id: 'opt-22-b', question_id: 'midterm-mc-22', option_text: 'Khi hàng hóa vừa rời khỏi cổng kho của người bán tại nước xuất khẩu', is_correct: false, order_index: 1 },
+        { id: 'opt-22-c', question_id: 'midterm-mc-22', option_text: 'Khi hàng cập bến cảng đích và hoàn tất thủ tục nhập khẩu', is_correct: false, order_index: 2 },
+        { id: 'opt-22-d', question_id: 'midterm-mc-22', option_text: 'Khi người mua thanh toán đủ 100% giá trị hợp đồng qua ngân hàng', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'midterm-mc-23', quiz_id: quizId, question_type: 'multiple_choice', points: 0.2, order_index: 22,
+      question_text: 'Mô hình CPFR (Collaborative Planning, Forecasting, and Replenishment) là phương thức hợp tác nhằm:',
+      options: [
+        { id: 'opt-23-a', question_id: 'midterm-mc-23', option_text: 'Cùng chia sẻ kế hoạch, dự báo nhu cầu và phối hợp bổ sung hàng giữa các đối tác trong chuỗi', is_correct: true, order_index: 0 },
+        { id: 'opt-23-b', question_id: 'midterm-mc-23', option_text: 'Thỏa thuận ấn định giá sàn cố định trên thị trường nhằm loại bỏ đối thủ cạnh tranh', is_correct: false, order_index: 1 },
+        { id: 'opt-23-c', question_id: 'midterm-mc-23', option_text: 'Chia sẻ bảo mật mã nguồn phần mềm nội bộ cho tất cả các nhà phân phối', is_correct: false, order_index: 2 },
+        { id: 'opt-23-d', question_id: 'midterm-mc-23', option_text: 'Chuyển toàn bộ rủi ro tài chính cho khách hàng mua buôn', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'midterm-mc-24', quiz_id: quizId, question_type: 'multiple_choice', points: 0.2, order_index: 23,
+      question_text: 'Chi phí ẩn (Hidden Costs) lớn nhất của việc duy trì mức hàng tồn kho quá mức thường bao gồm:',
+      options: [
+        { id: 'opt-24-a', question_id: 'midterm-mc-24', option_text: 'Chi phí cơ hội vốn bị ứ đọng, nguy cơ hàng lỗi mốt, hỏng hóc và phí bảo quản lưu kho', is_correct: true, order_index: 0 },
+        { id: 'opt-24-b', question_id: 'midterm-mc-24', option_text: 'Chi phí cơ bản của việc cấp tem bảo hành', is_correct: false, order_index: 1 },
+        { id: 'opt-24-c', question_id: 'midterm-mc-24', option_text: 'Chi phí đăng ký nhãn hiệu bảo hộ thương quyền', is_correct: false, order_index: 2 },
+        { id: 'opt-24-d', question_id: 'midterm-mc-24', option_text: 'Chi phí in ấn catalogue giấy phát tận tay người tiêu dùng', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'midterm-mc-25', quiz_id: quizId, question_type: 'multiple_choice', points: 0.2, order_index: 24,
+      question_text: 'Tỷ lệ lấp đầy đơn hàng (Order Fill Rate) trong Logistics phản ánh chỉ số nào sau đây?',
+      options: [
+        { id: 'opt-25-a', question_id: 'midterm-mc-25', option_text: 'Tỷ lệ phần trăm đơn đặt hàng của khách được đáp ứng ngay lập tức từ lượng hàng sẵn có trong kho', is_correct: true, order_index: 0 },
+        { id: 'opt-25-b', question_id: 'midterm-mc-25', option_text: 'Tỷ lệ diện tích sàn kho đã được xếp đầy hàng hóa so với tổng dung tích thiết kế', is_correct: false, order_index: 1 },
+        { id: 'opt-25-c', question_id: 'midterm-mc-25', option_text: 'Tỷ lệ trọng tải xe tải đã chở đầy so với tải trọng tối đa cho phép', is_correct: false, order_index: 2 },
+        { id: 'opt-25-d', question_id: 'midterm-mc-25', option_text: 'Số lượng nhân sự được tuyển dụng đủ vào bộ phận kho vận trong năm', is_correct: false, order_index: 3 },
+      ],
+    },
   ];
 
   const shortQuestions: Question[] = [
     {
-      id: 'midterm-short-1', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 20,
+      id: 'midterm-short-1', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 25,
       question_text: '[Câu hỏi ngắn 1 - 1.0 điểm]: Hãy nêu 3 nguyên nhân cốt lõi dẫn đến hiện tượng Bullwhip Effect trong chuỗi cung ứng và đề xuất 1 giải pháp công nghệ để giảm thiểu.',
       options: [],
     },
     {
-      id: 'midterm-short-2', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 21,
+      id: 'midterm-short-2', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 26,
       question_text: '[Câu hỏi ngắn 2 - 1.0 điểm]: Phân biệt sự khác nhau giữa 3PL (Third-Party Logistics) và 4PL (Fourth-Party Logistics) về vai trò chiến lược và quản lý tích hợp.',
       options: [],
     },
     {
-      id: 'midterm-short-3', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 22,
+      id: 'midterm-short-3', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 27,
       question_text: '[Câu hỏi ngắn 3 - 1.0 điểm]: Một nhà bán lẻ nhận 100 đơn hàng: 95 đơn đúng giờ, nhưng chỉ có 90 đơn vừa đúng giờ vừa đủ số lượng. Hãy tính chỉ số OTIF (%) và giải thích ý nghĩa.',
+      options: [],
+    },
+    {
+      id: 'midterm-short-4', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 28,
+      question_text: '[Câu hỏi ngắn 4 - 1.0 điểm]: Nêu công thức tính sản lượng đặt hàng kinh tế EOQ và giải thích ý nghĩa của 3 đại lượng: Nhu cầu hàng năm (D), Chi phí đặt hàng (S), và Chi phí lưu kho (H).',
+      options: [],
+    },
+    {
+      id: 'midterm-short-5', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 29,
+      question_text: '[Câu hỏi ngắn 5 - 1.0 điểm]: Trình bày sự khác biệt cốt lõi giữa chiến lược Đẩy (Push Strategy) và Kéo (Pull Strategy) trong việc kích hoạt dòng vận động hàng hóa.',
+      options: [],
+    },
+    {
+      id: 'midterm-short-6', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 30,
+      question_text: '[Câu hỏi ngắn 6 - 1.0 điểm]: Phân tích 2 lợi ích kinh tế lớn nhất của kỹ thuật Cross-docking so với mô hình lưu kho trung gian truyền thống.',
+      options: [],
+    },
+    {
+      id: 'midterm-short-7', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 31,
+      question_text: '[Câu hỏi ngắn 7 - 1.0 điểm]: Trình bày ưu thế vượt trội của công nghệ RFID so với mã vạch Barcode trong hoạt động kiểm soát tồn kho tự động tại Hub phân phối.',
+      options: [],
+    },
+    {
+      id: 'midterm-short-8', quiz_id: quizId, question_type: 'short_answer', points: 1.0, order_index: 32,
+      question_text: '[Câu hỏi ngắn 8 - 1.0 điểm]: Nêu 3 chỉ số KPI quan trọng nhất dùng để đánh giá hiệu suất vận hành của đội xe vận tải giao hàng chặng cuối (Last-mile delivery).',
       options: [],
     },
   ];
 
   const essayQuestions: Question[] = [
     {
-      id: 'midterm-essay-1', quiz_id: quizId, question_type: 'long_answer', points: 3.0, order_index: 23,
-      question_text: '[Tự luận dài - 3.0 điểm]: Phân tích ca nghiên cứu (Case Study): Một tập đoàn FMCG tại Việt Nam đang gặp khủng hoảng chi phí logistics chiếm tới 24% doanh thu và tỷ lệ giao trễ hạn 15%. Dựa trên kiến thức về Quản trị Kho bãi (WMS, Cross-docking), Mạng lưới Phân phối và Mô hình S&OP, Thầy/Cô hãy xây dựng kế hoạch tái cấu trúc chuỗi cung ứng toàn diện nhằm đưa chi phí về dưới 14% và nâng OTIF lên trên 98%.',
+      id: 'midterm-essay-1', quiz_id: quizId, question_type: 'long_answer', points: 3.0, order_index: 33,
+      question_text: '[Tự luận dài 1 - 3.0 điểm]: Phân tích ca nghiên cứu (Case Study): Một tập đoàn FMCG tại Việt Nam đang gặp khủng hoảng chi phí logistics chiếm tới 24% doanh thu và tỷ lệ giao trễ hạn 15%. Dựa trên kiến thức về Quản trị Kho bãi (WMS, Cross-docking), Mạng lưới Phân phối và Mô hình S&OP, Thầy/Cô hãy xây dựng kế hoạch tái cấu trúc chuỗi cung ứng toàn diện nhằm đưa chi phí về dưới 14% và nâng OTIF lên trên 98%.',
+      options: [],
+    },
+    {
+      id: 'midterm-essay-2', quiz_id: quizId, question_type: 'long_answer', points: 3.0, order_index: 34,
+      question_text: '[Tự luận dài 2 - 3.0 điểm]: Phân tích chiến lược thiết kế Mạng lưới Phân phối (Distribution Network Design): So sánh ưu và nhược điểm giữa mô hình Giao hàng trực tiếp từ nhà máy (Drop-shipping) và mô hình phân phối qua Hub/DC đa tầng. Đề xuất kiến trúc mạng lưới phù hợp cho một thương hiệu bán lẻ đa kênh (Omnichannel) mở rộng quy mô toàn quốc.',
+      options: [],
+    },
+    {
+      id: 'midterm-essay-3', quiz_id: quizId, question_type: 'long_answer', points: 3.0, order_index: 35,
+      question_text: '[Tự luận dài 3 - 3.0 điểm]: Khủng hoảng chuỗi cung ứng và Quản trị Rủi ro Tồn kho: Phân tích tác động của biến động Lead Time vận tải quốc tế đối với lượng tồn kho an toàn (Safety Stock). Đề xuất các chiến lược gia tăng khả năng chống chịu (Supply Chain Resilience) ngoài việc tăng lượng dự trữ thuần túy.',
       options: [],
     },
   ];
