@@ -761,3 +761,22 @@ export function saveStoredSubmission(submission: Submission): Submission[] {
   }
   return updated;
 }
+
+// Xóa bài nộp để mở khóa cho sinh viên thi lại
+export function deleteStoredSubmission(quizId: string, studentId: string): Submission[] {
+  const all = getStoredSubmissions();
+  const cleanId = studentId.replace(/^st-/, '').trim().toUpperCase();
+  const updated = all.filter((s) => {
+    if (s.quiz_id !== quizId) return true;
+    if (s.student_id === studentId) return false;
+    if (cleanId && (s.student_id === `st-${cleanId}` || s.student_id === cleanId)) return false;
+    const sc = s.student?.student_code ? s.student.student_code.trim().toUpperCase() : '';
+    if (cleanId && sc === cleanId) return false;
+    return true;
+  });
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(updated));
+  }
+  return updated;
+}

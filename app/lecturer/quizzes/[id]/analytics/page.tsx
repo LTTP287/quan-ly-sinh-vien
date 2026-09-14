@@ -7,7 +7,7 @@ import {
   ArrowLeft, FileSpreadsheet, Download, Eye, EyeOff, 
   Award, TrendingUp, Users, ShieldAlert, CheckCircle2, Lock,
   X, CheckCircle, XCircle, FileText, Clock, AlertTriangle,
-  Edit3, Save, MessageSquare, Check, Sparkles
+  Edit3, Save, MessageSquare, Check, Sparkles, RotateCcw, Unlock
 } from 'lucide-react';
 import { Quiz, Submission } from '@/types/database';
 import { getQuiz, listSubmissions, setShowResults } from '@/lib/data';
@@ -159,6 +159,51 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
       alert(err.message || 'Lỗi khi lưu điểm');
     } finally {
       setIsSavingGrade(false);
+    }
+  };
+
+  // Mở khóa phòng thi / Cho phép sinh viên làm lại bài
+  const [isUnlocking, setIsUnlocking] = useState(false);
+
+  const handleUnlockStudent = async (studentId: string, studentName?: string) => {
+    const confirmMsg = `Bạn có chắc chắn muốn MỞ KHÓA THI LẠI cho sinh viên "${studentName || studentId}"?\n\n• Bài nộp cũ và lịch sử vi phạm sẽ được reset.\n• Sinh viên sẽ có thể nhập lại mã phòng thi để vào làm bài.`;
+    if (!confirm(confirmMsg)) return;
+
+    setIsUnlocking(true);
+    try {
+      const res = await fetch('/api/lecturer/unlock-submission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quiz_id: params.id,
+          student_id: studentId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Mở khóa thất bại.');
+
+      // Xóa khỏi danh sách submissions hiển thị
+      const cleanCode = studentId.replace(/^st-/, '').trim().toUpperCase();
+      setSubmissions((prev) =>
+        prev.filter((s) => {
+          if (s.student_id === studentId) return false;
+          const sc = s.student?.student_code ? s.student.student_code.trim().toUpperCase() : '';
+          if (cleanCode && (sc === cleanCode || s.student_id.includes(cleanCode))) return false;
+          return true;
+        })
+      );
+
+      // Nếu đang mở modal của sinh viên này thì đóng lại
+      if (selectedStudentSubmission && (selectedStudentSubmission.student.id === studentId || selectedStudentSubmission.student.student_code === cleanCode)) {
+        setShowDetailModal(false);
+        setSelectedStudentSubmission(null);
+      }
+
+      alert(`Đã mở khóa thành công cho sinh viên ${studentName || studentId}! Sinh viên này có thể vào lại phòng thi để làm bài.`);
+    } catch (err: any) {
+      alert(`Lỗi mở khóa: ${err.message || err}`);
+    } finally {
+      setIsUnlocking(false);
     }
   };
 
@@ -369,13 +414,24 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
                       {s.submitted_at ? new Date(s.submitted_at).toLocaleTimeString('vi-VN') : 'Đang làm'}
                     </td>
                     <td className="p-4 text-right">
-                      <button
-                        onClick={() => handleOpenDetail(s.student_id)}
-                        className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 text-xs font-semibold inline-flex items-center space-x-1.5 transition-colors"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>Chấm & Xem Bài</span>
-                      </button>
+                      <div className="inline-flex items-center space-x-2">
+                        <button
+                          onClick={() => handleOpenDetail(s.student_id)}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 text-xs font-semibold inline-flex items-center space-x-1.5 transition-colors"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Chấm & Xem Bài</span>
+                        </button>
+                        <button
+                          onClick={() => handleUnlockStudent(s.student_id, s.student?.full_name)}
+                          disabled={isUnlocking}
+                          title="Xóa bài thi cũ, cho phép sinh viên vào phòng thi làm lại"
+                          className="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold inline-flex items-center space-x-1.5 transition-colors disabled:opacity-50"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Cho Thi Lại</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -404,15 +460,27 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  setShowDetailModal(false);
-                  setSelectedStudentSubmission(null);
-                }}
-                className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                {selectedStudentSubmission?.student && (
+                  <button
+                    onClick={() => handleUnlockStudent(selectedStudentSubmission.student.id, selectedStudentSubmission.student.full_name)}
+                    disabled={isUnlocking}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 text-xs font-semibold flex items-center space-x-1.5 transition-colors disabled:opacity-50"
+                  >
+                    <RotateCcw className="w-4 h-4 text-amber-400" />
+                    <span>Mở Khóa Cho Thi Lại</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedStudentSubmission(null);
+                  }}
+                  className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Content */}
