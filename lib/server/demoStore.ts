@@ -104,6 +104,7 @@ export interface DemoDb {
 }
 
 const STORE_PATH = path.join(process.env.TEMP_DIR || '/tmp', 'uniquiz_store.json');
+const PERSISTENT_STORE_PATH = path.join(process.cwd(), '.uniquiz_store.json');
 
 function seed(): DemoDb {
   const lecturers: DemoUser[] = [
@@ -455,7 +456,11 @@ const globalStore = globalThis as unknown as { __uniquizDemoDb?: DemoDb };
 export function saveDemoDb(): void {
   try {
     if (globalStore.__uniquizDemoDb) {
-      fs.writeFileSync(STORE_PATH, JSON.stringify(globalStore.__uniquizDemoDb, null, 2), 'utf8');
+      const data = JSON.stringify(globalStore.__uniquizDemoDb, null, 2);
+      fs.writeFileSync(STORE_PATH, data, 'utf8');
+      try {
+        fs.writeFileSync(PERSISTENT_STORE_PATH, data, 'utf8');
+      } catch {}
     }
   } catch (e) {
     // Bỏ qua lỗi ghi đĩa trong môi trường hạn chế
@@ -463,6 +468,7 @@ export function saveDemoDb(): void {
 }
 
 export function loadDemoDb(): DemoDb | null {
+  // 1. Thử đọc từ /tmp trước
   try {
     if (fs.existsSync(STORE_PATH)) {
       const raw = fs.readFileSync(STORE_PATH, 'utf8');
@@ -472,6 +478,18 @@ export function loadDemoDb(): DemoDb | null {
       }
     }
   } catch (e) {}
+
+  // 2. Dự phòng đọc từ file lưu trữ bền vững tại thư mục dự án
+  try {
+    if (fs.existsSync(PERSISTENT_STORE_PATH)) {
+      const raw = fs.readFileSync(PERSISTENT_STORE_PATH, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.users) && Array.isArray(parsed.classes)) {
+        return parsed;
+      }
+    }
+  } catch (e) {}
+
   return null;
 }
 
@@ -485,7 +503,7 @@ export function demoDb(): DemoDb {
       saveDemoDb();
     }
   } else if (fromDisk && Array.isArray(fromDisk.quizzes)) {
-    // Luôn đồng bộ danh sách đề thi, người dùng, lớp và ghi danh theo đúng file lưu trữ trên đĩa
+    // Luôn đồng bộ danh sách đề thi, người dùng, lớp, ghi danh và ĐIỂM SỐ theo đúng file lưu trữ trên đĩa
     globalStore.__uniquizDemoDb.quizzes = fromDisk.quizzes;
     if (Array.isArray(fromDisk.users)) {
       globalStore.__uniquizDemoDb.users = fromDisk.users;
@@ -495,6 +513,18 @@ export function demoDb(): DemoDb {
     }
     if (Array.isArray(fromDisk.enrollments)) {
       globalStore.__uniquizDemoDb.enrollments = fromDisk.enrollments;
+    }
+    if (Array.isArray(fromDisk.scores)) {
+      // Hợp nhất điểm số trên đĩa với điểm số trong bộ nhớ (không làm mất điểm số vừa nộp)
+      const existingScores = globalStore.__uniquizDemoDb.scores || [];
+      const scoreMap = new Map<string, DemoScore>();
+      for (const s of fromDisk.scores) {
+        scoreMap.set(`${s.quiz_id}_${s.student_id}`, s);
+      }
+      for (const s of existingScores) {
+        scoreMap.set(`${s.quiz_id}_${s.student_id}`, s);
+      }
+      globalStore.__uniquizDemoDb.scores = Array.from(scoreMap.values());
     }
   }
 

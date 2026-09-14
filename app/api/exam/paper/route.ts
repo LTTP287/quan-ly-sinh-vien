@@ -62,11 +62,12 @@ export async function POST(request: Request) {
     const db = demoDb();
     const quiz = db.quizzes.find((q) => q.id === quizId);
 
-    const myCode = auth.user.student_code ? auth.user.student_code.trim().toUpperCase() : '';
+    const myCode = auth.user.student_code ? auth.user.student_code.trim().toUpperCase() : auth.user.id.replace(/^st-/, '').trim().toUpperCase();
     const existingScore = db.scores.find((s) => {
       if (s.quiz_id !== quizId || !s.submitted_at) return false;
       if (s.student_id === auth.user.id) return true;
       if (myCode) {
+        if (s.student_id === `st-${myCode.toLowerCase()}` || s.student_id === `st-${myCode}` || s.student_id === myCode) return true;
         const scUser = db.users.find((x) => x.id === s.student_id);
         if (scUser && (scUser.student_code || '').trim().toUpperCase() === myCode) {
           return true;

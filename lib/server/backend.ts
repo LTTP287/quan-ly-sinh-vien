@@ -574,6 +574,7 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           if (s.quiz_id !== q.id) return false;
           if (s.student_id === user.id) return true;
           if (myStudentCode) {
+            if (s.student_id === `st-${myStudentCode.toLowerCase()}` || s.student_id === `st-${myStudentCode}` || s.student_id === myStudentCode) return true;
             const scUser = db.users.find((x) => x.id === s.student_id);
             if (scUser && (scUser.student_code || '').trim().toUpperCase() === myStudentCode) {
               return true;
@@ -662,7 +663,16 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
     });
 
     const history = db.scores
-      .filter((s) => s.student_id === user.id)
+      .filter((s) => {
+        if (!s.submitted_at) return false;
+        if (s.student_id === user.id) return true;
+        if (myStudentCode) {
+          if (s.student_id === `st-${myStudentCode.toLowerCase()}` || s.student_id === `st-${myStudentCode}` || s.student_id === myStudentCode) return true;
+          const u = db.users.find((x) => x.id === s.student_id);
+          if (u && (u.student_code || '').trim().toUpperCase() === myStudentCode) return true;
+        }
+        return false;
+      })
       .map((s) => {
         const q = db.quizzes.find((x) => x.id === s.quiz_id);
         return {
@@ -794,11 +804,12 @@ export async function checkQuizPasscode(
 
     // Kiểm tra sinh viên đã nộp bài này trước đó chưa (bằng studentId hoặc MSSV)
     const u = db.users.find((x) => x.id === studentId);
-    const studentCode = u?.student_code ? u.student_code.trim().toUpperCase() : '';
+    const studentCode = u?.student_code ? u.student_code.trim().toUpperCase() : studentId.replace(/^st-/, '').trim().toUpperCase();
     const existingScore = db.scores.find((s) => {
       if (s.quiz_id !== quizId || !s.submitted_at) return false;
       if (s.student_id === studentId) return true;
       if (studentCode) {
+        if (s.student_id === `st-${studentCode.toLowerCase()}` || s.student_id === `st-${studentCode}` || s.student_id === studentCode) return true;
         const scUser = db.users.find((x) => x.id === s.student_id);
         if (scUser && (scUser.student_code || '').trim().toUpperCase() === studentCode) {
           return true;

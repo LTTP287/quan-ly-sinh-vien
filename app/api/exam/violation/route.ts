@@ -17,8 +17,19 @@ export async function POST(request: Request) {
   if (!quizId) return NextResponse.json({ error: 'Thiếu mã bài thi.' }, { status: 400 });
 
   if (!useRemote) {
+    const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
     const db = demoDb();
-    let score = db.scores.find((s) => s.quiz_id === quizId && s.student_id === auth.user.id);
+    const myCode = auth.user.student_code ? auth.user.student_code.trim().toUpperCase() : auth.user.id.replace(/^st-/, '').trim().toUpperCase();
+    let score = db.scores.find((s) => {
+      if (s.quiz_id !== quizId) return false;
+      if (s.student_id === auth.user.id) return true;
+      if (myCode) {
+        if (s.student_id === `st-${myCode.toLowerCase()}` || s.student_id === `st-${myCode}` || s.student_id === myCode) return true;
+        const scUser = db.users.find((x) => x.id === s.student_id);
+        if (scUser && (scUser.student_code || '').trim().toUpperCase() === myCode) return true;
+      }
+      return false;
+    });
     if (!score) {
       score = {
         quiz_id: quizId,
@@ -30,6 +41,8 @@ export async function POST(request: Request) {
         warning_history: [],
       };
       db.scores.push(score);
+    } else {
+      score.student_id = auth.user.id;
     }
     score.tab_violations_count = (score.tab_violations_count || 0) + 1;
     if (!score.warning_history) score.warning_history = [];
@@ -38,6 +51,7 @@ export async function POST(request: Request) {
       event: 'visibility_hidden',
       message,
     });
+    saveDemoDb();
     return NextResponse.json({ count: score.tab_violations_count });
   }
 

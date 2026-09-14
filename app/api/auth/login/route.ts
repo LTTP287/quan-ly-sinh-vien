@@ -52,14 +52,21 @@ export async function POST(request: Request) {
           if (!stCode) continue;
           const idx = db.users.findIndex((u) => (u.student_code || '').trim().toUpperCase() === stCode);
           if (idx >= 0) {
+            const existingId = db.users[idx].id;
             const existingDob = db.users[idx].date_of_birth;
             db.users[idx] = {
               ...db.users[idx],
               ...st,
+              id: existingId, // KHÔNG BAO GIỜ ghi đè id cũ để không làm gãy liên kết điểm số (scores)
+              student_code: stCode,
               date_of_birth: st.date_of_birth || existingDob,
             };
           } else {
-            db.users.push(st);
+            db.users.push({
+              ...st,
+              id: st.id || `st-${stCode.toLowerCase()}`,
+              student_code: stCode,
+            });
           }
         }
       }

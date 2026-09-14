@@ -49,7 +49,11 @@ export async function POST(request: Request) {
     let score = db.scores.find((s) => {
       if (s.quiz_id !== quizId) return false;
       if (s.student_id === studentId) return true;
-      if (userCode && (s.student_id === `st-${userCode}` || s.student_id === userCode)) return true;
+      if (userCode) {
+        if (s.student_id === `st-${userCode.toLowerCase()}` || s.student_id === `st-${userCode}` || s.student_id === userCode) return true;
+        const u = db.users.find((x) => x.id === s.student_id);
+        if (u && (u.student_code || '').trim().toUpperCase() === userCode) return true;
+      }
       return false;
     });
 

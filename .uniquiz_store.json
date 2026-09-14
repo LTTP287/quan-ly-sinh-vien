@@ -1,0 +1,1659 @@
+{
+  "users": [
+    {
+      "id": "lecturer-phuong-dtu",
+      "email": "letthanhphuong3@dtu.edu.vn",
+      "student_code": null,
+      "full_name": "ThS. Lê Thị Thanh Phương",
+      "role": "lecturer",
+      "password": "LeminhPhuc@2512"
+    },
+    {
+      "id": "lecturer-phuong-gmail",
+      "email": "phuong.lethanh797@gmail.com",
+      "student_code": null,
+      "full_name": "ThS. Lê Thị Thanh Phương",
+      "role": "lecturer",
+      "password": "LeminhPhuc@2512"
+    },
+    {
+      "id": "lecturer-uuid-1",
+      "email": "giangvien@edu.vn",
+      "student_code": null,
+      "full_name": "ThS. Lê Thị Thanh Phương",
+      "role": "lecturer",
+      "password": "GiangVien@2026"
+    },
+    {
+      "id": "st-22120555",
+      "student_code": "22120555",
+      "full_name": "Nguyễn Hoàng Nam",
+      "email": "22120555@student.university.edu.vn",
+      "role": "student",
+      "date_of_birth": "2004-05-20"
+    },
+    {
+      "id": "st-123456789",
+      "student_code": "123456789",
+      "full_name": "Sinh Viên 123456789",
+      "email": "123456789@student.university.edu.vn",
+      "role": "student",
+      "date_of_birth": "2004-01-15"
+    },
+    {
+      "id": "st-20120001",
+      "student_code": "20120001",
+      "full_name": "Sinh Viên 20120001",
+      "email": "20120001@student.university.edu.vn",
+      "role": "student",
+      "date_of_birth": "15/01/2004"
+    },
+    {
+      "id": "st-scm201e-student",
+      "student_code": "22120888",
+      "full_name": "Sinh Viên Lớp SCM201 E",
+      "email": "22120888@student.university.edu.vn",
+      "role": "student",
+      "date_of_birth": "2004-08-08"
+    }
+  ],
+  "classes": [
+    {
+      "id": "class-scm201-i",
+      "code": "SCM201 I",
+      "name": "Quản trị Chuỗi cung ứng - SCM201 I",
+      "semester": "HKI (2026 - 2027)"
+    },
+    {
+      "id": "class-scm201-e",
+      "code": "SCM201 E",
+      "name": "Quản trị Chuỗi cung ứng - SCM201 E",
+      "semester": "HKI (2026 - 2027)"
+    }
+  ],
+  "enrollments": [
+    {
+      "class_id": "class-scm201-i",
+      "student_id": "st-scm-1"
+    },
+    {
+      "class_id": "class-scm201-i",
+      "student_id": "st-22120555"
+    },
+    {
+      "class_id": "class-scm201-i",
+      "student_id": "st-123456789"
+    },
+    {
+      "class_id": "class-scm201-i",
+      "student_id": "st-20120001"
+    },
+    {
+      "class_id": "class-scm201-e",
+      "student_id": "st-scm201e-student"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "quiz-05-scm",
+      "title": "quiz 05",
+      "description": "Kiểm tra trắc nghiệm chương 5",
+      "time_limit_minutes": 30,
+      "is_published": true,
+      "show_results": false,
+      "passcode": "SCM201",
+      "passcode_expires_at": null,
+      "class_ids": [
+        "class-scm201-i",
+        "class-scm201-e"
+      ],
+      "start_at": "2026-09-11T15:52:05.240Z",
+      "end_at": "2026-09-18T16:52:05.240Z",
+      "is_active": true,
+      "shuffle_questions": false,
+      "shuffle_options": false,
+      "prevent_previous": false,
+      "questions": [
+        {
+          "id": "q-05-1",
+          "question_text": "Chuỗi cung ứng bền vững cần đảm bảo yếu tố nào?",
+          "question_type": "multiple_choice",
+          "points": 1,
+          "options": [
+            {
+              "id": "opt-1",
+              "option_text": "Kinh tế, Môi trường và Xã hội",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-2",
+              "option_text": "Chỉ giảm giá thành",
+              "is_correct": false,
+              "order_index": 1
+            }
+          ]
+        }
+      ],
+      "class_schedules": {
+        "class-scm201-i": {
+          "class_id": "class-scm201-i",
+          "start_at": "2026-09-11T15:52:05.240Z",
+          "end_at": "2026-09-18T16:52:05.240Z",
+          "access_code": "SCM201",
+          "is_active": true
+        },
+        "class-scm201-e": {
+          "class_id": "class-scm201-e",
+          "start_at": "2026-09-11T15:52:05.240Z",
+          "end_at": "2026-09-18T16:52:05.240Z",
+          "access_code": "SCM201",
+          "is_active": true
+        }
+      }
+    },
+    {
+      "id": "midterm-scm-2026",
+      "title": "Midterm",
+      "description": "Đề thi Midterm phân bố chuẩn 3 phần (Thang điểm 10.0): Phần 1: Trắc nghiệm 20 câu (0.2đ x 20 = 4.0đ) | Phần 2: Câu hỏi ngắn 3 câu (1.0đ x 3 = 3.0đ) | Phần 3: Tự luận dài 1 câu (3.0đ). Tổng 24 câu = 10.0 điểm.",
+      "time_limit_minutes": 60,
+      "is_published": true,
+      "show_results": false,
+      "passcode": "LOG888",
+      "passcode_expires_at": null,
+      "class_ids": [
+        "class-scm201-i",
+        "class-scm201-e"
+      ],
+      "class_schedules": {
+        "class-scm201-i": {
+          "class_id": "class-scm201-i",
+          "start_at": "2026-09-13T17:59",
+          "end_at": "2026-09-20T17:59",
+          "access_code": "LOG888",
+          "is_active": true
+        },
+        "class-scm201-e": {
+          "class_id": "class-scm201-e",
+          "start_at": "2026-09-13T17:59",
+          "end_at": "2026-09-20T17:59",
+          "access_code": "LOG888",
+          "is_active": true
+        }
+      },
+      "start_at": "2026-09-13T17:59:00.000Z",
+      "end_at": "2026-09-20T17:59:00.000Z",
+      "is_active": true,
+      "shuffle_questions": true,
+      "shuffle_options": true,
+      "prevent_previous": true,
+      "questions_per_student": 24,
+      "section_sampling": {
+        "multiple_choice": 20,
+        "short_answer": 3,
+        "long_answer": 1
+      },
+      "questions": [
+        {
+          "id": "midterm-mc-1",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 0,
+          "question_text": "Yếu tố nào sau đây là mục tiêu 7Rs cốt lõi trong hoạt động Logistics?",
+          "options": [
+            {
+              "id": "opt-1-a",
+              "question_id": "midterm-mc-1",
+              "option_text": "Right Product, Right Quantity, Right Condition, Right Place, Right Time, Right Customer, Right Price",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-1-b",
+              "question_id": "midterm-mc-1",
+              "option_text": "Right Route, Right Risk, Right Revenue, Right Requirement, Right Resource, Right Return, Right Rate",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-1-c",
+              "question_id": "midterm-mc-1",
+              "option_text": "Right Storage, Right Safety, Right Speed, Right System, Right Scale, Right Strategy, Right Scope",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-1-d",
+              "question_id": "midterm-mc-1",
+              "option_text": "Right Port, Right Plane, Right Partner, Right Package, Right Process, Right Profit, Right Purpose",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-2",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 1,
+          "question_text": "Quan sát sơ đồ Bullwhip Effect bên dưới: Hiện tượng này mô tả sự biến động nhu cầu gia tăng như thế nào khi đơn hàng di chuyển ngược từ bán lẻ về phía nhà sản xuất?",
+          "image_url": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 700 200\" width=\"700\" height=\"200\"><rect width=\"700\" height=\"200\" rx=\"14\" fill=\"%230f172a\"/><text x=\"350\" y=\"28\" fill=\"%2338bdf8\" font-family=\"sans-serif\" font-size=\"13\" font-weight=\"bold\" text-anchor=\"middle\">SƠ ĐỒ BIỂU DIỄN HIỆU ỨNG CHIẾC ROI DA (BULLWHIP EFFECT)</text><rect x=\"30\" y=\"50\" width=\"130\" height=\"55\" rx=\"8\" fill=\"%231e293b\" stroke=\"%2338bdf8\" stroke-width=\"2\"/><text x=\"95\" y=\"75\" fill=\"%23f8fafc\" font-family=\"sans-serif\" font-size=\"12\" font-weight=\"bold\" text-anchor=\"middle\">1. Khách Hàng</text><text x=\"95\" y=\"93\" fill=\"%2394a3b8\" font-family=\"sans-serif\" font-size=\"10\" text-anchor=\"middle\">Nhu cầu ổn định (±5%)</text><rect x=\"200\" y=\"50\" width=\"130\" height=\"55\" rx=\"8\" fill=\"%231e293b\" stroke=\"%23818cf8\" stroke-width=\"2\"/><text x=\"265\" y=\"75\" fill=\"%23f8fafc\" font-family=\"sans-serif\" font-size=\"12\" font-weight=\"bold\" text-anchor=\"middle\">2. Bán Lẻ (Retail)</text><text x=\"265\" y=\"93\" fill=\"%2394a3b8\" font-family=\"sans-serif\" font-size=\"10\" text-anchor=\"middle\">Biến động (±15%)</text><rect x=\"370\" y=\"50\" width=\"130\" height=\"55\" rx=\"8\" fill=\"%231e293b\" stroke=\"%23c084fc\" stroke-width=\"2\"/><text x=\"435\" y=\"75\" fill=\"%23f8fafc\" font-family=\"sans-serif\" font-size=\"12\" font-weight=\"bold\" text-anchor=\"middle\">3. Phân Phối (3PL)</text><text x=\"435\" y=\"93\" fill=\"%2394a3b8\" font-family=\"sans-serif\" font-size=\"10\" text-anchor=\"middle\">Biến động (±35%)</text><rect x=\"540\" y=\"50\" width=\"130\" height=\"55\" rx=\"8\" fill=\"%231e293b\" stroke=\"%23f43f5e\" stroke-width=\"2\"/><text x=\"605\" y=\"75\" fill=\"%23f8fafc\" font-family=\"sans-serif\" font-size=\"12\" font-weight=\"bold\" text-anchor=\"middle\">4. Nhà Sản Xuất</text><text x=\"605\" y=\"93\" fill=\"%2394a3b8\" font-family=\"sans-serif\" font-size=\"10\" text-anchor=\"middle\">Biến động (±80%)</text><path d=\"M165 77 L195 77 M335 77 L365 77 M505 77 L535 77\" stroke=\"%2394a3b8\" stroke-width=\"2\"/><path d=\"M40 150 Q180 140 300 130 T500 115 T660 170\" fill=\"none\" stroke=\"%23f43f5e\" stroke-width=\"3\" stroke-dasharray=\"4,4\"/><text x=\"350\" y=\"175\" fill=\"%23cbd5e1\" font-family=\"sans-serif\" font-size=\"11\" text-anchor=\"middle\">Đơn hàng bị phóng đại và méo mó dần khi truyền ngược về đầu nguồn cung ứng</text></svg>",
+          "options": [
+            {
+              "id": "opt-2-a",
+              "question_id": "midterm-mc-2",
+              "option_text": "Biến động nhu cầu gia tăng khi đi ngược lên phía trên Chuỗi cung ứng từ bán lẻ đến nhà sản xuất",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-2-b",
+              "question_id": "midterm-mc-2",
+              "option_text": "Sự suy giảm liên tục của lượng tồn kho an toàn tại các nhà phân phối cấp 1",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-2-c",
+              "question_id": "midterm-mc-2",
+              "option_text": "Chi phí vận chuyển đường bộ tăng đều đặn theo khoảng cách địa lý",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-2-d",
+              "question_id": "midterm-mc-2",
+              "option_text": "Tốc độ quay vòng vốn lưu động của toàn bộ các tác nhân trong mạng lưới",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-3",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 2,
+          "question_text": "Thuật ngữ 3PL (Third-Party Logistics) để chỉ đối tượng nào?",
+          "options": [
+            {
+              "id": "opt-3-a",
+              "question_id": "midterm-mc-3",
+              "option_text": "Công ty dịch vụ logistics bên thứ ba cung cấp vận tải, kho bãi và thủ tục hải quan",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-3-b",
+              "question_id": "midterm-mc-3",
+              "option_text": "Doanh nghiệp sản xuất tự vận hành đội xe và hệ thống kho hàng nội bộ",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-3-c",
+              "question_id": "midterm-mc-3",
+              "option_text": "Người tiêu dùng cuối cùng nhận hàng tại điểm nhận bưu phẩm",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-3-d",
+              "question_id": "midterm-mc-3",
+              "option_text": "Cơ quan kiểm định chất lượng hàng hóa nhập khẩu của nhà nước",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-4",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 3,
+          "question_text": "Phương thức vận tải nào có chi phí đơn vị thấp nhất cho hàng rời khối lượng lớn trên cự ly dài?",
+          "options": [
+            {
+              "id": "opt-4-a",
+              "question_id": "midterm-mc-4",
+              "option_text": "Vận tải đường biển (Sea Freight)",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-4-b",
+              "question_id": "midterm-mc-4",
+              "option_text": "Vận tải đường hàng không (Air Freight)",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-4-c",
+              "question_id": "midterm-mc-4",
+              "option_text": "Vận tải đường bộ bằng xe tải van",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-4-d",
+              "question_id": "midterm-mc-4",
+              "option_text": "Chuyển phát nhanh bưu kiện quốc tế",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-5",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 4,
+          "question_text": "Chỉ số On-Time In-Full (OTIF) dùng để đo lường điều gì?",
+          "options": [
+            {
+              "id": "opt-5-a",
+              "question_id": "midterm-mc-5",
+              "option_text": "Tỷ lệ đơn hàng được giao đúng giờ và đủ số lượng theo cam kết với khách hàng",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-5-b",
+              "question_id": "midterm-mc-5",
+              "option_text": "Tổng chi phí xếp dỡ hàng hóa trên mỗi tấn hàng luân chuyển qua cảng",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-5-c",
+              "question_id": "midterm-mc-5",
+              "option_text": "Số ngày bình quân một lô hàng lưu lại trong kho trung chuyển",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-5-d",
+              "question_id": "midterm-mc-5",
+              "option_text": "Tỷ lệ hao hụt tự nhiên của hàng nông sản trong quá trình bảo quản lạnh",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-6",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 5,
+          "question_text": "Mô hình EOQ (Economic Order Quantity) nhằm tìm điểm cân bằng giữa:",
+          "options": [
+            {
+              "id": "opt-6-a",
+              "question_id": "midterm-mc-6",
+              "option_text": "Chi phí đặt hàng và chi phí lưu kho bảo quản tồn kho",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-6-b",
+              "question_id": "midterm-mc-6",
+              "option_text": "Chi phí quảng cáo tiếp thị và doanh thu bán hàng theo tháng",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-6-c",
+              "question_id": "midterm-mc-6",
+              "option_text": "Lương nhân viên kho và cước phí bảo hiểm hàng hóa trên đường đi",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-6-d",
+              "question_id": "midterm-mc-6",
+              "option_text": "Thời gian sản xuất sản phẩm và thời gian kiểm nghiệm chất lượng",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-7",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 6,
+          "question_text": "Kỹ thuật Cross-docking trong quản trị kho mang lại lợi ích lớn nhất nào?",
+          "options": [
+            {
+              "id": "opt-7-a",
+              "question_id": "midterm-mc-7",
+              "option_text": "Chuyển hàng trực tiếp từ xe nhận sang xe xuất mà không cần lưu kho trung gian",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-7-b",
+              "question_id": "midterm-mc-7",
+              "option_text": "Tăng diện tích kệ lưu kho nhiều tầng để chứa hàng tồn chiến lược",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-7-c",
+              "question_id": "midterm-mc-7",
+              "option_text": "Kéo dài thời gian kiểm đếm chi tiết từng linh kiện điện tử",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-7-d",
+              "question_id": "midterm-mc-7",
+              "option_text": "Loại bỏ hoàn toàn yêu cầu phải dán mã vạch Barcode trên kiện hàng",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-8",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 7,
+          "question_text": "Lead Time trong chuỗi cung ứng được định nghĩa là:",
+          "options": [
+            {
+              "id": "opt-8-a",
+              "question_id": "midterm-mc-8",
+              "option_text": "Khoảng thời gian từ lúc đặt hàng đến khi nhận được hàng hoàn chỉnh",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-8-b",
+              "question_id": "midterm-mc-8",
+              "option_text": "Thời gian xe tải dừng tại trạm kiểm soát trạm cân tải trọng",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-8-c",
+              "question_id": "midterm-mc-8",
+              "option_text": "Tổng thời gian đàm phán hợp đồng thương mại quốc tế",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-8-d",
+              "question_id": "midterm-mc-8",
+              "option_text": "Hạn sử dụng ghi trên bao bì của sản phẩm tiêu dùng nhanh",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-9",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 8,
+          "question_text": "Khái niệm Safety Stock (Tồn kho an toàn) được thiết lập nhằm mục đích gì?",
+          "options": [
+            {
+              "id": "opt-9-a",
+              "question_id": "midterm-mc-9",
+              "option_text": "Phòng ngừa sự bất định trong nhu cầu thị trường và độ trễ cung ứng từ nhà cung cấp",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-9-b",
+              "question_id": "midterm-mc-9",
+              "option_text": "Tận dụng hết không gian trống trên sàn kho trước mùa mưa bão",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-9-c",
+              "question_id": "midterm-mc-9",
+              "option_text": "Tránh thuế giá trị gia tăng đối với hàng hóa lưu kho ngắn ngày",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-9-d",
+              "question_id": "midterm-mc-9",
+              "option_text": "Giảm số lần thanh tra an toàn phòng cháy chữa cháy của kho",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-10",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 9,
+          "question_text": "Triết lý sản xuất Just-In-Time (JIT) cốt lõi tập trung vào:",
+          "options": [
+            {
+              "id": "opt-10-a",
+              "question_id": "midterm-mc-10",
+              "option_text": "Cung cấp đúng chi tiết, đúng số lượng, đúng thời điểm và loại bỏ mọi lãng phí",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-10-b",
+              "question_id": "midterm-mc-10",
+              "option_text": "Dự trữ thật nhiều nguyên vật liệu để đề phòng đứt gãy nguồn cung",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-10-c",
+              "question_id": "midterm-mc-10",
+              "option_text": "Sử dụng phương thức vận chuyển rẻ nhất bất kể thời gian chậm trễ",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-10-d",
+              "question_id": "midterm-mc-10",
+              "option_text": "Ưu tiên gia công hàng loạt lô lớn để giảm chi phí nhân công trực tiếp",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-11",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 10,
+          "question_text": "Mã định danh SKU (Stock Keeping Unit) trong quản lý kho hàng được sử dụng để:",
+          "options": [
+            {
+              "id": "opt-11-a",
+              "question_id": "midterm-mc-11",
+              "option_text": "Phân biệt và kiểm soát từng đơn vị hàng hóa cụ thể dựa trên quy cách và đặc tính",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-11-b",
+              "question_id": "midterm-mc-11",
+              "option_text": "Đăng ký biển số phương tiện vận tải ra vào cổng tổng kho",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-11-c",
+              "question_id": "midterm-mc-11",
+              "option_text": "Tính toán biểu thuế xuất nhập khẩu áp dụng cho từng quốc gia đối tác",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-11-d",
+              "question_id": "midterm-mc-11",
+              "option_text": "Xác định số thứ tự ưu tiên của container tại bãi cảng ICD",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-12",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 11,
+          "question_text": "Hoạt động Inbound Logistics bao gồm các dòng công việc nào sau đây?",
+          "options": [
+            {
+              "id": "opt-12-a",
+              "question_id": "midterm-mc-12",
+              "option_text": "Tiếp nhận, bốc dỡ, lưu trữ và cung ứng nguyên vật liệu đầu vào cho nhà máy",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-12-b",
+              "question_id": "midterm-mc-12",
+              "option_text": "Giao thành phẩm từ kho phân phối đến các siêu thị bán lẻ ngoài thị trường",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-12-c",
+              "question_id": "midterm-mc-12",
+              "option_text": "Thu hồi bao bì tái chế và sản phẩm lỗi bảo hành từ người tiêu dùng",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-12-d",
+              "question_id": "midterm-mc-12",
+              "option_text": "Tư vấn bán hàng và dịch vụ chăm sóc khách hàng sau khi mua",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-13",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 12,
+          "question_text": "Công nghệ RFID (Radio Frequency Identification) mang lại ưu thế vượt trội nào so với Barcode?",
+          "options": [
+            {
+              "id": "opt-13-a",
+              "question_id": "midterm-mc-13",
+              "option_text": "Có thể quét đồng thời nhiều thẻ chip từ xa mà không cần nhìn thấy trực tiếp tia quét",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-13-b",
+              "question_id": "midterm-mc-13",
+              "option_text": "Giá thành nhãn giấy in rẻ hơn rất nhiều so với nhãn mã vạch thông thường",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-13-c",
+              "question_id": "midterm-mc-13",
+              "option_text": "Không yêu cầu đầu đọc kết nối internet hoặc hệ thống quản lý WMS",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-13-d",
+              "question_id": "midterm-mc-13",
+              "option_text": "Hoạt động hiệu quả ngay cả khi bị ngâm hoàn toàn trong chất lỏng dẫn điện",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-14",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 13,
+          "question_text": "Hình thức vận tải đa phương thức (Intermodal Transport) sử dụng đơn vị tải chuẩn hóa nào phổ biến nhất?",
+          "options": [
+            {
+              "id": "opt-14-a",
+              "question_id": "midterm-mc-14",
+              "option_text": "Thùng hàng Container tiêu chuẩn ISO",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-14-b",
+              "question_id": "midterm-mc-14",
+              "option_text": "Bao tải gai loại 50kg bốc xếp thủ công",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-14-c",
+              "question_id": "midterm-mc-14",
+              "option_text": "Thùng phi sắt 200 lít không đóng pallet",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-14-d",
+              "question_id": "midterm-mc-14",
+              "option_text": "Hộp carton carton mềm kích thước tự do",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-15",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 14,
+          "question_text": "Hệ thống Cold Chain (Chuỗi cung ứng lạnh) giữ vai trò sống còn đối với nhóm ngành hàng nào?",
+          "options": [
+            {
+              "id": "opt-15-a",
+              "question_id": "midterm-mc-15",
+              "option_text": "Dược phẩm, vắc xin sinh học và thực phẩm thủy hải sản tươi sống",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-15-b",
+              "question_id": "midterm-mc-15",
+              "option_text": "Sắt thép xây dựng và xi măng đóng bao",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-15-c",
+              "question_id": "midterm-mc-15",
+              "option_text": "Hàng dệt may thời trang xuất khẩu đi thị trường châu Âu",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-15-d",
+              "question_id": "midterm-mc-15",
+              "option_text": "Sách báo và thiết bị văn phòng phẩm thông dụng",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-16",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 15,
+          "question_text": "Mô hình VMI (Vendor-Managed Inventory) có đặc điểm cốt lõi là:",
+          "options": [
+            {
+              "id": "opt-16-a",
+              "question_id": "midterm-mc-16",
+              "option_text": "Nhà cung cấp chịu trách nhiệm theo dõi và chủ động bổ sung tồn kho cho khách hàng",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-16-b",
+              "question_id": "midterm-mc-16",
+              "option_text": "Khách hàng tự sang kho nhà cung cấp để tự xếp hàng lên xe của mình",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-16-c",
+              "question_id": "midterm-mc-16",
+              "option_text": "Chính phủ quy định giá bán và mức tồn trữ tối đa cho từng mặt hàng",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-16-d",
+              "question_id": "midterm-mc-16",
+              "option_text": "Các bên không được phép chia sẻ dữ liệu điểm bán POS cho nhau",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-17",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 16,
+          "question_text": "Lộ trình thu gom Milk Run trong Logistics được thiết kế như thế nào?",
+          "options": [
+            {
+              "id": "opt-17-a",
+              "question_id": "midterm-mc-17",
+              "option_text": "Một xe chạy theo lộ trình định kỳ ghé thu gom hàng từ nhiều nhà cung cấp theo khung giờ cố định",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-17-b",
+              "question_id": "midterm-mc-17",
+              "option_text": "Mỗi nhà cung cấp sử dụng xe riêng của mình chạy thẳng độc lập về nhà máy chính",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-17-c",
+              "question_id": "midterm-mc-17",
+              "option_text": "Chỉ thu gom hàng vào ban đêm để tránh tắc đường cao tốc",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-17-d",
+              "question_id": "midterm-mc-17",
+              "option_text": "Vận chuyển hàng sữa tươi nguyên chất từ trang trại đến cơ sở chế biến bơ sữa",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-18",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 17,
+          "question_text": "Quy trình S&OP (Sales and Operations Planning) đóng vai trò then chốt trong việc:",
+          "options": [
+            {
+              "id": "opt-18-a",
+              "question_id": "midterm-mc-18",
+              "option_text": "Cân đối hài hòa giữa dự báo nhu cầu bán hàng và năng lực vận hành, sản xuất thực tế",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-18-b",
+              "question_id": "midterm-mc-18",
+              "option_text": "Tách biệt tuyệt đối bộ phận kinh doanh và phòng kế hoạch sản xuất",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-18-c",
+              "question_id": "midterm-mc-18",
+              "option_text": "Cắt giảm tối đa ngân sách đào tạo nội bộ cho đội ngũ nhân viên lái xe nâng",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-18-d",
+              "question_id": "midterm-mc-18",
+              "option_text": "Tập trung duy nhất vào báo cáo kết quả tài chính cuối năm tài khóa",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-19",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 18,
+          "question_text": "Quan sát sơ đồ phân loại hàng tồn kho ABC theo nguyên lý Pareto bên dưới: Hàng hóa thuộc Nhóm A thường đặc trưng bởi yếu tố nào?",
+          "image_url": "data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 650 190\" width=\"650\" height=\"190\"><rect width=\"650\" height=\"190\" rx=\"14\" fill=\"%230f172a\"/><text x=\"325\" y=\"26\" fill=\"%2338bdf8\" font-family=\"sans-serif\" font-size=\"13\" font-weight=\"bold\" text-anchor=\"middle\">MÔ HÌNH PHÂN TÍCH QUẢN TRỊ KHO HÀNG ABC (PARETO 80/20)</text><rect x=\"40\" y=\"48\" width=\"165\" height=\"85\" rx=\"8\" fill=\"%231e293b\" stroke=\"%2310b981\" stroke-width=\"2\"/><text x=\"122\" y=\"72\" fill=\"%2334d399\" font-family=\"sans-serif\" font-size=\"13\" font-weight=\"bold\" text-anchor=\"middle\">Nhóm A (Trọng Yếu)</text><text x=\"122\" y=\"95\" fill=\"%23f8fafc\" font-family=\"sans-serif\" font-size=\"11\" text-anchor=\"middle\">Giá trị: 70% - 80%</text><text x=\"122\" y=\"115\" fill=\"%2394a3b8\" font-family=\"sans-serif\" font-size=\"10\" text-anchor=\"middle\">Số lượng SKU: 15% - 20%</text><rect x=\"242\" y=\"48\" width=\"165\" height=\"85\" rx=\"8\" fill=\"%231e293b\" stroke=\"%23fbbf24\" stroke-width=\"2\"/><text x=\"325\" y=\"72\" fill=\"%23fcd34d\" font-family=\"sans-serif\" font-size=\"13\" font-weight=\"bold\" text-anchor=\"middle\">Nhóm B (Trung Bình)</text><text x=\"325\" y=\"95\" fill=\"%23f8fafc\" font-family=\"sans-serif\" font-size=\"11\" text-anchor=\"middle\">Giá trị: 15% - 20%</text><text x=\"325\" y=\"115\" fill=\"%2394a3b8\" font-family=\"sans-serif\" font-size=\"10\" text-anchor=\"middle\">Số lượng SKU: 30%</text><rect x=\"445\" y=\"48\" width=\"165\" height=\"85\" rx=\"8\" fill=\"%231e293b\" stroke=\"%2360a5fa\" stroke-width=\"2\"/><text x=\"527\" y=\"72\" fill=\"%2393c5fd\" font-family=\"sans-serif\" font-size=\"13\" font-weight=\"bold\" text-anchor=\"middle\">Nhóm C (Thông Thường)</text><text x=\"527\" y=\"95\" fill=\"%23f8fafc\" font-family=\"sans-serif\" font-size=\"11\" text-anchor=\"middle\">Giá trị: 5% - 10%</text><text x=\"527\" y=\"115\" fill=\"%2394a3b8\" font-family=\"sans-serif\" font-size=\"10\" text-anchor=\"middle\">Số lượng SKU: 50% - 55%</text><text x=\"325\" y=\"162\" fill=\"%23cbd5e1\" font-family=\"sans-serif\" font-size=\"11\" text-anchor=\"middle\">Tập trung kiểm soát chặt chẽ nhóm A để giảm rủi ro ứ đọng vốn lưu động</text></svg>",
+          "options": [
+            {
+              "id": "opt-19-a",
+              "question_id": "midterm-mc-19",
+              "option_text": "Giá trị tiền tệ hoặc tần suất xuất nhập luân chuyển hàng năm của sản phẩm",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-19-b",
+              "question_id": "midterm-mc-19",
+              "option_text": "Thứ tự bảng chữ cái tiếng Anh theo tên của thương hiệu sản xuất",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-19-c",
+              "question_id": "midterm-mc-19",
+              "option_text": "Màu sắc bao bì bên ngoài của thùng carton đóng gói",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-19-d",
+              "question_id": "midterm-mc-19",
+              "option_text": "Trọng lượng tĩnh thuần túy của từng kiện hàng khi nhập cảng",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-20",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 19,
+          "question_text": "Chiến lược Reverse Logistics (Logistics ngược) xử lý các dòng vận động nào sau đây?",
+          "options": [
+            {
+              "id": "opt-20-a",
+              "question_id": "midterm-mc-20",
+              "option_text": "Thu hồi sản phẩm hỏng hóc, xử lý hàng trả về, tái chế bao bì và tiêu hủy an toàn",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-20-b",
+              "question_id": "midterm-mc-20",
+              "option_text": "Vận chuyển hàng nguyên đai nguyên kiện từ kho trung tâm ra các đại lý cấp 2",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-20-c",
+              "question_id": "midterm-mc-20",
+              "option_text": "Thuê kho phụ trợ trong mùa cao điểm mua sắm Tết Nguyên Đán",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-20-d",
+              "question_id": "midterm-mc-20",
+              "option_text": "Đặt hàng bổ sung tự động qua cổng điện tử EDI",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-21",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 20,
+          "question_text": "Hệ thống WMS (Warehouse Management System) hỗ trợ chức năng cốt lõi nào trong kho hàng?",
+          "options": [
+            {
+              "id": "opt-21-a",
+              "question_id": "midterm-mc-21",
+              "option_text": "Quản lý vị trí lưu kho (Slotting), định tuyến lấy hàng (Picking) và kiểm kê tồn kho theo thời gian thực",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-21-b",
+              "question_id": "midterm-mc-21",
+              "option_text": "Tự động tính toán thuế thu nhập doanh nghiệp hàng quý",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-21-c",
+              "question_id": "midterm-mc-21",
+              "option_text": "Thiết kế mẫu mã bao bì sản phẩm phục vụ marketing bán lẻ",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-21-d",
+              "question_id": "midterm-mc-21",
+              "option_text": "Giám sát hành trình tàu biển trên vùng biển quốc tế",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-22",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 21,
+          "question_text": "Trong điều kiện thương mại Incoterms 2020, quy tắc FOB (Free On Board) quy định rủi ro chuyển giao từ người bán sang người mua khi nào?",
+          "options": [
+            {
+              "id": "opt-22-a",
+              "question_id": "midterm-mc-22",
+              "option_text": "Khi hàng hóa đã được xếp an toàn lên boong tàu tại cảng bốc hàng chỉ định",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-22-b",
+              "question_id": "midterm-mc-22",
+              "option_text": "Khi hàng hóa vừa rời khỏi cổng kho của người bán tại nước xuất khẩu",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-22-c",
+              "question_id": "midterm-mc-22",
+              "option_text": "Khi hàng cập bến cảng đích và hoàn tất thủ tục nhập khẩu",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-22-d",
+              "question_id": "midterm-mc-22",
+              "option_text": "Khi người mua thanh toán đủ 100% giá trị hợp đồng qua ngân hàng",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-23",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 22,
+          "question_text": "Mô hình CPFR (Collaborative Planning, Forecasting, and Replenishment) là phương thức hợp tác nhằm:",
+          "options": [
+            {
+              "id": "opt-23-a",
+              "question_id": "midterm-mc-23",
+              "option_text": "Cùng chia sẻ kế hoạch, dự báo nhu cầu và phối hợp bổ sung hàng giữa các đối tác trong chuỗi",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-23-b",
+              "question_id": "midterm-mc-23",
+              "option_text": "Thỏa thuận ấn định giá sàn cố định trên thị trường nhằm loại bỏ đối thủ cạnh tranh",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-23-c",
+              "question_id": "midterm-mc-23",
+              "option_text": "Chia sẻ bảo mật mã nguồn phần mềm nội bộ cho tất cả các nhà phân phối",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-23-d",
+              "question_id": "midterm-mc-23",
+              "option_text": "Chuyển toàn bộ rủi ro tài chính cho khách hàng mua buôn",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-24",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 23,
+          "question_text": "Chi phí ẩn (Hidden Costs) lớn nhất của việc duy trì mức hàng tồn kho quá mức thường bao gồm:",
+          "options": [
+            {
+              "id": "opt-24-a",
+              "question_id": "midterm-mc-24",
+              "option_text": "Chi phí cơ hội vốn bị ứ đọng, nguy cơ hàng lỗi mốt, hỏng hóc và phí bảo quản lưu kho",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-24-b",
+              "question_id": "midterm-mc-24",
+              "option_text": "Chi phí cơ bản của việc cấp tem bảo hành",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-24-c",
+              "question_id": "midterm-mc-24",
+              "option_text": "Chi phí đăng ký nhãn hiệu bảo hộ thương quyền",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-24-d",
+              "question_id": "midterm-mc-24",
+              "option_text": "Chi phí in ấn catalogue giấy phát tận tay người tiêu dùng",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-mc-25",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "multiple_choice",
+          "points": 0.2,
+          "order_index": 24,
+          "question_text": "Tỷ lệ lấp đầy đơn hàng (Order Fill Rate) trong Logistics phản ánh chỉ số nào sau đây?",
+          "options": [
+            {
+              "id": "opt-25-a",
+              "question_id": "midterm-mc-25",
+              "option_text": "Tỷ lệ phần trăm đơn đặt hàng của khách được đáp ứng ngay lập tức từ lượng hàng sẵn có trong kho",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "opt-25-b",
+              "question_id": "midterm-mc-25",
+              "option_text": "Tỷ lệ diện tích sàn kho đã được xếp đầy hàng hóa so với tổng dung tích thiết kế",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "opt-25-c",
+              "question_id": "midterm-mc-25",
+              "option_text": "Tỷ lệ trọng tải xe tải đã chở đầy so với tải trọng tối đa cho phép",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "opt-25-d",
+              "question_id": "midterm-mc-25",
+              "option_text": "Số lượng nhân sự được tuyển dụng đủ vào bộ phận kho vận trong năm",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "midterm-short-1",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "short_answer",
+          "points": 1,
+          "order_index": 25,
+          "question_text": "[Câu hỏi ngắn 1 - 1.0 điểm]: Hãy nêu 3 nguyên nhân cốt lõi dẫn đến hiện tượng Bullwhip Effect trong chuỗi cung ứng và đề xuất 1 giải pháp công nghệ để giảm thiểu.",
+          "options": []
+        },
+        {
+          "id": "midterm-short-2",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "short_answer",
+          "points": 1,
+          "order_index": 26,
+          "question_text": "[Câu hỏi ngắn 2 - 1.0 điểm]: Phân biệt sự khác nhau giữa 3PL (Third-Party Logistics) và 4PL (Fourth-Party Logistics) về vai trò chiến lược và quản lý tích hợp.",
+          "options": []
+        },
+        {
+          "id": "midterm-short-3",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "short_answer",
+          "points": 1,
+          "order_index": 27,
+          "question_text": "[Câu hỏi ngắn 3 - 1.0 điểm]: Một nhà bán lẻ nhận 100 đơn hàng: 95 đơn đúng giờ, nhưng chỉ có 90 đơn vừa đúng giờ vừa đủ số lượng. Hãy tính chỉ số OTIF (%) và giải thích ý nghĩa.",
+          "options": []
+        },
+        {
+          "id": "midterm-short-4",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "short_answer",
+          "points": 1,
+          "order_index": 28,
+          "question_text": "[Câu hỏi ngắn 4 - 1.0 điểm]: Nêu công thức tính sản lượng đặt hàng kinh tế EOQ và giải thích ý nghĩa của 3 đại lượng: Nhu cầu hàng năm (D), Chi phí đặt hàng (S), và Chi phí lưu kho (H).",
+          "options": []
+        },
+        {
+          "id": "midterm-short-5",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "short_answer",
+          "points": 1,
+          "order_index": 29,
+          "question_text": "[Câu hỏi ngắn 5 - 1.0 điểm]: Trình bày sự khác biệt cốt lõi giữa chiến lược Đẩy (Push Strategy) và Kéo (Pull Strategy) trong việc kích hoạt dòng vận động hàng hóa.",
+          "options": []
+        },
+        {
+          "id": "midterm-short-6",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "short_answer",
+          "points": 1,
+          "order_index": 30,
+          "question_text": "[Câu hỏi ngắn 6 - 1.0 điểm]: Phân tích 2 lợi ích kinh tế lớn nhất của kỹ thuật Cross-docking so với mô hình lưu kho trung gian truyền thống.",
+          "options": []
+        },
+        {
+          "id": "midterm-short-7",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "short_answer",
+          "points": 1,
+          "order_index": 31,
+          "question_text": "[Câu hỏi ngắn 7 - 1.0 điểm]: Trình bày ưu thế vượt trội của công nghệ RFID so với mã vạch Barcode trong hoạt động kiểm soát tồn kho tự động tại Hub phân phối.",
+          "options": []
+        },
+        {
+          "id": "midterm-short-8",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "short_answer",
+          "points": 1,
+          "order_index": 32,
+          "question_text": "[Câu hỏi ngắn 8 - 1.0 điểm]: Nêu 3 chỉ số KPI quan trọng nhất dùng để đánh giá hiệu suất vận hành của đội xe vận tải giao hàng chặng cuối (Last-mile delivery).",
+          "options": []
+        },
+        {
+          "id": "midterm-essay-1",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "long_answer",
+          "points": 3,
+          "order_index": 33,
+          "question_text": "[Tự luận dài 1 - 3.0 điểm]: Phân tích ca nghiên cứu (Case Study): Một tập đoàn FMCG tại Việt Nam đang gặp khủng hoảng chi phí logistics chiếm tới 24% doanh thu và tỷ lệ giao trễ hạn 15%. Dựa trên kiến thức về Quản trị Kho bãi (WMS, Cross-docking), Mạng lưới Phân phối và Mô hình S&OP, Thầy/Cô hãy xây dựng kế hoạch tái cấu trúc chuỗi cung ứng toàn diện nhằm đưa chi phí về dưới 14% và nâng OTIF lên trên 98%.",
+          "options": []
+        },
+        {
+          "id": "midterm-essay-2",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "long_answer",
+          "points": 3,
+          "order_index": 34,
+          "question_text": "[Tự luận dài 2 - 3.0 điểm]: Phân tích chiến lược thiết kế Mạng lưới Phân phối (Distribution Network Design): So sánh ưu và nhược điểm giữa mô hình Giao hàng trực tiếp từ nhà máy (Drop-shipping) và mô hình phân phối qua Hub/DC đa tầng. Đề xuất kiến trúc mạng lưới phù hợp cho một thương hiệu bán lẻ đa kênh (Omnichannel) mở rộng quy mô toàn quốc.",
+          "options": []
+        },
+        {
+          "id": "midterm-essay-3",
+          "quiz_id": "midterm-scm-2026",
+          "question_type": "long_answer",
+          "points": 3,
+          "order_index": 35,
+          "question_text": "[Tự luận dài 3 - 3.0 điểm]: Khủng hoảng chuỗi cung ứng và Quản trị Rủi ro Tồn kho: Phân tích tác động của biến động Lead Time vận tải quốc tế đối với lượng tồn kho an toàn (Safety Stock). Đề xuất các chiến lược gia tăng khả năng chống chịu (Supply Chain Resilience) ngoài việc tăng lượng dự trữ thuần túy.",
+          "options": []
+        }
+      ]
+    },
+    {
+      "id": "quiz-08-scm",
+      "title": "Quiz 08",
+      "description": "Kiểm tra trắc nghiệm Quiz 08: Logistics & Quản trị vận tải, kho bãi. Thời gian: 15 phút, 5 câu hỏi ngẫu nhiên.",
+      "time_limit_minutes": 15,
+      "is_published": true,
+      "show_results": false,
+      "passcode": "QUIZ08",
+      "passcode_expires_at": null,
+      "class_ids": [
+        "class-scm201-i",
+        "class-scm201-e"
+      ],
+      "class_schedules": {
+        "class-scm201-i": {
+          "class_id": "class-scm201-i",
+          "start_at": "2026-09-14T01:44:26.094Z",
+          "end_at": "2026-10-14T02:44:26.098Z",
+          "access_code": "QUIZ08",
+          "is_active": true
+        },
+        "class-scm201-e": {
+          "class_id": "class-scm201-e",
+          "start_at": "2026-09-14T01:44:26.094Z",
+          "end_at": "2026-10-14T02:44:26.098Z",
+          "access_code": "QUIZ08",
+          "is_active": true
+        }
+      },
+      "start_at": "2026-09-14T01:44:26.098Z",
+      "end_at": "2026-10-14T02:44:26.098Z",
+      "is_active": true,
+      "shuffle_questions": true,
+      "shuffle_options": true,
+      "prevent_previous": true,
+      "questions_per_student": 5,
+      "questions": [
+        {
+          "id": "c8-q1",
+          "quiz_id": "quiz-08-scm",
+          "question_text": "Trong quản trị chuỗi cung ứng, mục tiêu chính của việc tối ưu hóa chi phí vận tải và tồn kho là gì?",
+          "question_type": "multiple_choice",
+          "points": 2,
+          "order_index": 0,
+          "options": [
+            {
+              "id": "c8-q1-a",
+              "question_id": "c8-q1",
+              "option_text": "Cân bằng tổng chi phí logistics thấp nhất trong khi vẫn đảm bảo mức độ dịch vụ khách hàng yêu cầu",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "c8-q1-b",
+              "question_id": "c8-q1",
+              "option_text": "Chỉ tập trung giảm cước vận chuyển mà không quan tâm đến lượng hàng tồn kho",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "c8-q1-c",
+              "question_id": "c8-q1",
+              "option_text": "Tích trữ tối đa lượng hàng tồn kho tại mọi trung tâm phân phối để không bao giờ hết hàng",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "c8-q1-d",
+              "question_id": "c8-q1",
+              "option_text": "Loại bỏ hoàn toàn các đối tác 3PL để tự đầu tư phương tiện vận tải",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "c8-q2",
+          "quiz_id": "quiz-08-scm",
+          "question_text": "Chỉ số Fill Rate đo lường điều gì trong quá trình thực hiện đơn hàng?",
+          "question_type": "multiple_choice",
+          "points": 2,
+          "order_index": 1,
+          "options": [
+            {
+              "id": "c8-q2-a",
+              "question_id": "c8-q2",
+              "option_text": "Tỷ lệ phần trăm nhu cầu của khách hàng được đáp ứng ngay lập tức từ lượng hàng sẵn có trong kho",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "c8-q2-b",
+              "question_id": "c8-q2",
+              "option_text": "Tỷ lệ hàng hóa bị hư hỏng trong quá trình bốc xếp dỡ hàng",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "c8-q2-c",
+              "question_id": "c8-q2",
+              "option_text": "Tốc độ quay vòng của phương tiện vận tải đường dài theo tháng",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "c8-q2-d",
+              "question_id": "c8-q2",
+              "option_text": "Số lượng hóa đơn chứng từ hải quan hoàn thành trước hạn",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "c8-q3",
+          "quiz_id": "quiz-08-scm",
+          "question_text": "Phương thức Cross-docking trong quản lý kho bãi mang lại lợi ích nổi bật nào sau đây?",
+          "question_type": "multiple_choice",
+          "points": 2,
+          "order_index": 2,
+          "options": [
+            {
+              "id": "c8-q3-a",
+              "question_id": "c8-q3",
+              "option_text": "Giảm thiểu thời gian và chi phí lưu kho bằng cách chuyển trực tiếp hàng từ xe tải nhập sang xe tải xuất",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "c8-q3-b",
+              "question_id": "c8-q3",
+              "option_text": "Tăng diện tích lưu kho dài hạn lên gấp đôi",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "c8-q3-c",
+              "question_id": "c8-q3",
+              "option_text": "Kéo dài thời gian kiểm đếm chi tiết tại sàn tiếp nhận",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "c8-q3-d",
+              "question_id": "c8-q3",
+              "option_text": "Yêu cầu lưu trữ toàn bộ pallet ít nhất 3 ngày trước khi xuất xưởng",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "c8-q4",
+          "quiz_id": "quiz-08-scm",
+          "question_text": "Khái niệm Milk-run trong tuyến đường vận chuyển logistics là gì?",
+          "question_type": "multiple_choice",
+          "points": 2,
+          "order_index": 3,
+          "options": [
+            {
+              "id": "c8-q4-a",
+              "question_id": "c8-q4",
+              "option_text": "Một phương tiện duy nhất thu gom hàng theo lộ trình cố định từ nhiều nhà cung cấp khác nhau",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "c8-q4-b",
+              "question_id": "c8-q4",
+              "option_text": "Vận chuyển riêng lẻ từng chuyến trực tiếp cho một nhà cung cấp duy nhất",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "c8-q4-c",
+              "question_id": "c8-q4",
+              "option_text": "Tuyến vận tải chỉ chuyên dụng cho các sản phẩm sữa và thực phẩm tươi sống",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "c8-q4-d",
+              "question_id": "c8-q4",
+              "option_text": "Phương thức giao hàng chặng cuối dùng xe máy tại khu vực nội đô",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        },
+        {
+          "id": "c8-q5",
+          "quiz_id": "quiz-08-scm",
+          "question_text": "Hệ thống quản lý kho WMS (Warehouse Management System) có chức năng chính là gì?",
+          "question_type": "multiple_choice",
+          "points": 2,
+          "order_index": 4,
+          "options": [
+            {
+              "id": "c8-q5-a",
+              "question_id": "c8-q5",
+              "option_text": "Tự động hóa và tối ưu hóa vị trí lưu trữ, lấy hàng, đóng gói và quản lý luồng hàng trong kho",
+              "is_correct": true,
+              "order_index": 0
+            },
+            {
+              "id": "c8-q5-b",
+              "question_id": "c8-q5",
+              "option_text": "Chỉ dùng để tính lương cho nhân công bốc vác",
+              "is_correct": false,
+              "order_index": 1
+            },
+            {
+              "id": "c8-q5-c",
+              "question_id": "c8-q5",
+              "option_text": "Thay thế hoàn toàn hợp đồng ngoại thương quốc tế",
+              "is_correct": false,
+              "order_index": 2
+            },
+            {
+              "id": "c8-q5-d",
+              "question_id": "c8-q5",
+              "option_text": "Lập trình hệ thống đèn chiếu sáng tự động ngoài cổng kho",
+              "is_correct": false,
+              "order_index": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "id": "sess-1789145525127-l43znp",
+      "user_id": "lecturer-phuong-dtu",
+      "token_hash": "a1dfe558b3558dda8cca85312fab482d71e80c99bf8dcc7655ffa6dd3c0ff43c",
+      "issued_at": "2026-09-11T16:52:05.127Z",
+      "expires_at": "2026-09-12T00:52:05.127Z",
+      "revoked_at": null,
+      "user_agent": "node"
+    },
+    {
+      "id": "sess-1789145525254-xkcjvw",
+      "user_id": "st-22120555",
+      "token_hash": "612d3144b3bd199d61755c341d4e58053b5e7e076365f3dcb49f5850115ad75b",
+      "issued_at": "2026-09-11T16:52:05.254Z",
+      "expires_at": "2026-09-12T00:52:05.254Z",
+      "revoked_at": "2026-09-14T02:25:06.962Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789146466074-6se1dt",
+      "user_id": "st-123456789",
+      "token_hash": "0ef6cdb659bbd67c815b9da1dce6db78073579b91570012af553c0f541122869",
+      "issued_at": "2026-09-11T17:07:46.074Z",
+      "expires_at": "2026-09-12T01:07:46.074Z",
+      "revoked_at": "2026-09-11T17:07:57.926Z",
+      "user_agent": "curl/8.7.1",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789146477926-e1uyh7",
+      "user_id": "st-123456789",
+      "token_hash": "d683a9b1b2c83309a6f072dc70ec83b8f328c3c6da0baf17304a539f22b9be90",
+      "issued_at": "2026-09-11T17:07:57.926Z",
+      "expires_at": "2026-09-12T01:07:57.926Z",
+      "revoked_at": "2026-09-11T17:08:09.238Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789146489238-p5non6",
+      "user_id": "st-123456789",
+      "token_hash": "828a5d8370f375fd3e6e3d8e0f74c0f8ce2b53676df98607981e7091c2c0809c",
+      "issued_at": "2026-09-11T17:08:09.238Z",
+      "expires_at": "2026-09-12T01:08:09.238Z",
+      "revoked_at": "2026-09-11T17:08:35.128Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789146515128-gevp4t",
+      "user_id": "st-123456789",
+      "token_hash": "968f95363c066ad5a81e340a8e2bc43e81859cc7dbdefd325f0f6813b221b339",
+      "issued_at": "2026-09-11T17:08:35.128Z",
+      "expires_at": "2026-09-12T01:08:35.128Z",
+      "revoked_at": "2026-09-11T17:08:58.546Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789146538546-gzxrn9",
+      "user_id": "st-123456789",
+      "token_hash": "f8899343aab092a3c306bab25ffdc2070359b052a20fab3c5331ebe02b894a43",
+      "issued_at": "2026-09-11T17:08:58.546Z",
+      "expires_at": "2026-09-12T01:08:58.546Z",
+      "revoked_at": "2026-09-11T17:09:13.554Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789146553554-yjic2g",
+      "user_id": "st-123456789",
+      "token_hash": "c7795d06f9ce8e29650dfc7c2af82685193ca696436802cd5db378076b62d30d",
+      "issued_at": "2026-09-11T17:09:13.554Z",
+      "expires_at": "2026-09-12T01:09:13.554Z",
+      "revoked_at": null,
+      "user_agent": "node"
+    },
+    {
+      "id": "sess-1789351123671-9w6927",
+      "user_id": "st-scm-1",
+      "token_hash": "fcb809d0ce04612f40979b8f79eb702afe17c2b8eb40319ca5a5b46bac502c51",
+      "issued_at": "2026-09-14T01:58:43.671Z",
+      "expires_at": "2026-09-14T09:58:43.671Z",
+      "revoked_at": "2026-09-14T01:58:52.970Z",
+      "user_agent": "curl/8.7.1",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789351132970-v9kull",
+      "user_id": "st-scm-1",
+      "token_hash": "224dd9873d258f65603a1cc6b5dec79526ddf1f64d85beede578757c292955dc",
+      "issued_at": "2026-09-14T01:58:52.970Z",
+      "expires_at": "2026-09-14T09:58:52.970Z",
+      "revoked_at": "2026-09-14T01:59:27.644Z",
+      "user_agent": "curl/8.7.1",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789351167644-qdvup9",
+      "user_id": "st-scm-1",
+      "token_hash": "0ad11020ce8876da592a8ff2356f5f16146f8f94628f5a1a4f221e06cc1f2d4e",
+      "issued_at": "2026-09-14T01:59:27.644Z",
+      "expires_at": "2026-09-14T09:59:27.644Z",
+      "revoked_at": null,
+      "user_agent": "curl/8.7.1"
+    },
+    {
+      "id": "sess-1789352706962-rux04s",
+      "user_id": "st-22120555",
+      "token_hash": "c8b0e55b42260e30260f06a6ac819b96e2e7251008ebdbd490d2dffe57a54314",
+      "issued_at": "2026-09-14T02:25:06.962Z",
+      "expires_at": "2026-09-14T10:25:06.962Z",
+      "revoked_at": "2026-09-14T02:25:22.473Z",
+      "user_agent": "curl/8.7.1",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789352722473-csu6zo",
+      "user_id": "st-22120555",
+      "token_hash": "a39256d36e56c777b8c66c07c12c69cad7a25cbe49b9fcaf4db88e954395bb7e",
+      "issued_at": "2026-09-14T02:25:22.473Z",
+      "expires_at": "2026-09-14T10:25:22.473Z",
+      "revoked_at": "2026-09-14T02:25:31.314Z",
+      "user_agent": "curl/8.7.1",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789352731314-5cpb84",
+      "user_id": "st-22120555",
+      "token_hash": "143a8751adb44bc9798fe3a266cd2bc81def0f92a973cf1a3d3d1e449b65a040",
+      "issued_at": "2026-09-14T02:25:31.314Z",
+      "expires_at": "2026-09-14T10:25:31.314Z",
+      "revoked_at": "2026-09-14T03:25:55.833Z",
+      "user_agent": "curl/8.7.1",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789356355833-bnz45k",
+      "user_id": "st-22120555",
+      "token_hash": "f132c6e0c8816da6bc84475e4e06f9fe09b53744d4817e139261b32dd51a2cb1",
+      "issued_at": "2026-09-14T03:25:55.833Z",
+      "expires_at": "2026-09-14T11:25:55.833Z",
+      "revoked_at": "2026-09-14T03:25:55.963Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789356355963-rzkn9p",
+      "user_id": "st-22120555",
+      "token_hash": "fa9b34d683854628f1cd26398767f42d97e1c2dd3a57e81eec11115579b2c163",
+      "issued_at": "2026-09-14T03:25:55.963Z",
+      "expires_at": "2026-09-14T11:25:55.963Z",
+      "revoked_at": null,
+      "user_agent": "node"
+    },
+    {
+      "id": "sess-1789356367618-21bp3p",
+      "user_id": "lecturer-phuong-gmail",
+      "token_hash": "a7fd26a4e83fd77affe4764571983a424d9ba9682b36757c97205141a7262b1f",
+      "issued_at": "2026-09-14T03:26:07.618Z",
+      "expires_at": "2026-09-14T11:26:07.618Z",
+      "revoked_at": null,
+      "user_agent": "node"
+    }
+  ],
+  "scores": [
+    {
+      "quiz_id": "quiz-05-scm",
+      "student_id": "st-123456789",
+      "total_score": 0,
+      "submitted_at": "2026-09-11T17:09:13.598Z",
+      "status": "submitted",
+      "tab_violations_count": 0,
+      "warning_history": [],
+      "answers": []
+    }
+  ]
+}

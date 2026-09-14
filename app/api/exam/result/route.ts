@@ -16,12 +16,22 @@ export async function GET(request: Request) {
   if (!useRemote) {
     const { demoDb } = await import('@/lib/server/demoStore');
     const db = demoDb();
-    const quiz = db.quizzes.find((q) => q.id === quizId);
-    const score = db.scores.find((s) => s.quiz_id === quizId && s.student_id === auth.user.id);
+    const myCode = auth.user.student_code ? auth.user.student_code.trim().toUpperCase() : auth.user.id.replace(/^st-/, '').trim().toUpperCase();
+    const score = db.scores.find((s) => {
+      if (s.quiz_id !== quizId) return false;
+      if (s.student_id === auth.user.id) return true;
+      if (myCode) {
+        if (s.student_id === `st-${myCode.toLowerCase()}` || s.student_id === `st-${myCode}` || s.student_id === myCode) return true;
+        const scUser = db.users.find((x) => x.id === s.student_id);
+        if (scUser && (scUser.student_code || '').trim().toUpperCase() === myCode) return true;
+      }
+      return false;
+    });
     if (!score) {
       return NextResponse.json({ mode: 'remote', result: { found: false } });
     }
 
+    const quiz = db.quizzes.find((q) => q.id === quizId);
     const { DEFAULT_QUESTION_BANK } = await import('@/lib/classStore');
     const questions = (quiz?.questions && quiz.questions.length > 0) ? quiz.questions : DEFAULT_QUESTION_BANK;
     const totalTestedQuestions = (score.answers && score.answers.length > 0)

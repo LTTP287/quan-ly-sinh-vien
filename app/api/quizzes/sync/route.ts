@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         existing.email = st.email || existing.email;
       } else {
         existing = {
-          id: st.id || `st-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          id: st.id || `st-${code.toLowerCase()}`,
           student_code: code,
           full_name: st.full_name || code,
           email: st.email || `${code.toLowerCase()}@student.university.edu.vn`,

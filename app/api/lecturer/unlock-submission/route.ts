@@ -38,9 +38,11 @@ export async function POST(request: Request) {
     db.scores = db.scores.filter((s) => {
       if (s.quiz_id !== quizId) return true;
       if (s.student_id === studentId) return false;
-      if (cleanCode && (s.student_id === `st-${cleanCode}` || s.student_id === cleanCode)) return false;
-      const u = db.users.find((x) => x.id === s.student_id);
-      if (cleanCode && u && (u.student_code || '').trim().toUpperCase() === cleanCode) return false;
+      if (cleanCode) {
+        if (s.student_id === `st-${cleanCode.toLowerCase()}` || s.student_id === `st-${cleanCode}` || s.student_id === cleanCode) return false;
+        const u = db.users.find((x) => x.id === s.student_id);
+        if (u && (u.student_code || '').trim().toUpperCase() === cleanCode) return false;
+      }
       return true;
     });
 

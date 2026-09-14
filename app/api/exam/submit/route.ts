@@ -21,14 +21,16 @@ export async function POST(request: Request) {
   if (!useRemote) {
     const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
     const db = demoDb();
-    const userCode = (auth.user.student_code || '').trim().toUpperCase();
+    const userCode = (auth.user.student_code || '').trim().toUpperCase() || auth.user.id.replace(/^st-/, '').trim().toUpperCase();
 
     let score = db.scores.find((s) => {
       if (s.quiz_id !== quizId) return false;
       if (s.student_id === auth.user.id) return true;
-      if (userCode && (s.student_id === `st-${userCode}` || s.student_id === userCode)) return true;
-      const u = db.users.find((x) => x.id === s.student_id);
-      if (userCode && u && (u.student_code || '').trim().toUpperCase() === userCode) return true;
+      if (userCode) {
+        if (s.student_id === `st-${userCode.toLowerCase()}` || s.student_id === `st-${userCode}` || s.student_id === userCode) return true;
+        const u = db.users.find((x) => x.id === s.student_id);
+        if (u && (u.student_code || '').trim().toUpperCase() === userCode) return true;
+      }
       return false;
     });
 
@@ -43,6 +45,9 @@ export async function POST(request: Request) {
         warning_history: [],
       };
       db.scores.push(score);
+    } else {
+      // Đảm bảo student_id khớp với user.id hiện tại
+      score.student_id = auth.user.id;
     }
 
     // Đảm bảo thông tin sinh viên có trong db.users để giảng viên đối soát tên/MSSV
