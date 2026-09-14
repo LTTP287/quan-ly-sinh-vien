@@ -342,8 +342,11 @@ export function demoDb(): DemoDb {
       saveDemoDb();
     }
   } else if (fromDisk && Array.isArray(fromDisk.quizzes)) {
-    // Luôn đồng bộ danh sách đề thi theo đúng file lưu trữ trên đĩa
+    // Luôn đồng bộ danh sách đề thi, người dùng, lớp và ghi danh theo đúng file lưu trữ trên đĩa
     globalStore.__uniquizDemoDb.quizzes = fromDisk.quizzes;
+    if (Array.isArray(fromDisk.users)) {
+      globalStore.__uniquizDemoDb.users = fromDisk.users;
+    }
     if (Array.isArray(fromDisk.classes)) {
       globalStore.__uniquizDemoDb.classes = fromDisk.classes;
     }

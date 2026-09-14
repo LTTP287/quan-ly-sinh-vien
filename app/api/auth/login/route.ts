@@ -52,7 +52,12 @@ export async function POST(request: Request) {
           if (!stCode) continue;
           const idx = db.users.findIndex((u) => (u.student_code || '').trim().toUpperCase() === stCode);
           if (idx >= 0) {
-            db.users[idx] = { ...db.users[idx], ...st };
+            const existingDob = db.users[idx].date_of_birth;
+            db.users[idx] = {
+              ...db.users[idx],
+              ...st,
+              date_of_birth: st.date_of_birth || existingDob,
+            };
           } else {
             db.users.push(st);
           }
