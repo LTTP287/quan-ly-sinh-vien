@@ -20,28 +20,50 @@ function admin(): SupabaseClient {
   });
 }
 
-/** Chuẩn hoá mật khẩu ngày sinh thông minh: chấp nhận DD/MM/YYYY, D/M/YYYY, YYYY-MM-DD, chuỗi số -> DDMMYYYY */
-export function normalizeDob(input: string): string {
-  if (!input) return '';
+/** Chuẩn hoá mật khẩu ngày sinh thông minh: sinh ra tập các biến thể chấp nhận được (DDMMYYYY, YYYYMMDD, MMDDYYYY) */
+export function getDobCandidates(input: string): string[] {
+  if (!input) return [];
   const trimmed = String(input).trim();
+  const results = new Set<string>();
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits) results.add(digits);
+
   const parts = trimmed.split(/[\/\-.]/);
   if (parts.length === 3) {
-    if (parts[0].length === 4) {
+    let p1 = parts[0].padStart(2, '0');
+    let p2 = parts[1].padStart(2, '0');
+    let p3 = parts[2];
+    if (p1.length === 4) {
       // YYYY-MM-DD
-      return `${parts[2].padStart(2, '0')}${parts[1].padStart(2, '0')}${parts[0]}`;
+      results.add(p3.padStart(2, '0') + p2 + p1); // DDMMYYYY
+      results.add(p2 + p3.padStart(2, '0') + p1); // MMDDYYYY
+      results.add(p1 + p2 + p3.padStart(2, '0')); // YYYYMMDD
+    } else {
+      let yyyy = p3.length === 2 ? '20' + p3 : p3;
+      results.add(p1 + p2 + yyyy); // DDMMYYYY
+      results.add(p2 + p1 + yyyy); // MMDDYYYY
+      results.add(yyyy + p2 + p1); // YYYYMMDD
     }
-    // DD/MM/YYYY hoặc D/M/YYYY
-    const dd = parts[0].padStart(2, '0');
-    const mm = parts[1].padStart(2, '0');
-    let yyyy = parts[2];
-    if (yyyy.length === 2) yyyy = '20' + yyyy;
-    return `${dd}${mm}${yyyy}`;
   }
-  const digits = trimmed.replace(/\D/g, '');
-  if (digits.length === 8 && /^(19|20)\d{6}$/.test(digits)) {
-    return `${digits.slice(6, 8)}${digits.slice(4, 6)}${digits.slice(0, 4)}`;
+
+  if (digits.length === 8) {
+    // Nếu là YYYYMMDD -> DDMMYYYY
+    if (/^(19|20)\d{6}$/.test(digits)) {
+      results.add(digits.slice(6, 8) + digits.slice(4, 6) + digits.slice(0, 4));
+    }
+    // Nếu là DDMMYYYY -> YYYYMMDD
+    if (/^\d{4}(19|20)\d{2}$/.test(digits)) {
+      results.add(digits.slice(4, 8) + digits.slice(2, 4) + digits.slice(0, 2));
+    }
   }
-  return digits;
+
+  return Array.from(results);
+}
+
+export function normalizeDob(input: string): string {
+  if (!input) return '';
+  const cands = getDobCandidates(input);
+  return cands[0] || input.replace(/\D/g, '');
 }
 
 // ====================================================================
@@ -53,8 +75,8 @@ export async function authenticateStudent(
   dob: string
 ): Promise<AuthUser | null> {
   const code = (studentCode || '').trim().toUpperCase();
-  const pwd = normalizeDob(dob);
-  if (!code) return null;
+  const inputCandidates = getDobCandidates(dob);
+  if (!code || inputCandidates.length === 0) return null;
 
   if (!useRemote) {
     const db = demoDb();
@@ -66,10 +88,8 @@ export async function authenticateStudent(
       // Sinh viên bắt buộc phải có ngày sinh thiết lập trong danh sách đã import
       if (!u.date_of_birth) return false;
 
-      const expectedPwd = dobToPassword(u.date_of_birth);
-      const rawDigits = normalizeDob(u.date_of_birth);
-
-      return expectedPwd === pwd || rawDigits === pwd;
+      const userCandidates = getDobCandidates(u.date_of_birth);
+      return userCandidates.some((c) => inputCandidates.includes(c));
     });
 
     if (!user) {
@@ -86,6 +106,7 @@ export async function authenticateStudent(
   }
 
   // Chế độ Supabase Remote
+  const pwd = normalizeDob(dob);
   const { data, error } = await admin().rpc('authenticate_student', {
     p_student_code: code,
     p_dob: pwd,
@@ -102,9 +123,8 @@ export async function authenticateStudent(
     .maybeSingle();
 
   if (directUser && directUser.date_of_birth) {
-    const expectedPwd = dobToPassword(directUser.date_of_birth);
-    const rawDigits = normalizeDob(directUser.date_of_birth);
-    if (expectedPwd === pwd || rawDigits === pwd) {
+    const userCandidates = getDobCandidates(directUser.date_of_birth);
+    if (userCandidates.some((c) => inputCandidates.includes(c))) {
       return {
         id: directUser.id,
         email: directUser.email,

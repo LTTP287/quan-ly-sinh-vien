@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       saveDemoDb();
     }
 
-    user = await authenticateStudent(code, dob);
+    user = await authenticateStudent(code, String(body.date_of_birth || ''));
     if (!user) {
       // Không phân biệt "sai MSSV" với "sai ngày sinh" để tránh dò tài khoản
       return NextResponse.json(

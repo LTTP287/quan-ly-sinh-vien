@@ -17,24 +17,41 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
   const [uploading, setUploading] = useState(false);
   const [successCount, setSuccessCount] = useState<number | null>(null);
 
-  // Chuẩn hoá ô "Ngày sinh" trong Excel (chấp nhận DD/MM/YYYY, D-M-YYYY, hoặc
+  // Chuẩn hoá ô "Ngày sinh" trong Excel (chấp nhận DD/MM/YYYY, D-M-YYYY, YYYY-MM-DD hoặc
   // ngày serial của Excel) về ISO yyyy-mm-dd để gửi lên server làm mật khẩu.
   const parseDobToIso = (raw: string): string | undefined => {
     if (!raw) return undefined;
     const trimmed = raw.trim();
 
+    // 1. Dạng YYYY-MM-DD hoặc YYYY/MM/DD
+    const mIso = trimmed.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+    if (mIso) {
+      const [, yyyy, mm, dd] = mIso;
+      return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+    }
+
+    // 2. Dạng DD/MM/YYYY hoặc D-M-YYYY
     const m = trimmed.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
     if (m) {
       const [, dd, mm, yyyy] = m;
       return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
     }
 
-    // Excel đôi khi trả về số serial ngày tháng thay vì chuỗi
+    // 3. Excel đôi khi trả về số serial ngày tháng thay vì chuỗi
     if (/^\d{4,6}$/.test(trimmed)) {
       const parsed = XLSX.SSF.parse_date_code(Number(trimmed));
       if (parsed) {
         return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
       }
+    }
+
+    // 4. Chuỗi số 8 ký tự YYYYMMDD hoặc DDMMYYYY
+    const digits = trimmed.replace(/\D/g, '');
+    if (digits.length === 8) {
+      if (/^(19|20)\d{6}$/.test(digits)) {
+        return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+      }
+      return `${digits.slice(4, 8)}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`;
     }
 
     return undefined;
