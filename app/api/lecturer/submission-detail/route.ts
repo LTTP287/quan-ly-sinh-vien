@@ -31,31 +31,53 @@ export async function GET(request: Request) {
     const { demoDb } = await import('@/lib/server/demoStore');
     const db = demoDb();
 
-    const student = db.users.find((u) => u.id === studentId);
+    const userCode = studentId.replace(/^st-/, '').trim().toUpperCase();
+
+    const student = db.users.find((u) => {
+      if (u.id === studentId) return true;
+      const uc = (u.student_code || '').trim().toUpperCase();
+      return uc && (uc === userCode || studentId.includes(uc));
+    });
     const quiz = db.quizzes.find((q) => q.id === quizId);
-    const score = db.scores.find((s) => s.quiz_id === quizId && s.student_id === studentId);
+    let score = db.scores.find((s) => {
+      if (s.quiz_id !== quizId) return false;
+      if (s.student_id === studentId) return true;
+      if (userCode && (s.student_id === `st-${userCode}` || s.student_id === userCode)) return true;
+      const u = db.users.find((x) => x.id === s.student_id);
+      if (userCode && u && (u.student_code || '').trim().toUpperCase() === userCode) return true;
+      return false;
+    });
 
     // Tìm trong localStorage fallback nếu có
-    const { getStoredQuizById, getSubmission, getAllStoredStudents } = await import('@/lib/classStore');
+    const { getStoredQuizById, getSubmission, getAllStoredStudents, DEFAULT_QUESTION_BANK, createDefaultMidtermQuiz } = await import('@/lib/classStore');
     const localQuiz = getStoredQuizById(quizId);
-    const localSub = getSubmission(quizId, studentId);
-    const localStudent = getAllStoredStudents().find((s) => s.id === studentId);
+    const localSub = getSubmission(quizId, studentId) || (userCode ? getSubmission(quizId, `st-${userCode}`) || getSubmission(quizId, userCode) : null);
+    const localStudent = getAllStoredStudents().find((s) => s.id === studentId || (userCode && (s.student_code || '').toUpperCase() === userCode));
 
     const effectiveStudent = student || localStudent || {
       id: studentId,
       full_name: 'Sinh viên',
-      student_code: studentId,
+      student_code: userCode || studentId,
       email: '',
       role: 'student' as const,
     };
 
+    const defaultMidterm = createDefaultMidtermQuiz();
+    const isMidterm = quizId === 'midterm-scm-2026' || (quiz?.title && quiz.title.toLowerCase().includes('midterm')) || (localQuiz?.title && localQuiz.title.toLowerCase().includes('midterm'));
+
     const effectiveQuiz = quiz || localQuiz;
-    const allQuestions = (effectiveQuiz?.questions && effectiveQuiz.questions.length > 0)
-      ? effectiveQuiz.questions
-      : (localQuiz?.questions || []);
+    let allQuestions = (effectiveQuiz?.questions && effectiveQuiz.questions.length > 0)
+      ? [...effectiveQuiz.questions]
+      : (localQuiz?.questions && localQuiz.questions.length > 0)
+        ? [...localQuiz.questions]
+        : (isMidterm ? [...(defaultMidterm.questions || [])] : [...DEFAULT_QUESTION_BANK]);
+
+    if (isMidterm && allQuestions.length < 30 && defaultMidterm.questions) {
+      allQuestions = [...defaultMidterm.questions];
+    }
 
     // Map answers
-    const answersMap: Record<string, { option_id?: string; answer_text?: string; score_awarded?: number; feedback?: string }> = {};
+    const answersMap: Record<string, { option_id?: string; answer_text?: string; score_awarded?: number; feedback?: string; is_correct?: boolean }> = {};
     if (localSub?.answers) {
       localSub.answers.forEach((a: any) => {
         answersMap[a.question_id] = {
@@ -63,30 +85,53 @@ export async function GET(request: Request) {
           answer_text: a.answer_text || undefined,
           score_awarded: a.score_awarded !== undefined ? a.score_awarded : undefined,
           feedback: a.feedback || undefined,
+          is_correct: a.is_correct,
         };
       });
-    } else if (score?.answers) {
+    }
+    if (score?.answers) {
       score.answers.forEach((a: any) => {
         if (a.question_id) {
           answersMap[a.question_id] = {
-            option_id: a.option_id || undefined,
-            answer_text: a.answer_text || undefined,
-            score_awarded: a.score_awarded !== undefined ? a.score_awarded : undefined,
-            feedback: a.feedback || undefined,
+            option_id: a.option_id || answersMap[a.question_id]?.option_id || undefined,
+            answer_text: (a.answer_text !== undefined && a.answer_text !== null) ? a.answer_text : answersMap[a.question_id]?.answer_text,
+            score_awarded: a.score_awarded !== undefined ? a.score_awarded : answersMap[a.question_id]?.score_awarded,
+            feedback: a.feedback || answersMap[a.question_id]?.feedback || undefined,
+            is_correct: a.is_correct !== undefined ? a.is_correct : answersMap[a.question_id]?.is_correct,
           };
         }
       });
     }
 
-    // Nếu sinh viên chỉ được phát một phần câu hỏi (ví dụ 24 câu từ ngân hàng 51 câu), chỉ hiển thị các câu trong bài thi của SV
-    const targetQuestions = Object.keys(answersMap).length > 0
-      ? allQuestions.filter((q) => q.id in answersMap)
-      : allQuestions;
+    // Đảm bảo không bỏ sót bất kỳ câu hỏi nào mà sinh viên đã làm bài
+    const answeredQIds = Object.keys(answersMap);
+    let targetQuestions: any[] = [];
+    if (answeredQIds.length > 0) {
+      targetQuestions = answeredQIds.map((qId) => {
+        let found = allQuestions.find((q) => q.id === qId);
+        if (!found && defaultMidterm.questions) {
+          found = defaultMidterm.questions.find((q) => q.id === qId);
+        }
+        if (found) return found;
+        return {
+          id: qId,
+          question_text: `Câu hỏi (${qId})`,
+          question_type: answersMap[qId]?.answer_text !== undefined ? 'short_answer' : 'multiple_choice',
+          points: 1,
+          options: [],
+        };
+      });
+    } else {
+      targetQuestions = allQuestions;
+    }
 
     const detailedQuestions = targetQuestions.map((q) => {
       const selectedOptionId = answersMap[q.id]?.option_id || null;
       const answerText = answersMap[q.id]?.answer_text || null;
-      const isCorrect = q.options?.some((o) => o.id === selectedOptionId && o.is_correct) || false;
+      const isWritten = q.question_type === 'short_answer' || q.question_type === 'long_answer';
+      const isCorrect = isWritten
+        ? (answersMap[q.id]?.score_awarded !== undefined && (answersMap[q.id]?.score_awarded || 0) > 0)
+        : (q.options?.some((o: any) => o.id === selectedOptionId && o.is_correct) || false);
       const scoreAwarded = answersMap[q.id]?.score_awarded !== undefined ? answersMap[q.id]?.score_awarded : null;
       const feedback = answersMap[q.id]?.feedback || null;
 
@@ -99,8 +144,8 @@ export async function GET(request: Request) {
         answer_text: answerText,
         score_awarded: scoreAwarded,
         feedback: feedback,
-        is_correct: selectedOptionId ? isCorrect : false,
-        options: (q.options || []).map((o) => ({
+        is_correct: isCorrect,
+        options: (q.options || []).map((o: any) => ({
           id: o.id,
           option_text: o.option_text,
           is_correct: o.is_correct,
@@ -123,12 +168,12 @@ export async function GET(request: Request) {
       },
       submission: {
         id: localSub?.id || `sub-${quizId}-${studentId}`,
-        total_score: localSub?.total_score ?? score?.total_score ?? 0,
-        status: localSub?.status || score?.status || 'submitted',
+        total_score: score?.total_score ?? localSub?.total_score ?? 0,
+        status: score?.status || localSub?.status || 'submitted',
         started_at: localSub?.started_at || null,
-        submitted_at: localSub?.submitted_at || score?.submitted_at || null,
-        tab_violations_count: localSub?.tab_violations_count ?? score?.tab_violations_count ?? 0,
-        warning_history: localSub?.warning_history || score?.warning_history || [],
+        submitted_at: score?.submitted_at || localSub?.submitted_at || null,
+        tab_violations_count: score?.tab_violations_count ?? localSub?.tab_violations_count ?? 0,
+        warning_history: score?.warning_history || localSub?.warning_history || [],
       },
       questions: detailedQuestions,
     });

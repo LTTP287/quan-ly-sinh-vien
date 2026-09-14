@@ -59,7 +59,6 @@ export async function POST(request: Request) {
   // Chế độ demo: phục vụ đề thi trực tiếp từ demoDb (đồng bộ từ Giảng viên)
   if (!useRemote) {
     const { demoDb } = await import('@/lib/server/demoStore');
-    const { DEFAULT_QUESTION_BANK } = await import('@/lib/classStore');
     const db = demoDb();
     const quiz = db.quizzes.find((q) => q.id === quizId);
 
@@ -83,15 +82,22 @@ export async function POST(request: Request) {
     const seed = `${userCode}_${quizId}`;
     const rng = createPRNG(seed);
 
+    const { DEFAULT_QUESTION_BANK, createDefaultMidtermQuiz } = await import('@/lib/classStore');
+    const defaultMidterm = createDefaultMidtermQuiz();
+    const isMidterm = quizId === 'midterm-scm-2026' || (quiz?.title && quiz.title.toLowerCase().includes('midterm'));
+
     let questions: any[] = (quiz && Array.isArray(quiz.questions) && quiz.questions.length > 0)
       ? [...quiz.questions]
-      : [...DEFAULT_QUESTION_BANK];
+      : (isMidterm ? [...(defaultMidterm.questions || [])] : [...DEFAULT_QUESTION_BANK]);
+
+    if (isMidterm && questions.length < 30 && defaultMidterm.questions) {
+      questions = [...defaultMidterm.questions];
+    }
 
     let mcPool = questions.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
     let shortPool = questions.filter((q) => q.question_type === 'short_answer');
     let longPool = questions.filter((q) => q.question_type === 'long_answer');
 
-    const isMidterm = quiz?.id === 'midterm-scm-2026';
     let sampling = quiz?.section_sampling;
     if (!sampling && isMidterm) {
       sampling = {

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Question, Quiz, Submission, UserProfile, TabViolationRecord } from '@/types/database';
 import { getQuiz, getCurrentUser, saveSubmissionLocal } from '@/lib/data';
-import { DEFAULT_QUESTION_BANK } from '@/lib/classStore';
+import { DEFAULT_QUESTION_BANK, createDefaultMidtermQuiz } from '@/lib/classStore';
 import { gradeSubmission } from '@/lib/grading';
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -164,13 +164,16 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
           created_at: '',
         };
       }
-      const bank = (found.questions && found.questions.length > 0) ? found.questions : DEFAULT_QUESTION_BANK;
+      const isMidterm = found.id === 'midterm-scm-2026' || (found.title && found.title.toLowerCase().includes('midterm'));
+      let bank = (found.questions && found.questions.length > 0) ? found.questions : (isMidterm ? (createDefaultMidtermQuiz().questions || []) : DEFAULT_QUESTION_BANK);
+      if (isMidterm && bank.length < 30) {
+        bank = createDefaultMidtermQuiz().questions || [];
+      }
 
       let mcPool = bank.filter((q) => q.question_type === 'multiple_choice' || q.question_type === 'true_false');
       let shortPool = bank.filter((q) => q.question_type === 'short_answer');
       let longPool = bank.filter((q) => q.question_type === 'long_answer');
 
-      const isMidterm = found.id === 'midterm-scm-2026';
       let sampling = found.section_sampling;
       if (!sampling && isMidterm) {
         sampling = {
@@ -269,15 +272,9 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
       }
     };
 
-    const handleBlur = () => {
-      handleDetection();
-    };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleBlur);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleBlur);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSubmitting]);
@@ -312,7 +309,7 @@ export default function StudentExamRoomPage({ params }: { params: { id: string }
     const isKickOut = !!reason && reason.includes('KICK_OUT');
 
     try {
-      const answers = isKickOut ? [] : questions.map((q) => {
+      const answers = questions.map((q) => {
         if (q.question_type === 'short_answer' || q.question_type === 'long_answer') {
           return {
             question_id: q.id,

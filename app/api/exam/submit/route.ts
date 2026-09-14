@@ -68,8 +68,17 @@ export async function POST(request: Request) {
     const quiz = db.quizzes.find((q) => q.id === quizId);
     let totalScore = 0;
     let correctCount = 0;
-    const { DEFAULT_QUESTION_BANK } = await import('@/lib/classStore');
-    const questions = (quiz?.questions && quiz.questions.length > 0) ? quiz.questions : DEFAULT_QUESTION_BANK;
+    const { DEFAULT_QUESTION_BANK, createDefaultMidtermQuiz } = await import('@/lib/classStore');
+    const defaultMidterm = createDefaultMidtermQuiz();
+    const isMidterm = quizId === 'midterm-scm-2026' || (quiz?.title && quiz.title.toLowerCase().includes('midterm'));
+
+    let questions: any[] = (quiz?.questions && quiz.questions.length > 0)
+      ? quiz.questions
+      : (isMidterm ? (defaultMidterm.questions || []) : DEFAULT_QUESTION_BANK);
+
+    if (isMidterm && questions.length < 30 && defaultMidterm.questions) {
+      questions = defaultMidterm.questions;
+    }
 
     // Số câu hỏi thực tế trong đề thi của sinh viên
     const totalTestedQuestions = (score.answers && score.answers.length > 0)
@@ -78,43 +87,63 @@ export async function POST(request: Request) {
 
     if (questions.length > 0) {
       let earnedPoints = 0;
-      let maxPoints = 0;
 
       for (const a of score.answers || []) {
-        const q = questions.find((x: any) => x.id === a.question_id);
+        const q = questions.find((x: any) => x.id === a.question_id) || defaultMidterm.questions?.find((x: any) => x.id === a.question_id);
         if (q) {
           const qPoints = typeof q.points === 'number' && q.points > 0 ? q.points : (10 / totalTestedQuestions);
-          maxPoints += qPoints;
           if (q.question_type === 'short_answer' || q.question_type === 'long_answer') {
-            if (a.answer_text && a.answer_text.trim().length > 0) {
-              correctCount++;
-              earnedPoints += qPoints;
-            }
+            // Phần câu hỏi ngắn & tự luận: KHÔNG tự chấm điểm, để 0đ chờ Giảng viên chấm thủ công
+            a.score_awarded = 0;
+            a.is_correct = false;
           } else {
+            // Phần trắc nghiệm: Hệ thống TỰ CHẤM chuẩn xác theo đáp án đúng (is_correct)
             const opt = (q.options || []).find((o: any) => o.id === a.option_id);
             if (opt && opt.is_correct) {
               correctCount++;
               earnedPoints += qPoints;
+              a.score_awarded = qPoints;
+              a.is_correct = true;
+            } else {
+              a.score_awarded = 0;
+              a.is_correct = false;
             }
           }
         }
       }
 
-      if (maxPoints > 0) {
-        if (Math.abs(maxPoints - 10) < 0.05) {
-          totalScore = Math.round(earnedPoints * 10) / 10;
-        } else {
-          totalScore = Math.round((earnedPoints / maxPoints) * 10 * 10) / 10;
-        }
-      } else {
-        totalScore = totalTestedQuestions > 0
-          ? Math.round((correctCount / totalTestedQuestions) * 10 * 10) / 10
-          : 0;
-      }
-      totalScore = Math.min(10, Math.max(0, totalScore));
+      // Điểm số tự động chấm ban đầu = Tổng điểm các câu trắc nghiệm làm đúng
+      // Làm tròn 1 chữ số thập phân (ví dụ 4.0 điểm nếu làm đúng 20 câu trắc nghiệm)
+      totalScore = Math.min(10, Math.max(0, Math.round(earnedPoints * 10) / 10));
     }
     score.total_score = totalScore;
     saveDemoDb();
+
+    // Đồng thời đồng bộ vào store bài nộp cục bộ nếu có
+    try {
+      const { saveStoredSubmission } = await import('@/lib/classStore');
+      const subId = `sub-${quizId}-${auth.user.id}`;
+      saveStoredSubmission({
+        id: subId,
+        quiz_id: quizId,
+        student_id: auth.user.id,
+        started_at: new Date().toISOString(),
+        submitted_at: score.submitted_at,
+        total_score: totalScore,
+        status: score.status,
+        tab_violations_count: score.tab_violations_count,
+        warning_history: [],
+        answers: (score.answers || []).map((a: any) => ({
+          id: `ans-${subId}-${a.question_id}`,
+          submission_id: subId,
+          question_id: a.question_id,
+          selected_option_id: a.option_id,
+          answer_text: a.answer_text,
+          is_correct: a.is_correct,
+          score_awarded: a.score_awarded,
+        })),
+      });
+    } catch {}
 
     const res = NextResponse.json({
       mode: 'remote',

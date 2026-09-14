@@ -57,7 +57,7 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
           const defaultScore = (q.score_awarded !== null && q.score_awarded !== undefined)
             ? Number(q.score_awarded)
             : (q.question_type === 'short_answer' || q.question_type === 'long_answer')
-              ? (q.answer_text?.trim() ? Number(q.points) || 1 : 0)
+              ? 0 // Mặc định 0đ cho câu tự luận/ngắn khi chưa được giảng viên chấm
               : (q.is_correct ? Number(q.points) || 0.2 : 0);
           initialGrades[q.id] = {
             score: defaultScore,

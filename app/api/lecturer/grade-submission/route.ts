@@ -73,11 +73,18 @@ export async function POST(request: Request) {
 
     // Cập nhật điểm và nhận xét cho từng câu hỏi
     const quiz = db.quizzes.find((q) => q.id === quizId);
-    const { DEFAULT_QUESTION_BANK, getStoredQuizById } = await import('@/lib/classStore');
+    const { DEFAULT_QUESTION_BANK, getStoredQuizById, createDefaultMidtermQuiz } = await import('@/lib/classStore');
+    const defaultMidterm = createDefaultMidtermQuiz();
     const localQuiz = getStoredQuizById(quizId);
-    const questions = (quiz?.questions && quiz.questions.length > 0)
-      ? quiz.questions
-      : ((localQuiz?.questions && localQuiz.questions.length > 0) ? localQuiz.questions : DEFAULT_QUESTION_BANK);
+    const isMidterm = quizId === 'midterm-scm-2026' || (quiz?.title && quiz.title.toLowerCase().includes('midterm')) || (localQuiz?.title && localQuiz.title.toLowerCase().includes('midterm'));
+
+    let questions = (quiz?.questions && quiz.questions.length > 0)
+      ? [...quiz.questions]
+      : ((localQuiz?.questions && localQuiz.questions.length > 0) ? [...localQuiz.questions] : (isMidterm ? [...(defaultMidterm.questions || [])] : DEFAULT_QUESTION_BANK));
+
+    if (isMidterm && questions.length < 30 && defaultMidterm.questions) {
+      questions = [...defaultMidterm.questions];
+    }
 
     for (const [qId, gData] of Object.entries(gradeMap)) {
       let ans = score.answers.find((a: any) => a.question_id === qId);
@@ -86,6 +93,7 @@ export async function POST(request: Request) {
         score.answers.push(ans);
       }
       ans.score_awarded = gData.score_awarded;
+      ans.is_correct = gData.score_awarded > 0;
       if (gData.feedback !== undefined) {
         ans.feedback = gData.feedback;
       }
@@ -94,17 +102,15 @@ export async function POST(request: Request) {
     // Tính lại tổng điểm
     let totalScore = 0;
     for (const a of score.answers) {
-      const q = questions.find((x: any) => x.id === a.question_id);
+      const q = questions.find((x: any) => x.id === a.question_id) || defaultMidterm.questions?.find((x: any) => x.id === a.question_id);
       if (a.score_awarded !== undefined && a.score_awarded !== null) {
         totalScore += Number(a.score_awarded) || 0;
       } else if (q) {
         if (q.question_type === 'short_answer' || q.question_type === 'long_answer') {
-          // Chưa chấm thủ công
-          if (a.answer_text && a.answer_text.trim().length > 0) {
-            totalScore += Number(q.points) || 1;
-          }
+          // Chưa chấm thủ công: để 0đ
+          totalScore += 0;
         } else {
-          // Trắc nghiệm
+          // Trắc nghiệm: kiểm tra đáp án đúng
           const opt = (q.options || []).find((o: any) => o.id === a.option_id);
           if (opt && opt.is_correct) {
             totalScore += Number(q.points) || 0.2;

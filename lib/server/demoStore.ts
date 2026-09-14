@@ -90,6 +90,7 @@ export interface DemoScore {
     answer_text?: string;
     score_awarded?: number;
     feedback?: string;
+    is_correct?: boolean;
   }[];
 }
 
@@ -362,10 +363,23 @@ export function demoDb(): DemoDb {
     modified = true;
   }
 
-  // 2. Bảo đảm đề thi 'Midterm' mà Giảng viên giữ luôn luôn có mặt
-  const hasMidterm = db.quizzes.some((q) => q.title.trim().toLowerCase() === 'midterm' || q.id === 'midterm-scm-2026');
-  if (!hasMidterm) {
-    const defaultMidterm = createDefaultMidtermQuiz();
+  // 2. Bảo đảm đề thi 'Midterm' mà Giảng viên giữ luôn luôn có mặt và đầy đủ câu hỏi
+  const midQuizIdx = db.quizzes.findIndex((q) => q.title.trim().toLowerCase() === 'midterm' || q.id === 'midterm-scm-2026');
+  const defaultMidterm = createDefaultMidtermQuiz();
+  if (midQuizIdx >= 0) {
+    const existingMid = db.quizzes[midQuizIdx];
+    if (!existingMid.questions || existingMid.questions.length === 0) {
+      existingMid.questions = (defaultMidterm.questions || []) as DemoQuestion[];
+      existingMid.questions_per_student = 24;
+      existingMid.section_sampling = {
+        multiple_choice: 20,
+        short_answer: 3,
+        long_answer: 1,
+      };
+      existingMid.passcode = existingMid.passcode || 'LOG888';
+      modified = true;
+    }
+  } else {
     const midQuiz: DemoQuiz = {
       id: 'midterm-scm-2026',
       title: 'Midterm',
