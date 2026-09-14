@@ -30,12 +30,12 @@ export async function POST(request: Request) {
 
   if (role === 'student') {
     const code = String(body.student_code || '').trim();
-    const dob = normalizeDob(String(body.date_of_birth || ''));
+    const rawDob = String(body.date_of_birth || '').trim();
 
     if (!code) {
       return NextResponse.json({ error: 'Vui lòng nhập Mã sinh viên.' }, { status: 400 });
     }
-    if (!dob) {
+    if (!rawDob) {
       return NextResponse.json(
         { error: 'Vui lòng nhập ngày sinh.' },
         { status: 400 }
@@ -149,10 +149,11 @@ export async function POST(request: Request) {
     redirect: user.role === 'lecturer' ? '/lecturer/dashboard' : '/student/dashboard',
   });
 
+  const isHttps = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https://');
   response.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps,
     path: '/',
     maxAge: SESSION_TTL_SECONDS,
   });

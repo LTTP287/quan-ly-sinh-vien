@@ -109,17 +109,16 @@ export default function StudentLoginPage() {
                 <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  inputMode="numeric"
                   required
-                  placeholder="DD/MM/YYYY"
+                  placeholder="DD/MM/YYYY hoặc ddmmyyyy"
                   value={dob}
                   onChange={(e) => handleDobChange(e.target.value)}
-                  maxLength={10}
+                  maxLength={30}
                   className="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors font-mono tracking-wider"
                 />
               </div>
-              <p className="text-[11px] text-slate-500 mt-2">
-                * Mật khẩu mặc định là ngày sinh của bạn theo hồ sơ lớp, định dạng Ngày/Tháng/Năm.
+              <p className="text-[11px] text-slate-400 mt-2">
+                * Mật khẩu là <strong>Ngày sinh</strong> của bạn (ví dụ: <code className="text-purple-300">20/05/2004</code> hoặc <code className="text-purple-300">20052004</code>) hoặc mật khẩu <code className="text-purple-300">SinhVien@2026</code>.
               </p>
             </div>
 
