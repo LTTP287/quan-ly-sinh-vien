@@ -12,15 +12,17 @@ export const runtime = 'nodejs';
  * Giúp sinh viên đăng nhập trên thiết bị/trình duyệt khác thấy ngay đề thi đã Publish.
  */
 export async function POST(request: Request) {
-  const auth = await getAuthContext();
-  if (!auth) return unauthorized();
-  if (auth.user.role !== 'lecturer') {
-    return NextResponse.json({ error: 'Chỉ Giảng viên mới đồng bộ được đề thi.' }, { status: 403 });
-  }
-
   if (useRemote) {
+    const auth = await getAuthContext();
+    if (!auth) return unauthorized();
+    if (auth.user.role !== 'lecturer') {
+      return NextResponse.json({ error: 'Chỉ Giảng viên mới đồng bộ được đề thi.' }, { status: 403 });
+    }
     return NextResponse.json({ ok: true, mode: 'remote' });
   }
+
+  // Ở chế độ demo: Cho phép đồng bộ từ trình duyệt Giảng viên lên máy chủ
+  const auth = await getAuthContext();
 
   const body = await request.json().catch(() => null);
   const quizzes = Array.isArray(body?.quizzes) ? body.quizzes : [];
@@ -99,9 +101,18 @@ export async function POST(request: Request) {
           }
         }
       }
-      const isMidterm = q.id === 'midterm-scm-2026';
+      const titleLower = (q.title || '').toLowerCase();
+      const isMidterm = q.id === 'midterm-scm-2026' || titleLower.includes('midterm');
       if (!passcode && isMidterm) {
         passcode = 'LOG888';
+      }
+      const isQuiz05 = q.id.includes('quiz-05') || titleLower.includes('quiz 05') || titleLower.includes('quiz - 05');
+      if (!passcode && isQuiz05) {
+        passcode = 'SCM201';
+      }
+      const isQuiz08 = q.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08');
+      if (!passcode && isQuiz08) {
+        passcode = 'QUIZ08';
       }
 
       const idx = db.quizzes.findIndex((x) => x.id === q.id);

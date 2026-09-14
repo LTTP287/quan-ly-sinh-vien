@@ -83,6 +83,45 @@ export async function POST(request: Request) {
           }
         }
       }
+      if (Array.isArray(body.demo_quizzes) && body.demo_quizzes.length > 0) {
+        for (const q of body.demo_quizzes) {
+          if (!q.id) continue;
+          let passcode = (q.passcode || q.access_code || '').trim().toUpperCase();
+          const titleLower = (q.title || '').toLowerCase();
+          if (!passcode) {
+            if (q.id === 'midterm-scm-2026' || titleLower.includes('midterm')) passcode = 'LOG888';
+            else if (q.id.includes('quiz-05') || titleLower.includes('quiz 05') || titleLower.includes('quiz - 05')) passcode = 'SCM201';
+            else if (q.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) passcode = 'QUIZ08';
+          }
+          const idx = db.quizzes.findIndex((x) => x.id === q.id);
+          const demoItem = {
+            id: q.id,
+            title: q.title || 'Đề thi',
+            description: q.description || '',
+            time_limit_minutes: Number(q.time_limit_minutes) || 45,
+            is_published: q.is_published !== false,
+            show_results: !!q.show_results,
+            passcode: passcode || null,
+            passcode_expires_at: q.passcode_expires_at || null,
+            class_ids: Array.isArray(q.assigned_class_ids) && q.assigned_class_ids.length > 0 ? q.assigned_class_ids : (q.class_ids || ['class-scm201-i']),
+            class_schedules: q.class_schedules || {},
+            start_at: q.start_at || new Date(Date.now() - 3600000).toISOString(),
+            end_at: q.end_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+            is_active: q.is_active !== false,
+            shuffle_questions: q.shuffle_questions !== false,
+            shuffle_options: q.shuffle_options !== false,
+            prevent_previous: !!q.prevent_previous,
+            questions_per_student: Number(q.questions_per_student) || (q.questions?.length || 5),
+            section_sampling: q.section_sampling || null,
+            questions: Array.isArray(q.questions) ? q.questions : [],
+          };
+          if (idx >= 0) {
+            db.quizzes[idx] = { ...db.quizzes[idx], ...demoItem };
+          } else {
+            db.quizzes.push(demoItem);
+          }
+        }
+      }
       saveDemoDb();
     }
 

@@ -242,15 +242,24 @@ function seed(): DemoDb {
   ];
 
   const defaultQuiz: DemoQuiz = {
-    id: 'quiz-tb-1789133680207',
-    title: 'Quiz - 05',
+    id: 'quiz-05-scm',
+    title: 'Quiz 05',
     description: 'Chapter 3: Integrated Operations Planning (p2). Time limit: 5 minutes, 5 randomized questions. No backtracking, immediate 0 score if tab switching is detected.',
     time_limit_minutes: 5,
     is_published: true,
     show_results: false,
-    passcode: null,
+    passcode: 'SCM201',
     passcode_expires_at: null,
     class_ids: ['class-scm201-i'],
+    class_schedules: {
+      'class-scm201-i': {
+        class_id: 'class-scm201-i',
+        start_at: new Date(Date.now() - 3600000).toISOString(),
+        end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+        access_code: 'SCM201',
+        is_active: true,
+      },
+    },
     start_at: new Date(Date.now() - 3600000).toISOString(),
     end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
     is_active: true,
@@ -259,6 +268,108 @@ function seed(): DemoDb {
     prevent_previous: true,
     questions_per_student: 5,
     questions: chapter3Questions,
+  };
+
+  const chapter8Questions: DemoQuestion[] = [
+    {
+      id: 'c8-q1',
+      quiz_id: 'quiz-08-scm',
+      question_text: 'Trong quản trị chuỗi cung ứng, mục tiêu chính của việc tối ưu hóa chi phí vận tải và tồn kho là gì?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 0,
+      options: [
+        { id: 'c8-q1-a', question_id: 'c8-q1', option_text: 'Cân bằng tổng chi phí logistics thấp nhất trong khi vẫn đảm bảo mức độ dịch vụ khách hàng yêu cầu', is_correct: true, order_index: 0 },
+        { id: 'c8-q1-b', question_id: 'c8-q1', option_text: 'Chỉ tập trung giảm cước vận chuyển mà không quan tâm đến lượng hàng tồn kho', is_correct: false, order_index: 1 },
+        { id: 'c8-q1-c', question_id: 'c8-q1', option_text: 'Tích trữ tối đa lượng hàng tồn kho tại mọi trung tâm phân phối để không bao giờ hết hàng', is_correct: false, order_index: 2 },
+        { id: 'c8-q1-d', question_id: 'c8-q1', option_text: 'Loại bỏ hoàn toàn các đối tác 3PL để tự đầu tư phương tiện vận tải', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c8-q2',
+      quiz_id: 'quiz-08-scm',
+      question_text: 'Chỉ số Fill Rate đo lường điều gì trong quá trình thực hiện đơn hàng?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 1,
+      options: [
+        { id: 'c8-q2-a', question_id: 'c8-q2', option_text: 'Tỷ lệ phần trăm nhu cầu của khách hàng được đáp ứng ngay lập tức từ lượng hàng sẵn có trong kho', is_correct: true, order_index: 0 },
+        { id: 'c8-q2-b', question_id: 'c8-q2', option_text: 'Tỷ lệ hàng hóa bị hư hỏng trong quá trình bốc xếp dỡ hàng', is_correct: false, order_index: 1 },
+        { id: 'c8-q2-c', question_id: 'c8-q2', option_text: 'Tốc độ quay vòng của phương tiện vận tải đường dài theo tháng', is_correct: false, order_index: 2 },
+        { id: 'c8-q2-d', question_id: 'c8-q2', option_text: 'Số lượng hóa đơn chứng từ hải quan hoàn thành trước hạn', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c8-q3',
+      quiz_id: 'quiz-08-scm',
+      question_text: 'Phương thức Cross-docking trong quản lý kho bãi mang lại lợi ích nổi bật nào sau đây?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 2,
+      options: [
+        { id: 'c8-q3-a', question_id: 'c8-q3', option_text: 'Giảm thiểu thời gian và chi phí lưu kho bằng cách chuyển trực tiếp hàng từ xe tải nhập sang xe tải xuất', is_correct: true, order_index: 0 },
+        { id: 'c8-q3-b', question_id: 'c8-q3', option_text: 'Tăng diện tích lưu kho dài hạn lên gấp đôi', is_correct: false, order_index: 1 },
+        { id: 'c8-q3-c', question_id: 'c8-q3', option_text: 'Kéo dài thời gian kiểm đếm chi tiết tại sàn tiếp nhận', is_correct: false, order_index: 2 },
+        { id: 'c8-q3-d', question_id: 'c8-q3', option_text: 'Yêu cầu lưu trữ toàn bộ pallet ít nhất 3 ngày trước khi xuất xưởng', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c8-q4',
+      quiz_id: 'quiz-08-scm',
+      question_text: 'Khái niệm Milk-run trong tuyến đường vận chuyển logistics là gì?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 3,
+      options: [
+        { id: 'c8-q4-a', question_id: 'c8-q4', option_text: 'Một phương tiện duy nhất thu gom hàng theo lộ trình cố định từ nhiều nhà cung cấp khác nhau', is_correct: true, order_index: 0 },
+        { id: 'c8-q4-b', question_id: 'c8-q4', option_text: 'Vận chuyển riêng lẻ từng chuyến trực tiếp cho một nhà cung cấp duy nhất', is_correct: false, order_index: 1 },
+        { id: 'c8-q4-c', question_id: 'c8-q4', option_text: 'Tuyến vận tải chỉ chuyên dụng cho các sản phẩm sữa và thực phẩm tươi sống', is_correct: false, order_index: 2 },
+        { id: 'c8-q4-d', question_id: 'c8-q4', option_text: 'Phương thức giao hàng chặng cuối dùng xe máy tại khu vực nội đô', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c8-q5',
+      quiz_id: 'quiz-08-scm',
+      question_text: 'Hệ thống quản lý kho WMS (Warehouse Management System) có chức năng chính là gì?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 4,
+      options: [
+        { id: 'c8-q5-a', question_id: 'c8-q5', option_text: 'Tự động hóa và tối ưu hóa vị trí lưu trữ, lấy hàng, đóng gói và quản lý luồng hàng trong kho', is_correct: true, order_index: 0 },
+        { id: 'c8-q5-b', question_id: 'c8-q5', option_text: 'Chỉ dùng để tính lương cho nhân công bốc vác', is_correct: false, order_index: 1 },
+        { id: 'c8-q5-c', question_id: 'c8-q5', option_text: 'Thay thế hoàn toàn hợp đồng ngoại thương quốc tế', is_correct: false, order_index: 2 },
+        { id: 'c8-q5-d', question_id: 'c8-q5', option_text: 'Lập trình hệ thống đèn chiếu sáng tự động ngoài cổng kho', is_correct: false, order_index: 3 },
+      ],
+    },
+  ];
+
+  const quiz08: DemoQuiz = {
+    id: 'quiz-08-scm',
+    title: 'Quiz 08',
+    description: 'Kiểm tra trắc nghiệm Quiz 08: Logistics & Quản trị vận tải, kho bãi. Thời gian: 15 phút, 5 câu hỏi ngẫu nhiên.',
+    time_limit_minutes: 15,
+    is_published: true,
+    show_results: false,
+    passcode: 'QUIZ08',
+    passcode_expires_at: null,
+    class_ids: ['class-scm201-i'],
+    class_schedules: {
+      'class-scm201-i': {
+        class_id: 'class-scm201-i',
+        start_at: new Date(Date.now() - 3600000).toISOString(),
+        end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+        access_code: 'QUIZ08',
+        is_active: true,
+      },
+    },
+    start_at: new Date(Date.now() - 3600000).toISOString(),
+    end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+    is_active: true,
+    shuffle_questions: true,
+    shuffle_options: true,
+    prevent_previous: true,
+    questions_per_student: 5,
+    questions: chapter8Questions,
   };
 
   const midterm = createDefaultMidtermQuiz();
@@ -300,7 +411,7 @@ function seed(): DemoDb {
     users: [...lecturers, defaultStudent],
     classes: [defaultClass],
     enrollments: [{ class_id: 'class-scm201-i', student_id: 'st-123456789' }],
-    quizzes: [defaultQuiz, midtermQuiz],
+    quizzes: [defaultQuiz, quiz08, midtermQuiz],
     sessions: [],
     scores: [],
   };

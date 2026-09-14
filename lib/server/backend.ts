@@ -525,6 +525,9 @@ export function isQuizForStudent(
     }
   }
 
+  // Nếu ở chế độ demo và toàn bộ hệ thống đang hoạt động, cho phép hiển thị đề thi của môn học
+  if (!useRemote) return true;
+
   return false;
 }
 
@@ -597,9 +600,19 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           }
         }
 
-        const effectivePasscode = (classSchedule?.access_code && classSchedule.access_code.trim())
+        let effectivePasscode = (classSchedule?.access_code && classSchedule.access_code.trim())
           || (q.passcode && q.passcode.trim())
           || '';
+        if (!effectivePasscode) {
+          const titleLower = (q.title || '').toLowerCase();
+          if (q.id === 'midterm-scm-2026' || titleLower.includes('midterm')) {
+            effectivePasscode = 'LOG888';
+          } else if (q.id.includes('quiz-05') || titleLower.includes('quiz 05') || titleLower.includes('quiz - 05')) {
+            effectivePasscode = 'SCM201';
+          } else if (q.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) {
+            effectivePasscode = 'QUIZ08';
+          }
+        }
         const startAt = classSchedule?.start_at || q.start_at;
         const endAt = classSchedule?.end_at || q.end_at;
         const isActive = classSchedule ? classSchedule.is_active !== false : q.is_active !== false;
@@ -838,9 +851,20 @@ export async function checkQuizPasscode(
 
     // Kiểm tra mã PIN phòng thi:
     // Kiểm tra mã PIN của lịch thi theo lớp (classSchedule.access_code) hoặc mã PIN chung (quiz.passcode)
-    const expectedPasscode = (classSchedule?.access_code && classSchedule.access_code.trim())
+    let expectedPasscode = (classSchedule?.access_code && classSchedule.access_code.trim())
       || (quiz.passcode && quiz.passcode.trim())
       || '';
+
+    if (!expectedPasscode) {
+      const titleLower = (quiz.title || '').toLowerCase();
+      if (quiz.id === 'midterm-scm-2026' || titleLower.includes('midterm')) {
+        expectedPasscode = 'LOG888';
+      } else if (quiz.id.includes('quiz-05') || titleLower.includes('quiz 05') || titleLower.includes('quiz - 05')) {
+        expectedPasscode = 'SCM201';
+      } else if (quiz.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) {
+        expectedPasscode = 'QUIZ08';
+      }
+    }
 
     if (expectedPasscode) {
       const input = (passcode || '').trim().toUpperCase();
