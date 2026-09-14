@@ -44,6 +44,43 @@ export function getStoredClasses(): ClassModule[] {
     list = list.filter((c) => c.id !== 'class-1' && c.id !== 'class-2');
   }
 
+  // Mặc định cung cấp 2 lớp chuẩn SCM201 I và SCM201 E nếu chưa có
+  if (list.length === 0) {
+    list = [
+      {
+        id: 'class-scm201-i',
+        code: 'SCM201 I',
+        name: 'Quản trị Chuỗi cung ứng - SCM201 I',
+        semester: 'HKI (2026 - 2027)',
+        students_count: 0,
+        lecturer_id: 'lecturer-phuong-dtu',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'class-scm201-e',
+        code: 'SCM201 E',
+        name: 'Quản trị Chuỗi cung ứng - SCM201 E',
+        semester: 'HKI (2026 - 2027)',
+        students_count: 0,
+        lecturer_id: 'lecturer-phuong-dtu',
+        created_at: new Date().toISOString(),
+      },
+    ];
+  } else {
+    // Nếu mới chỉ có SCM201 I mà chưa có SCM201 E, tự động bổ sung SCM201 E
+    if (!list.some((c) => (c.code || '').trim().toUpperCase() === 'SCM201 E')) {
+      list.push({
+        id: 'class-scm201-e',
+        code: 'SCM201 E',
+        name: 'Quản trị Chuỗi cung ứng - SCM201 E',
+        semester: 'HKI (2026 - 2027)',
+        students_count: 0,
+        lecturer_id: 'lecturer-phuong-dtu',
+        created_at: new Date().toISOString(),
+      });
+    }
+  }
+
   const finalClasses = list.map((c) => ({
     ...c,
     semester: !c.semester || c.semester.includes('2025') ? 'HKI (2026 - 2027)' : c.semester,
@@ -571,10 +608,17 @@ export function createDefaultMidtermQuiz(): Quiz {
       short_answer: 3,
       long_answer: 1,
     },
-    assigned_class_ids: ['class-scm201-i'],
+    assigned_class_ids: ['class-scm201-i', 'class-scm201-e'],
     class_schedules: {
       'class-scm201-i': {
         class_id: 'class-scm201-i',
+        start_at: '2026-09-13T17:59',
+        end_at: '2026-09-20T17:59',
+        access_code: 'LOG888',
+        is_active: true,
+      },
+      'class-scm201-e': {
+        class_id: 'class-scm201-e',
         start_at: '2026-09-13T17:59',
         end_at: '2026-09-20T17:59',
         access_code: 'LOG888',
@@ -633,8 +677,28 @@ export function getStoredQuizzes(): Quiz[] {
           return matchDefault?.image_url ? { ...quest, image_url: matchDefault.image_url } : quest;
         });
 
+        // Bổ sung class-scm201-e vào assigned_class_ids và class_schedules nếu đề thi thuộc môn SCM201
+        const assigned = Array.isArray(q.assigned_class_ids) ? [...q.assigned_class_ids] : ['class-scm201-i'];
+        if (!assigned.includes('class-scm201-e')) {
+          assigned.push('class-scm201-e');
+        }
+        const schedules = { ...(q.class_schedules || {}) };
+        const refSched: any = Object.values(schedules)[0] || null;
+        const pass = q.passcode || (isMidterm ? 'LOG888' : 'QUIZ08');
+        if (!schedules['class-scm201-e']) {
+          schedules['class-scm201-e'] = {
+            class_id: 'class-scm201-e',
+            start_at: refSched?.start_at || q.start_at || new Date(Date.now() - 3600000).toISOString(),
+            end_at: refSched?.end_at || q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
+            access_code: pass,
+            is_active: true,
+          };
+        }
+
         return {
           ...q,
+          assigned_class_ids: assigned,
+          class_schedules: schedules,
           passcode: q.passcode || (isMidterm ? 'LOG888' : q.passcode),
           questions: updatedQuestions,
           questions_per_student: Number(q.questions_per_student) > 0 ? Number(q.questions_per_student) : (isMidterm ? 24 : totalSample),
@@ -645,7 +709,30 @@ export function getStoredQuizzes(): Quiz[] {
           },
         };
       }
-      return q;
+
+      // Đề trắc nghiệm thông thường (Quiz 05, Quiz 08...)
+      const assigned = Array.isArray(q.assigned_class_ids) ? [...q.assigned_class_ids] : ['class-scm201-i'];
+      if (!assigned.includes('class-scm201-e')) {
+        assigned.push('class-scm201-e');
+      }
+      const schedules = { ...(q.class_schedules || {}) };
+      const refSched: any = Object.values(schedules)[0] || null;
+      const pass = q.passcode || (q.title?.toLowerCase().includes('quiz 08') ? 'QUIZ08' : 'SCM201');
+      if (!schedules['class-scm201-e']) {
+        schedules['class-scm201-e'] = {
+          class_id: 'class-scm201-e',
+          start_at: refSched?.start_at || q.start_at || new Date(Date.now() - 3600000).toISOString(),
+          end_at: refSched?.end_at || q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
+          access_code: pass,
+          is_active: true,
+        };
+      }
+
+      return {
+        ...q,
+        assigned_class_ids: assigned,
+        class_schedules: schedules,
+      };
     });
 
     return updated;

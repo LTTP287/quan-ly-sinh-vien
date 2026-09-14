@@ -581,11 +581,17 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           }
           return false;
         });
+        // Tìm lớp của sinh viên tương ứng với đề thi này
         let studentClass = classes.find((c) => q.class_ids.includes(c.id));
         if (!studentClass && myClassIds.length > 0) {
           studentClass = classes.find((c) => myClassIds.includes(c.id));
         }
-        if (!studentClass) studentClass = classes[0];
+        if (!studentClass && classes.length > 0) {
+          studentClass = classes[0];
+        }
+        if (!studentClass && db.classes.length > 0) {
+          studentClass = db.classes.find((c) => (c.code || '').includes('SCM201 E')) || db.classes[0];
+        }
 
         let classSchedule = studentClass ? q.class_schedules?.[studentClass.id] : undefined;
         if (!classSchedule && q.class_schedules) {
@@ -593,6 +599,17 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
             if (q.class_schedules[cid]) {
               classSchedule = q.class_schedules[cid];
               break;
+            }
+          }
+          if (!classSchedule && studentClass) {
+            // Đối chiếu theo mã lớp (ví dụ 'SCM201 E' hay 'SCM201 I')
+            const clsCode = (studentClass.code || '').trim().toUpperCase();
+            for (const [scId, sc] of Object.entries(q.class_schedules)) {
+              const matchedCls = db.classes.find((c) => c.id === scId);
+              if (matchedCls && (matchedCls.code || '').trim().toUpperCase() === clsCode) {
+                classSchedule = sc;
+                break;
+              }
             }
           }
           if (!classSchedule) {
@@ -627,7 +644,7 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           end_at: endAt,
           requires_passcode: !!effectivePasscode,
           passcode_expires_at: q.passcode_expires_at,
-          class_name: studentClass?.name || studentClass?.code || 'Introduction to Logistics & SCM',
+          class_name: studentClass?.name || studentClass?.code || 'Quản trị Chuỗi cung ứng - SCM201',
           submitted: !!score?.submitted_at,
           score: q.show_results ? score?.total_score ?? null : null,
           show_results: q.show_results,
@@ -824,6 +841,20 @@ export async function checkQuizPasscode(
         if (quiz.class_schedules[cid]) {
           classSchedule = quiz.class_schedules[cid];
           break;
+        }
+      }
+      if (!classSchedule) {
+        // Đối chiếu theo mã lớp (ví dụ 'SCM201 E' hay 'SCM201 I')
+        const myCls = db.classes.find((c) => myClassIds.includes(c.id));
+        if (myCls) {
+          const myCode = (myCls.code || '').trim().toUpperCase();
+          for (const [scId, sc] of Object.entries(quiz.class_schedules)) {
+            const matchedCls = db.classes.find((c) => c.id === scId);
+            if (matchedCls && (matchedCls.code || '').trim().toUpperCase() === myCode) {
+              classSchedule = sc;
+              break;
+            }
+          }
         }
       }
       if (!classSchedule) {

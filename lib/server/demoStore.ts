@@ -161,12 +161,20 @@ function seed(): DemoDb {
     date_of_birth: '2004-01-15',
   };
 
-  const defaultClass = {
-    id: 'class-scm201-i',
-    code: 'SCM201 I',
-    name: 'Introduction to Logistics & SCM',
-    semester: 'HKI (2026 - 2027)',
-  };
+  const defaultClasses = [
+    {
+      id: 'class-scm201-i',
+      code: 'SCM201 I',
+      name: 'Quản trị Chuỗi cung ứng - SCM201 I',
+      semester: 'HKI (2026 - 2027)',
+    },
+    {
+      id: 'class-scm201-e',
+      code: 'SCM201 E',
+      name: 'Quản trị Chuỗi cung ứng - SCM201 E',
+      semester: 'HKI (2026 - 2027)',
+    },
+  ];
 
   const chapter3Questions: DemoQuestion[] = [
     {
@@ -250,10 +258,17 @@ function seed(): DemoDb {
     show_results: false,
     passcode: 'SCM201',
     passcode_expires_at: null,
-    class_ids: ['class-scm201-i'],
+    class_ids: ['class-scm201-i', 'class-scm201-e'],
     class_schedules: {
       'class-scm201-i': {
         class_id: 'class-scm201-i',
+        start_at: new Date(Date.now() - 3600000).toISOString(),
+        end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+        access_code: 'SCM201',
+        is_active: true,
+      },
+      'class-scm201-e': {
+        class_id: 'class-scm201-e',
         start_at: new Date(Date.now() - 3600000).toISOString(),
         end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
         access_code: 'SCM201',
@@ -352,10 +367,17 @@ function seed(): DemoDb {
     show_results: false,
     passcode: 'QUIZ08',
     passcode_expires_at: null,
-    class_ids: ['class-scm201-i'],
+    class_ids: ['class-scm201-i', 'class-scm201-e'],
     class_schedules: {
       'class-scm201-i': {
         class_id: 'class-scm201-i',
+        start_at: new Date(Date.now() - 3600000).toISOString(),
+        end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+        access_code: 'QUIZ08',
+        is_active: true,
+      },
+      'class-scm201-e': {
+        class_id: 'class-scm201-e',
         start_at: new Date(Date.now() - 3600000).toISOString(),
         end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
         access_code: 'QUIZ08',
@@ -382,10 +404,17 @@ function seed(): DemoDb {
     show_results: false,
     passcode: 'LOG888',
     passcode_expires_at: null,
-    class_ids: ['class-scm201-i'],
+    class_ids: ['class-scm201-i', 'class-scm201-e'],
     class_schedules: {
       'class-scm201-i': {
         class_id: 'class-scm201-i',
+        start_at: '2026-09-13T17:59',
+        end_at: '2026-09-20T17:59',
+        access_code: 'LOG888',
+        is_active: true,
+      },
+      'class-scm201-e': {
+        class_id: 'class-scm201-e',
         start_at: '2026-09-13T17:59',
         end_at: '2026-09-20T17:59',
         access_code: 'LOG888',
@@ -409,8 +438,11 @@ function seed(): DemoDb {
 
   return {
     users: [...lecturers, defaultStudent],
-    classes: [defaultClass],
-    enrollments: [{ class_id: 'class-scm201-i', student_id: 'st-123456789' }],
+    classes: defaultClasses,
+    enrollments: [
+      { class_id: 'class-scm201-i', student_id: 'st-123456789' },
+      { class_id: 'class-scm201-e', student_id: 'st-123456789' },
+    ],
     quizzes: [defaultQuiz, quiz08, midtermQuiz],
     sessions: [],
     scores: [],
@@ -573,6 +605,83 @@ export function demoDb(): DemoDb {
           }
         }
       }
+    }
+  }
+
+  // 3. Đảm bảo cả hai lớp SCM201 I và SCM201 E đều luôn có mặt
+  const hasClassI = db.classes.some((c) => c.id === 'class-scm201-i' || (c.code || '').trim().toUpperCase() === 'SCM201 I');
+  if (!hasClassI) {
+    db.classes.unshift({
+      id: 'class-scm201-i',
+      code: 'SCM201 I',
+      name: 'Quản trị Chuỗi cung ứng - SCM201 I',
+      semester: 'HKI (2026 - 2027)',
+    });
+    modified = true;
+  }
+
+  const hasClassE = db.classes.some((c) => c.id === 'class-scm201-e' || (c.code || '').trim().toUpperCase() === 'SCM201 E');
+  if (!hasClassE) {
+    db.classes.push({
+      id: 'class-scm201-e',
+      code: 'SCM201 E',
+      name: 'Quản trị Chuỗi cung ứng - SCM201 E',
+      semester: 'HKI (2026 - 2027)',
+    });
+    modified = true;
+  }
+
+  // 4. Đảm bảo tất cả đề thi (Quiz 05, Quiz 08, Midterm...) đều được gán cho cả lớp SCM201 I và SCM201 E kèm lịch thi
+  const scmClassIds = ['class-scm201-i', 'class-scm201-e'];
+  for (const q of db.quizzes) {
+    if (!q.class_ids) q.class_ids = [];
+    let changedQuiz = false;
+    for (const cid of scmClassIds) {
+      if (!q.class_ids.includes(cid)) {
+        q.class_ids.push(cid);
+        changedQuiz = true;
+      }
+    }
+    if (!q.class_schedules) q.class_schedules = {};
+
+    let refSchedule: any = Object.values(q.class_schedules)[0] || null;
+    let expectedCode = (q.passcode && q.passcode.trim()) || refSchedule?.access_code || '';
+    const titleLower = (q.title || '').toLowerCase();
+    if (!expectedCode) {
+      if (q.id === 'midterm-scm-2026' || titleLower.includes('midterm')) expectedCode = 'LOG888';
+      else if (q.id.includes('quiz-05') || titleLower.includes('quiz 05') || titleLower.includes('quiz - 05')) expectedCode = 'SCM201';
+      else if (q.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) expectedCode = 'QUIZ08';
+    }
+
+    for (const cid of scmClassIds) {
+      if (!q.class_schedules[cid]) {
+        q.class_schedules[cid] = {
+          class_id: cid,
+          start_at: refSchedule?.start_at || q.start_at || new Date(Date.now() - 3600000).toISOString(),
+          end_at: refSchedule?.end_at || q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
+          access_code: expectedCode || 'QUIZ08',
+          is_active: true,
+        };
+        changedQuiz = true;
+      } else {
+        if (!q.class_schedules[cid].access_code && expectedCode) {
+          q.class_schedules[cid].access_code = expectedCode;
+          changedQuiz = true;
+        }
+        if (q.class_schedules[cid].is_active === false) {
+          q.class_schedules[cid].is_active = true;
+          changedQuiz = true;
+        }
+      }
+    }
+
+    if (!q.passcode && expectedCode) {
+      q.passcode = expectedCode;
+      changedQuiz = true;
+    }
+
+    if (changedQuiz) {
+      modified = true;
     }
   }
 
