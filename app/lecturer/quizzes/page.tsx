@@ -268,7 +268,8 @@ export default function LecturerTestBankPage() {
   const handleDeleteQuiz = async (quizId: string, title: string) => {
     if (!confirm(`Bạn có chắc chắn muốn xoá đề thi "${title}" khỏi Ngân hàng đề không? Thao tác này không thể hoàn tác.`)) return;
     try {
-      setQuizzes(await deleteQuiz(quizId));
+      const remaining = await deleteQuiz(quizId);
+      setQuizzes((remaining || []).filter((q) => q.id !== quizId));
     } catch (err: any) {
       alert(`Không xoá được đề thi: ${err?.message || err}`);
     }

@@ -35,6 +35,18 @@ export async function POST(request: Request) {
   const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
   const db = demoDb();
 
+  if (!Array.isArray(db.deleted_quiz_ids)) {
+    db.deleted_quiz_ids = [];
+  }
+  const deletedQuizIds: string[] = Array.isArray(body?.deleted_quiz_ids) ? body.deleted_quiz_ids.map(String) : [];
+  if (body?.deleted_quiz_id) {
+    deletedQuizIds.push(String(body.deleted_quiz_id));
+  }
+  if (deletedQuizIds.length > 0) {
+    db.deleted_quiz_ids = Array.from(new Set([...db.deleted_quiz_ids, ...deletedQuizIds]));
+    db.quizzes = db.quizzes.filter((q) => !db.deleted_quiz_ids!.includes(q.id));
+  }
+
   // 1. Đồng bộ lớp học phần từ Giảng viên
   if (classes.length > 0) {
     db.classes = classes.map((c: any) => ({
@@ -201,4 +213,39 @@ export async function POST(request: Request) {
     synced_students: db.users.filter((u) => u.role === 'student').length,
     synced_enrollments: db.enrollments.length,
   });
+}
+
+/**
+ * DELETE /api/quizzes/sync?id=<quiz_id>
+ * Xoá vĩnh viễn đề thi khỏi demoStore của Server và lưu vào danh sách deleted_quiz_ids
+ */
+export async function DELETE(request: Request) {
+  const auth = await getAuthContext();
+  if (auth && auth.user.role !== 'lecturer') {
+    return NextResponse.json({ error: 'Chỉ Giảng viên mới được phép xóa đề thi.' }, { status: 403 });
+  }
+
+  const url = new URL(request.url);
+  let quizId = url.searchParams.get('id');
+  if (!quizId) {
+    const body = await request.json().catch(() => null);
+    quizId = body?.quiz_id || body?.id;
+  }
+
+  if (!quizId) {
+    return NextResponse.json({ error: 'Thiếu mã đề thi.' }, { status: 400 });
+  }
+
+  const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
+  const db = demoDb();
+  if (!Array.isArray(db.deleted_quiz_ids)) {
+    db.deleted_quiz_ids = [];
+  }
+  if (!db.deleted_quiz_ids.includes(quizId)) {
+    db.deleted_quiz_ids.push(quizId);
+  }
+  db.quizzes = db.quizzes.filter((q) => q.id !== quizId);
+  saveDemoDb();
+
+  return NextResponse.json({ ok: true, deleted: quizId });
 }

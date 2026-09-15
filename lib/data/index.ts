@@ -148,16 +148,17 @@ export async function signOut(): Promise<void> {
 // CLASSES & STUDENTS
 // ====================================================================
 
-export async function syncDemoQuizzesToServer(): Promise<void> {
+export async function syncDemoQuizzesToServer(extraDeletedIds: string[] = []): Promise<void> {
   if (typeof window === 'undefined' || isRemote) return;
   try {
-    const quizzes = local.getStoredQuizzes();
+    const deletedQuizIds = Array.from(new Set([...(local.getStoredDeletedQuizIds ? local.getStoredDeletedQuizIds() : []), ...extraDeletedIds]));
+    const quizzes = local.getStoredQuizzes().filter((q) => !deletedQuizIds.includes(q.id));
     const classes = local.getStoredClasses();
     const class_students = local.getAllStoredClassStudents();
     await fetch('/api/quizzes/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quizzes, classes, class_students }),
+      body: JSON.stringify({ quizzes, classes, class_students, deleted_quiz_ids: deletedQuizIds }),
     });
   } catch {}
 }
@@ -689,8 +690,13 @@ export async function setShowResults(quizId: string, value: boolean): Promise<vo
 export async function deleteQuiz(quizId: string): Promise<Quiz[]> {
   if (!isRemote) {
     const updated = local.deleteStoredQuiz(quizId);
-    await syncDemoQuizzesToServer();
-    return updated;
+    try {
+      await fetch(`/api/quizzes/sync?id=${encodeURIComponent(quizId)}`, {
+        method: 'DELETE',
+      });
+    } catch {}
+    await syncDemoQuizzesToServer([quizId]);
+    return updated.filter((q) => q.id !== quizId);
   }
 
   const { error } = await db().from('quizzes').delete().eq('id', quizId);

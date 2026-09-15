@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   STUDENTS_PREFIX: 'uniquiz_students_',
   QUIZZES: 'uniquiz_testbank',
   SUBMISSIONS: 'uniquiz_submissions',
+  DELETED_QUIZZES: 'uniquiz_deleted_quizzes',
 };
 
 // Initial default classes for 2026 - 2027 (empty by default, user-created only)
@@ -755,15 +756,38 @@ export function createDefaultQuiz06(): Quiz {
 
 const DEFAULT_QUIZZES: Quiz[] = [];
 
+export function getStoredDeletedQuizIds(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.DELETED_QUIZZES);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function markQuizAsDeleted(quizId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const list = getStoredDeletedQuizIds();
+    if (!list.includes(quizId)) {
+      list.push(quizId);
+      localStorage.setItem(STORAGE_KEYS.DELETED_QUIZZES, JSON.stringify(list));
+    }
+  } catch {}
+}
+
 export function getStoredQuizzes(): Quiz[] {
   if (typeof window === 'undefined') return [];
   const initKey = 'uniquiz_quizzes_initialized_v2';
   const stored = localStorage.getItem(STORAGE_KEYS.QUIZZES) || localStorage.getItem('uni_quiz_testbank_v1');
+  const deletedIds = getStoredDeletedQuizIds();
+
   if (!stored) {
     if (localStorage.getItem(initKey) === '1') {
       return [];
     }
-    const initial = [createDefaultMidtermQuiz(), createDefaultQuiz06()];
+    const initial = [createDefaultMidtermQuiz(), createDefaultQuiz06()].filter((q) => !deletedIds.includes(q.id));
     localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(initial));
     localStorage.setItem(initKey, '1');
     return initial;
@@ -777,8 +801,12 @@ export function getStoredQuizzes(): Quiz[] {
       return [];
     }
 
-    // Luôn lọc bỏ đề thi cũ đã bị xoá khỏi test bank: 'quiz-midterm-logistics' hoặc tên dài 'Đề Thi Giữa Kỳ (Midterm Exam)'
-    parsed = parsed.filter((q) => q.id !== 'quiz-midterm-logistics' && !q.title.includes('Đề Thi Giữa Kỳ (Midterm Exam)'));
+    // Luôn lọc bỏ đề thi cũ đã bị xoá khỏi test bank và danh sách các đề thi giảng viên đã chủ động xóa
+    parsed = parsed.filter(
+      (q) => q.id !== 'quiz-midterm-logistics' && 
+             !q.title.includes('Đề Thi Giữa Kỳ (Midterm Exam)') &&
+             !deletedIds.includes(q.id)
+    );
 
     const updated: Quiz[] = parsed.map((q: Quiz): Quiz => {
       const isMidterm = q.id === 'midterm-scm-2026';
@@ -874,8 +902,13 @@ export function getStoredQuizzes(): Quiz[] {
       };
     });
 
-    if (!updated.some((x) => x.id === 'quiz-06-scm' || (x.title || '').toLowerCase().includes('quiz 06'))) {
-      updated.push(createDefaultQuiz06());
+    // Chỉ tự động khởi tạo Quiz 06 đúng 1 lần cho trình duyệt chưa từng có và GIẢNG VIÊN CHƯA TỪNG XOÁ
+    const seedQuiz06Key = 'uniquiz_quiz06_seeded_v1';
+    if (!localStorage.getItem(seedQuiz06Key)) {
+      localStorage.setItem(seedQuiz06Key, '1');
+      if (!deletedIds.includes('quiz-06-scm') && !updated.some((x) => x.id === 'quiz-06-scm' || (x.title || '').toLowerCase().includes('quiz 06'))) {
+        updated.push(createDefaultQuiz06());
+      }
     }
 
     return updated;
@@ -909,6 +942,7 @@ export function getStoredQuizById(quizId: string): Quiz | undefined {
 
 // Xóa 1 đề thi
 export function deleteStoredQuiz(quizId: string): Quiz[] {
+  markQuizAsDeleted(quizId);
   const quizzes = getStoredQuizzes();
   const updated = quizzes.filter((q) => q.id !== quizId);
   if (typeof window !== 'undefined') {
