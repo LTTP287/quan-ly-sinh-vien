@@ -63,6 +63,14 @@
       "email": "22120777@student.university.edu.vn",
       "role": "student",
       "date_of_birth": "2004-07-07"
+    },
+    {
+      "id": "st-22120999",
+      "student_code": "22120999",
+      "full_name": "Trần Văn Mới",
+      "email": "22120999@student.university.edu.vn",
+      "role": "student",
+      "date_of_birth": "2004-09-09"
     }
   ],
   "classes": [
@@ -88,10 +96,6 @@
   "enrollments": [
     {
       "class_id": "class-scm201-i",
-      "student_id": "st-scm-1"
-    },
-    {
-      "class_id": "class-scm201-i",
       "student_id": "st-22120555"
     },
     {
@@ -107,8 +111,20 @@
       "student_id": "st-scm201e-student"
     },
     {
+      "class_id": "class-scm201-e",
+      "student_id": "st-22120888"
+    },
+    {
       "class_id": "class-scm201-c",
       "student_id": "st-scm201c-student"
+    },
+    {
+      "class_id": "class-scm201-c",
+      "student_id": "st-22120777"
+    },
+    {
+      "class_id": "class-scm201-c",
+      "student_id": "st-22120999"
     }
   ],
   "quizzes": [
@@ -1448,8 +1464,9 @@
       "token_hash": "76aa74998b2bb969a3aa3655df4ca8e3cc798878dc0f50d889a5ff5077a905b1",
       "issued_at": "2026-09-15T03:55:54.155Z",
       "expires_at": "2026-09-15T11:55:54.155Z",
-      "revoked_at": null,
-      "user_agent": "node"
+      "revoked_at": "2026-09-15T07:01:21.582Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
     },
     {
       "id": "sess-1789444554204-2uqyj1",
@@ -1457,8 +1474,9 @@
       "token_hash": "ded8670d9f25a4abc1a53f03c83c777e5f1f138330114b906e0d289a6d9d7388",
       "issued_at": "2026-09-15T03:55:54.204Z",
       "expires_at": "2026-09-15T11:55:54.204Z",
-      "revoked_at": null,
-      "user_agent": "node"
+      "revoked_at": "2026-09-15T07:01:21.552Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
     },
     {
       "id": "sess-1789444580528-6iy300",
@@ -1466,8 +1484,9 @@
       "token_hash": "e3f150b3b18ca4cf5cd47e534d00d583bf4791d29fdfe2588fdcbd25126755e5",
       "issued_at": "2026-09-15T03:56:20.528Z",
       "expires_at": "2026-09-15T11:56:20.528Z",
-      "revoked_at": null,
-      "user_agent": "node"
+      "revoked_at": "2026-09-15T07:01:21.599Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
     },
     {
       "id": "sess-1789454067547-rgac5i",
@@ -1484,8 +1503,54 @@
       "token_hash": "dd0d8b91b06b70af5a695bd58a3c1291d4e9237b1102bd4f94640c0447f3d435",
       "issued_at": "2026-09-15T06:34:27.575Z",
       "expires_at": "2026-09-15T14:34:27.575Z",
+      "revoked_at": "2026-09-15T07:01:21.516Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
+    },
+    {
+      "id": "sess-1789455681516-6746yg",
+      "user_id": "st-scm201c-student",
+      "token_hash": "80e26a05122064ff67bdfb4fa832806c6957b172c12cc6ed85a0d37a1048983c",
+      "issued_at": "2026-09-15T07:01:21.516Z",
+      "expires_at": "2026-09-15T15:01:21.516Z",
       "revoked_at": null,
-      "user_agent": "node"
+      "user_agent": null
+    },
+    {
+      "id": "sess-1789455681552-4qoost",
+      "user_id": "st-scm201e-student",
+      "token_hash": "8fa4e4ba9675b1dec07eff68ccede8010fd724a8123c0e3ae1417ebe91d5e550",
+      "issued_at": "2026-09-15T07:01:21.552Z",
+      "expires_at": "2026-09-15T15:01:21.552Z",
+      "revoked_at": null,
+      "user_agent": null
+    },
+    {
+      "id": "sess-1789455681582-rs9woq",
+      "user_id": "st-22120555",
+      "token_hash": "59f9c6ee8a2b9f9279cae8907fa41d3226a9f5ccef2b1d322ba7e41342d351b0",
+      "issued_at": "2026-09-15T07:01:21.582Z",
+      "expires_at": "2026-09-15T15:01:21.582Z",
+      "revoked_at": null,
+      "user_agent": null
+    },
+    {
+      "id": "sess-1789455681599-pcihb4",
+      "user_id": "lecturer-phuong-dtu",
+      "token_hash": "e240fcdee3d352783e2c2a9a8b9d3976688f1fc9615efe8825d27d09acc67f8e",
+      "issued_at": "2026-09-15T07:01:21.599Z",
+      "expires_at": "2026-09-15T15:01:21.599Z",
+      "revoked_at": null,
+      "user_agent": null
+    },
+    {
+      "id": "sess-1789455681620-igniby",
+      "user_id": "st-22120999",
+      "token_hash": "fef719d518593b845c109f6284788239984ca3addc52c268df2caafd3add4c1d",
+      "issued_at": "2026-09-15T07:01:21.620Z",
+      "expires_at": "2026-09-15T15:01:21.620Z",
+      "revoked_at": null,
+      "user_agent": null
     }
   ],
   "scores": [

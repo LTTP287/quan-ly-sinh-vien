@@ -190,17 +190,44 @@ export function saveStoredStudents(classId: string, newStudents: UserProfile[]):
   const existing = getStoredStudents(classId);
 
   const merged = [...existing];
+  const newCodes = new Set<string>();
+
   newStudents.forEach((st) => {
-    if (!merged.some((m) => m.student_code === st.student_code)) {
-      merged.push(st);
+    const code = (st.student_code || '').trim().toUpperCase();
+    if (!code) return;
+    newCodes.add(code);
+    const normalizedSt: UserProfile = {
+      ...st,
+      id: `st-${code.toLowerCase()}`,
+      student_code: code,
+    };
+    const idx = merged.findIndex((m) => (m.student_code || '').trim().toUpperCase() === code);
+    if (idx >= 0) {
+      merged[idx] = { ...merged[idx], ...normalizedSt };
+    } else {
+      merged.push(normalizedSt);
     }
   });
 
   if (typeof window !== 'undefined') {
     localStorage.setItem(`${STORAGE_KEYS.STUDENTS_PREFIX}${classId}`, JSON.stringify(merged));
 
+    // Đảm bảo sinh viên chỉ thuộc đúng lớp học phần được import (xoá khỏi các lớp học phần khác của cùng môn)
     const classes = getStoredClasses();
-    const updatedClasses = classes.map((c) => (c.id === classId ? { ...c, students_count: merged.length } : c));
+    classes.forEach((c) => {
+      if (c.id !== classId) {
+        const otherStudents = getStoredStudents(c.id);
+        const filteredOther = otherStudents.filter((s) => !newCodes.has((s.student_code || '').trim().toUpperCase()));
+        if (filteredOther.length !== otherStudents.length) {
+          localStorage.setItem(`${STORAGE_KEYS.STUDENTS_PREFIX}${c.id}`, JSON.stringify(filteredOther));
+        }
+      }
+    });
+
+    const updatedClasses = getStoredClasses().map((c) => ({
+      ...c,
+      students_count: getStoredStudents(c.id).length,
+    }));
     localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(updatedClasses));
   }
 
@@ -210,7 +237,10 @@ export function saveStoredStudents(classId: string, newStudents: UserProfile[]):
 // Delete student from class
 export function deleteStoredStudent(classId: string, studentId: string): UserProfile[] {
   const existing = getStoredStudents(classId);
-  const updated = existing.filter((s) => s.id !== studentId);
+  const targetUser = existing.find((s) => s.id === studentId);
+  const targetCode = (targetUser?.student_code || studentId.replace(/^st-/, '')).trim().toUpperCase();
+
+  const updated = existing.filter((s) => s.id !== studentId && (s.student_code || '').trim().toUpperCase() !== targetCode);
 
   if (typeof window !== 'undefined') {
     localStorage.setItem(`${STORAGE_KEYS.STUDENTS_PREFIX}${classId}`, JSON.stringify(updated));

@@ -39,9 +39,10 @@ export async function POST(request: Request) {
     for (const s of students) {
       const code = (s.student_code || '').trim().toUpperCase();
       if (!code) continue;
+      const canonicalId = `st-${code.toLowerCase()}`;
       const existingIdx = db.users.findIndex((u) => (u.student_code || '').trim().toUpperCase() === code);
       const stUser = {
-        id: existingIdx >= 0 ? db.users[existingIdx].id : `st-${Date.now()}-${created}`,
+        id: existingIdx >= 0 ? db.users[existingIdx].id : canonicalId,
         student_code: code,
         full_name: s.full_name || code,
         email: s.email || `${code.toLowerCase()}@student.university.edu.vn`,
@@ -54,8 +55,12 @@ export async function POST(request: Request) {
         db.users.push(stUser);
         created++;
       }
-      if (classId && !db.enrollments.some((e) => e.class_id === classId && e.student_id === stUser.id)) {
-        db.enrollments.push({ class_id: classId, student_id: stUser.id });
+      if (classId) {
+        const targetIds = Array.from(new Set([stUser.id, canonicalId]));
+        db.enrollments = db.enrollments.filter((e) => !targetIds.includes(e.student_id));
+        for (const tId of targetIds) {
+          db.enrollments.push({ class_id: classId, student_id: tId });
+        }
       }
     }
     saveDemoDb();

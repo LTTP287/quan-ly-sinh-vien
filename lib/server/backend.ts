@@ -143,40 +143,46 @@ export function determineClassForStudent(
   code: string,
   fullName: string,
   dbClasses: { id: string; code: string; name: string }[]
-): { id: string; code: string; name: string } {
+): { id: string; code: string; name: string } | null {
   const codeUpper = (code || '').trim().toUpperCase();
   const nameUpper = (fullName || '').trim().toUpperCase();
 
-  // 1. Phân loại lớp SCM201 C
+  // Chỉ phân loại nếu tên hoặc mã sinh viên chỉ định rõ ràng lớp/học phần
   if (
-    codeUpper.includes('C') ||
     nameUpper.includes('SCM201 C') ||
     nameUpper.includes('LỚP C') ||
     nameUpper.includes('HỌC PHẦN C') ||
-    codeUpper.startsWith('221207') ||
-    codeUpper.startsWith('221206') ||
-    codeUpper.startsWith('221209') ||
-    codeUpper.startsWith('221203')
+    codeUpper.endsWith('-C') ||
+    codeUpper.endsWith(' C')
   ) {
     const clsC = dbClasses.find((c) => (c.code || '').trim().toUpperCase() === 'SCM201 C' || c.id === 'class-scm201-c');
     if (clsC) return clsC;
   }
 
-  // 2. Phân loại lớp SCM201 E
   if (
-    codeUpper.includes('E') ||
     nameUpper.includes('SCM201 E') ||
     nameUpper.includes('LỚP E') ||
     nameUpper.includes('HỌC PHẦN E') ||
-    codeUpper.startsWith('221208')
+    codeUpper.endsWith('-E') ||
+    codeUpper.endsWith(' E')
   ) {
     const clsE = dbClasses.find((c) => (c.code || '').trim().toUpperCase() === 'SCM201 E' || c.id === 'class-scm201-e');
     if (clsE) return clsE;
   }
 
-  // 3. Mặc định lớp SCM201 I hoặc lớp đầu tiên
-  const clsI = dbClasses.find((c) => (c.code || '').trim().toUpperCase() === 'SCM201 I' || c.id === 'class-scm201-i');
-  return clsI || dbClasses[0];
+  if (
+    nameUpper.includes('SCM201 I') ||
+    nameUpper.includes('LỚP I') ||
+    nameUpper.includes('HỌC PHẦN I') ||
+    codeUpper.endsWith('-I') ||
+    codeUpper.endsWith(' I')
+  ) {
+    const clsI = dbClasses.find((c) => (c.code || '').trim().toUpperCase() === 'SCM201 I' || c.id === 'class-scm201-i');
+    if (clsI) return clsI;
+  }
+
+  // Tuyệt đối KHÔNG đoán mò theo chữ số tiền tố MSSV để không gán sai học phần của sinh viên
+  return null;
 }
 
 export async function authenticateStudent(
@@ -239,10 +245,12 @@ export async function authenticateStudent(
             db.enrollments.push({ class_id: me.class_id, student_id: user!.id });
           }
         }
-        // Nếu chưa có ghi danh nào, phân loại lớp thông minh theo mã sinh viên / tên lớp
+        // Nếu chưa có ghi danh nào, chỉ phân loại nếu có chỉ định tường minh
         if (!db.enrollments.some((e) => e.student_id === user!.id) && db.classes.length > 0) {
           const targetCls = determineClassForStudent(code, user.full_name, db.classes);
-          db.enrollments.push({ class_id: targetCls.id, student_id: user!.id });
+          if (targetCls) {
+            db.enrollments.push({ class_id: targetCls.id, student_id: user!.id });
+          }
         }
         saveDemoDb();
       } else {
@@ -580,31 +588,38 @@ export function isQuizForStudent(
 export async function getStudentDashboard(user: AuthUser): Promise<StudentDashboard> {
   if (!useRemote) {
     const db = demoDb();
-    let myClassIds = db.enrollments
-      .filter((e) => e.student_id === user.id)
-      .map((e) => e.class_id);
+    const code = (user.student_code || '').trim().toUpperCase();
 
-    // Đối chiếu theo mã sinh viên MSSV nếu ID có sự thay đổi giữa các lần đồng bộ
-    if (myClassIds.length === 0 && user.student_code) {
-      const code = user.student_code.trim().toUpperCase();
-      const matchedUsers = db.users.filter((u) => (u.student_code || '').trim().toUpperCase() === code);
-      for (const mu of matchedUsers) {
-        const cids = db.enrollments.filter((e) => e.student_id === mu.id).map((e) => e.class_id);
-        cids.forEach((cid) => {
-          if (!myClassIds.includes(cid)) myClassIds.push(cid);
-        });
-      }
-    }
+    // 1. Tìm tất cả user IDs tương ứng với mã sinh viên này
+    const matchedUsers = code
+      ? db.users.filter((u) => (u.student_code || '').trim().toUpperCase() === code)
+      : [];
+    const allUserIds = Array.from(
+      new Set([user.id, `st-${code.toLowerCase()}`, ...matchedUsers.map((u) => u.id)].filter(Boolean))
+    );
 
-    // Nếu sinh viên chưa có lớp nào cụ thể, phân loại thông minh theo mã sinh viên / tên lớp
+    // 2. Thu thập danh sách lớp sinh viên thực sự được giảng viên ghi danh
+    let myClassIds = Array.from(
+      new Set(
+        db.enrollments
+          .filter((e) => allUserIds.includes(e.student_id))
+          .map((e) => e.class_id)
+      )
+    );
+
+    // Nếu chưa có lớp nào cụ thể, chỉ phân loại nếu tên hoặc mã có chỉ định tường minh (vd tài khoản test mẫu)
     if (myClassIds.length === 0 && db.classes.length > 0) {
-      const targetCls = determineClassForStudent(user.student_code || '', user.full_name || '', db.classes);
-      myClassIds = [targetCls.id];
-      if (!db.enrollments.some((e) => e.class_id === targetCls.id && e.student_id === user.id)) {
-        db.enrollments.push({ class_id: targetCls.id, student_id: user.id });
+      const targetCls = determineClassForStudent(code, user.full_name || '', db.classes);
+      if (targetCls) {
+        myClassIds = [targetCls.id];
+        for (const uId of allUserIds) {
+          if (!db.enrollments.some((e) => e.class_id === targetCls.id && e.student_id === uId)) {
+            db.enrollments.push({ class_id: targetCls.id, student_id: uId });
+          }
+        }
+        const { saveDemoDb } = await import('@/lib/server/demoStore');
+        saveDemoDb();
       }
-      const { saveDemoDb } = await import('@/lib/server/demoStore');
-      saveDemoDb();
     }
 
     const classes = db.classes.filter((c) => myClassIds.includes(c.id));
@@ -870,23 +885,18 @@ export async function checkQuizPasscode(
       return { ok: false, reason: 'ALREADY_SUBMITTED' };
     }
 
-    let myClassIds = db.enrollments
-      .filter((e) => e.student_id === studentId)
-      .map((e) => e.class_id);
+    const studentUser = db.users.find((x) => x.id === studentId);
+    const code = (studentUser?.student_code || studentCode || '').trim().toUpperCase();
+    const matched = code ? db.users.filter((x) => (x.student_code || '').trim().toUpperCase() === code) : [];
+    const allUserIds = Array.from(new Set([studentId, `st-${code.toLowerCase()}`, ...matched.map((u) => u.id)].filter(Boolean)));
 
-    if (myClassIds.length === 0) {
-      const u = db.users.find((x) => x.id === studentId);
-      if (u?.student_code) {
-        const code = u.student_code.trim().toUpperCase();
-        const matched = db.users.filter((x) => (x.student_code || '').trim().toUpperCase() === code);
-        for (const mu of matched) {
-          const cids = db.enrollments.filter((e) => e.student_id === mu.id).map((e) => e.class_id);
-          cids.forEach((cid) => {
-            if (!myClassIds.includes(cid)) myClassIds.push(cid);
-          });
-        }
-      }
-    }
+    const myClassIds = Array.from(
+      new Set(
+        db.enrollments
+          .filter((e) => allUserIds.includes(e.student_id))
+          .map((e) => e.class_id)
+      )
+    );
 
     const isAllowed = isQuizForStudent(quiz, myClassIds, db.classes);
     if (!isAllowed) {

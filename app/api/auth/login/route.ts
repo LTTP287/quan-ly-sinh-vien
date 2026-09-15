@@ -81,12 +81,27 @@ export async function POST(request: Request) {
         }
       }
       if (Array.isArray(body.demo_enrollments)) {
+        const handledCodes = new Set<string>();
         for (const en of body.demo_enrollments) {
           const stCode = (en.student_code || '').trim().toUpperCase();
-          const stUser = db.users.find((u) => (u.student_code || '').trim().toUpperCase() === stCode);
-          const stId = stUser ? stUser.id : en.student_id;
-          if (stId && !db.enrollments.some((e) => e.class_id === en.class_id && e.student_id === stId)) {
-            db.enrollments.push({ class_id: en.class_id, student_id: stId });
+          if (stCode) handledCodes.add(stCode);
+        }
+        if (handledCodes.size > 0) {
+          db.enrollments = db.enrollments.filter((e) => {
+            const u = db.users.find((x) => x.id === e.student_id);
+            const uCode = (u?.student_code || '').trim().toUpperCase();
+            return !handledCodes.has(uCode);
+          });
+        }
+        for (const en of body.demo_enrollments) {
+          const stCode = (en.student_code || '').trim().toUpperCase();
+          const canonicalId = `st-${stCode.toLowerCase()}`;
+          const stUsers = db.users.filter((u) => (u.student_code || '').trim().toUpperCase() === stCode);
+          const targetIds = Array.from(new Set([...stUsers.map((u) => u.id), canonicalId, en.student_id].filter(Boolean)));
+          for (const tId of targetIds) {
+            if (!db.enrollments.some((e) => e.class_id === en.class_id && e.student_id === tId)) {
+              db.enrollments.push({ class_id: en.class_id, student_id: tId });
+            }
           }
         }
       }

@@ -188,7 +188,7 @@ export default function ExcelStudentImporter({ classId, onImportSuccess }: Excel
             const email = `${finalCode.toLowerCase()}@student.university.edu.vn`;
 
             students.push({
-              id: `imported-${finalCode}-${rowIdx}`,
+              id: `st-${finalCode.toLowerCase()}`,
               email,
               student_code: finalCode,
               full_name: finalName,

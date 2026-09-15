@@ -62,33 +62,56 @@ export async function POST(request: Request) {
   const activeClassIds = new Set(db.classes.map((c) => c.id));
   db.enrollments = db.enrollments.filter((e) => activeClassIds.has(e.class_id));
 
-  for (const [classId, stList] of Object.entries(classStudents)) {
-    if (!activeClassIds.has(classId) || !Array.isArray(stList)) continue;
-
-    for (const st of stList as any[]) {
-      const code = (st.student_code || '').trim().toUpperCase();
-      if (!code) continue;
-
-      let existing = db.users.find((u) => (u.student_code || '').trim().toUpperCase() === code);
-      if (existing) {
-        existing.full_name = st.full_name || existing.full_name;
-        existing.date_of_birth = st.date_of_birth || existing.date_of_birth;
-        existing.email = st.email || existing.email;
-      } else {
-        existing = {
-          id: st.id || `st-${code.toLowerCase()}`,
-          student_code: code,
-          full_name: st.full_name || code,
-          email: st.email || `${code.toLowerCase()}@student.university.edu.vn`,
-          role: 'student',
-          date_of_birth: st.date_of_birth,
-        };
-        db.users.push(existing);
+  if (Object.keys(classStudents).length > 0) {
+    const codesInSync = new Set<string>();
+    for (const [classId, stList] of Object.entries(classStudents)) {
+      if (Array.isArray(stList)) {
+        for (const st of stList as any[]) {
+          const c = (st.student_code || '').trim().toUpperCase();
+          if (c) codesInSync.add(c);
+        }
       }
+    }
 
-      // Ghi danh CHÍNH XÁC sinh viên vào lớp học phần này
-      if (!db.enrollments.some((e) => e.class_id === classId && e.student_id === existing.id)) {
-        db.enrollments.push({ class_id: classId, student_id: existing.id });
+    // Dọn sạch ghi danh cũ của tất cả sinh viên được đồng bộ để tránh bị dính lớp sai
+    db.enrollments = db.enrollments.filter((e) => {
+      const u = db.users.find((x) => x.id === e.student_id);
+      const code = (u?.student_code || '').trim().toUpperCase();
+      return !codesInSync.has(code);
+    });
+
+    for (const [classId, stList] of Object.entries(classStudents)) {
+      if (!activeClassIds.has(classId) || !Array.isArray(stList)) continue;
+
+      for (const st of stList as any[]) {
+        const code = (st.student_code || '').trim().toUpperCase();
+        if (!code) continue;
+
+        const canonicalId = `st-${code.toLowerCase()}`;
+        let existing = db.users.find((u) => (u.student_code || '').trim().toUpperCase() === code);
+        if (existing) {
+          existing.full_name = st.full_name || existing.full_name;
+          existing.date_of_birth = st.date_of_birth || existing.date_of_birth;
+          existing.email = st.email || existing.email;
+        } else {
+          existing = {
+            id: st.id || canonicalId,
+            student_code: code,
+            full_name: st.full_name || code,
+            email: st.email || `${code.toLowerCase()}@student.university.edu.vn`,
+            role: 'student',
+            date_of_birth: st.date_of_birth,
+          };
+          db.users.push(existing);
+        }
+
+        // Ghi danh CHÍNH XÁC sinh viên vào lớp học phần này (cho cả existing ID lẫn canonical ID)
+        const targetIds = Array.from(new Set([existing.id, canonicalId]));
+        for (const tId of targetIds) {
+          if (!db.enrollments.some((e) => e.class_id === classId && e.student_id === tId)) {
+            db.enrollments.push({ class_id: classId, student_id: tId });
+          }
+        }
       }
     }
   }

@@ -321,18 +321,28 @@ export async function importStudents(
   if (!isRemote) {
     const merged = local.saveStoredStudents(
       classId,
-      students.map((s, i) => ({
-        id: `st-${Date.now()}-${i}`,
-        student_code: s.student_code,
-        full_name: s.full_name,
-        email: s.email || studentCodeToEmail(s.student_code),
-        role: 'student' as const,
-        date_of_birth: s.date_of_birth || null,
-        created_at: new Date().toISOString(),
-      }))
+      students.map((s) => {
+        const code = s.student_code.trim();
+        return {
+          id: `st-${code.toLowerCase()}`,
+          student_code: code,
+          full_name: s.full_name.trim(),
+          email: s.email || studentCodeToEmail(code),
+          role: 'student' as const,
+          date_of_birth: s.date_of_birth || null,
+          created_at: new Date().toISOString(),
+        };
+      })
     );
     // Đồng bộ toàn bộ dữ liệu lớp và sinh viên lên bộ nhớ máy chủ để sinh viên đăng nhập được ngay
-    syncDemoQuizzesToServer();
+    await syncDemoQuizzesToServer();
+    try {
+      await fetch('/api/students/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classId, students }),
+      });
+    } catch {}
     return { created: students.length, enrolled: merged.length, skipped: 0, errors: [] };
   }
 
@@ -350,7 +360,7 @@ export async function importStudents(
 export async function removeStudent(classId: string, studentId: string): Promise<UserProfile[]> {
   if (!isRemote) {
     const updated = local.deleteStoredStudent(classId, studentId);
-    syncDemoQuizzesToServer();
+    await syncDemoQuizzesToServer();
     return updated;
   }
 
