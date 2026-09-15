@@ -677,22 +677,22 @@ export function getStoredQuizzes(): Quiz[] {
           return matchDefault?.image_url ? { ...quest, image_url: matchDefault.image_url } : quest;
         });
 
-        // Bổ sung class-scm201-e vào assigned_class_ids và class_schedules nếu đề thi thuộc môn SCM201
-        const assigned = Array.isArray(q.assigned_class_ids) ? [...q.assigned_class_ids] : ['class-scm201-i'];
-        if (!assigned.includes('class-scm201-e')) {
-          assigned.push('class-scm201-e');
-        }
+        const assigned = Array.isArray(q.assigned_class_ids) && q.assigned_class_ids.length > 0
+          ? [...q.assigned_class_ids]
+          : (isMidterm ? ['class-scm201-i', 'class-scm201-e'] : ['class-scm201-i']);
         const schedules = { ...(q.class_schedules || {}) };
         const refSched: any = Object.values(schedules)[0] || null;
         const pass = q.passcode || (isMidterm ? 'LOG888' : 'QUIZ08');
-        if (!schedules['class-scm201-e']) {
-          schedules['class-scm201-e'] = {
-            class_id: 'class-scm201-e',
-            start_at: refSched?.start_at || q.start_at || new Date(Date.now() - 3600000).toISOString(),
-            end_at: refSched?.end_at || q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
-            access_code: pass,
-            is_active: true,
-          };
+        for (const cid of assigned) {
+          if (!schedules[cid]) {
+            schedules[cid] = {
+              class_id: cid,
+              start_at: refSched?.start_at || q.start_at || new Date(Date.now() - 3600000).toISOString(),
+              end_at: refSched?.end_at || q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
+              access_code: pass,
+              is_active: true,
+            };
+          }
         }
 
         return {
@@ -711,21 +711,22 @@ export function getStoredQuizzes(): Quiz[] {
       }
 
       // Đề trắc nghiệm thông thường (Quiz 05, Quiz 08...)
-      const assigned = Array.isArray(q.assigned_class_ids) ? [...q.assigned_class_ids] : ['class-scm201-i'];
-      if (!assigned.includes('class-scm201-e')) {
-        assigned.push('class-scm201-e');
-      }
+      const assigned = Array.isArray(q.assigned_class_ids) && q.assigned_class_ids.length > 0
+        ? [...q.assigned_class_ids]
+        : (q.title?.toLowerCase().includes('quiz 08') ? ['class-scm201-e'] : ['class-scm201-i']);
       const schedules = { ...(q.class_schedules || {}) };
       const refSched: any = Object.values(schedules)[0] || null;
       const pass = q.passcode || (q.title?.toLowerCase().includes('quiz 08') ? 'QUIZ08' : 'SCM201');
-      if (!schedules['class-scm201-e']) {
-        schedules['class-scm201-e'] = {
-          class_id: 'class-scm201-e',
-          start_at: refSched?.start_at || q.start_at || new Date(Date.now() - 3600000).toISOString(),
-          end_at: refSched?.end_at || q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
-          access_code: pass,
-          is_active: true,
-        };
+      for (const cid of assigned) {
+        if (!schedules[cid]) {
+          schedules[cid] = {
+            class_id: cid,
+            start_at: refSched?.start_at || q.start_at || new Date(Date.now() - 3600000).toISOString(),
+            end_at: refSched?.end_at || q.end_at || new Date(Date.now() + 86400000 * 30).toISOString(),
+            access_code: pass,
+            is_active: true,
+          };
+        }
       }
 
       return {

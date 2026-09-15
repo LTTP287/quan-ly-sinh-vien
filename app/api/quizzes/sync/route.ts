@@ -21,8 +21,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, mode: 'remote' });
   }
 
-  // Ở chế độ demo: Cho phép đồng bộ từ trình duyệt Giảng viên lên máy chủ
+  // Ở chế độ demo: Chỉ cho phép Giảng viên đồng bộ lên máy chủ
   const auth = await getAuthContext();
+  if (auth && auth.user.role !== 'lecturer') {
+    return NextResponse.json({ error: 'Chỉ Giảng viên mới được phép đồng bộ đề thi.' }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   const quizzes = Array.isArray(body?.quizzes) ? body.quizzes : [];

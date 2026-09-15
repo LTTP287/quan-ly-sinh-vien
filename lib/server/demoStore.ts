@@ -661,17 +661,24 @@ export function demoDb(): DemoDb {
     modified = true;
   }
 
-  // 4. Đảm bảo tất cả đề thi (Quiz 05, Quiz 08, Midterm...) đều được gán cho cả lớp SCM201 I và SCM201 E kèm lịch thi
-  const scmClassIds = ['class-scm201-i', 'class-scm201-e'];
+  // 4. Đảm bảo lịch thi (class_schedules) và mã phòng thi hợp lệ cho các lớp được phân công
   for (const q of db.quizzes) {
     if (!q.class_ids) q.class_ids = [];
     let changedQuiz = false;
-    for (const cid of scmClassIds) {
-      if (!q.class_ids.includes(cid)) {
-        q.class_ids.push(cid);
-        changedQuiz = true;
+
+    // Nếu đề thi chưa được gán lớp nào, gán lớp mặc định
+    if (q.class_ids.length === 0) {
+      const titleLower = (q.title || '').toLowerCase();
+      if (q.id === 'midterm-scm-2026' || titleLower.includes('midterm')) {
+        q.class_ids = ['class-scm201-i', 'class-scm201-e'];
+      } else if (q.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) {
+        q.class_ids = ['class-scm201-e'];
+      } else {
+        q.class_ids = ['class-scm201-i'];
       }
+      changedQuiz = true;
     }
+
     if (!q.class_schedules) q.class_schedules = {};
 
     let refSchedule: any = Object.values(q.class_schedules)[0] || null;
@@ -683,7 +690,7 @@ export function demoDb(): DemoDb {
       else if (q.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) expectedCode = 'QUIZ08';
     }
 
-    for (const cid of scmClassIds) {
+    for (const cid of q.class_ids) {
       if (!q.class_schedules[cid]) {
         q.class_schedules[cid] = {
           class_id: cid,
@@ -696,10 +703,6 @@ export function demoDb(): DemoDb {
       } else {
         if (!q.class_schedules[cid].access_code && expectedCode) {
           q.class_schedules[cid].access_code = expectedCode;
-          changedQuiz = true;
-        }
-        if (q.class_schedules[cid].is_active === false) {
-          q.class_schedules[cid].is_active = true;
           changedQuiz = true;
         }
       }

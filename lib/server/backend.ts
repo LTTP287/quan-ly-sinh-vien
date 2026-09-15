@@ -189,11 +189,20 @@ export async function authenticateStudent(
         };
         db.users.push(user);
 
-        // Tự động ghi danh vào tất cả lớp học phần đang có để sinh viên thấy được bài thi
-        for (const c of db.classes) {
-          if (!db.enrollments.some((e) => e.class_id === c.id && e.student_id === user!.id)) {
-            db.enrollments.push({ class_id: c.id, student_id: user.id });
+        // Nếu sinh viên đã có ghi danh trước đó, đảm bảo ID mới cũng giữ nguyên ghi danh
+        const matchingEnrollments = db.enrollments.filter((e) => {
+          const u = db.users.find((x) => x.id === e.student_id);
+          return u && (u.student_code || '').trim().toUpperCase() === code;
+        });
+        for (const me of matchingEnrollments) {
+          if (!db.enrollments.some((e) => e.class_id === me.class_id && e.student_id === user!.id)) {
+            db.enrollments.push({ class_id: me.class_id, student_id: user!.id });
           }
+        }
+        // Nếu chưa có ghi danh nào, chỉ gán vào lớp mặc định thay vì tất cả các lớp
+        if (!db.enrollments.some((e) => e.student_id === user!.id) && db.classes.length > 0) {
+          const defaultCls = db.classes.find((c) => (c.code || '').includes('SCM201 I')) || db.classes[0];
+          db.enrollments.push({ class_id: defaultCls.id, student_id: user!.id });
         }
         saveDemoDb();
       } else {
@@ -504,7 +513,7 @@ export function isQuizForStudent(
   dbClasses: { id: string; code: string; name: string }[]
 ): boolean {
   if (!quiz.is_published) return false;
-  if (!quiz.class_ids || quiz.class_ids.length === 0) return true;
+  if (!quiz.class_ids || quiz.class_ids.length === 0) return false;
 
   const myClassIdSet = new Set(myClassIds);
   if (quiz.class_ids.some((cid) => myClassIdSet.has(cid))) return true;
@@ -524,9 +533,6 @@ export function isQuizForStudent(
       if (myClassCodes.has(targetCode) || myClassNames.has(targetName)) return true;
     }
   }
-
-  // Nếu ở chế độ demo và toàn bộ hệ thống đang hoạt động, cho phép hiển thị đề thi của môn học
-  if (!useRemote) return true;
 
   return false;
 }
@@ -550,13 +556,12 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
       }
     }
 
-    // Nếu sinh viên chưa có lớp nào cụ thể, tự động gán vào tất cả các lớp đang có
+    // Nếu sinh viên chưa có lớp nào cụ thể, gán vào lớp mặc định SCM201 I hoặc lớp đầu tiên
     if (myClassIds.length === 0 && db.classes.length > 0) {
-      myClassIds = db.classes.map((c) => c.id);
-      for (const cid of myClassIds) {
-        if (!db.enrollments.some((e) => e.class_id === cid && e.student_id === user.id)) {
-          db.enrollments.push({ class_id: cid, student_id: user.id });
-        }
+      const defaultCls = db.classes.find((c) => (c.code || '').includes('SCM201 I')) || db.classes[0];
+      myClassIds = [defaultCls.id];
+      if (!db.enrollments.some((e) => e.class_id === defaultCls.id && e.student_id === user.id)) {
+        db.enrollments.push({ class_id: defaultCls.id, student_id: user.id });
       }
       const { saveDemoDb } = await import('@/lib/server/demoStore');
       saveDemoDb();
@@ -582,19 +587,32 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           }
           return false;
         });
-        // Tìm lớp của sinh viên tương ứng với đề thi này
+
+        // Tìm lớp của sinh viên tương ứng với đề thi này (chỉ từ danh sách các lớp sinh viên thực sự tham gia)
         let studentClass = classes.find((c) => q.class_ids.includes(c.id));
-        if (!studentClass && myClassIds.length > 0) {
-          studentClass = classes.find((c) => myClassIds.includes(c.id));
+        if (!studentClass) {
+          const qCidSet = new Set(q.class_ids.map((id) => (id || '').trim().toUpperCase()));
+          studentClass = classes.find((c) => {
+            const code = (c.code || '').trim().toUpperCase();
+            const name = (c.name || '').trim().toLowerCase();
+            return qCidSet.has(code) || qCidSet.has(c.id.toUpperCase());
+          });
         }
         if (!studentClass && classes.length > 0) {
           studentClass = classes[0];
         }
-        if (!studentClass && db.classes.length > 0) {
-          studentClass = db.classes.find((c) => (c.code || '').includes('SCM201 E')) || db.classes[0];
-        }
 
         let classSchedule = studentClass ? q.class_schedules?.[studentClass.id] : undefined;
+        if (!classSchedule && q.class_schedules && studentClass) {
+          const clsCode = (studentClass.code || '').trim().toUpperCase();
+          for (const [scId, sc] of Object.entries(q.class_schedules)) {
+            const matchedCls = db.classes.find((c) => c.id === scId);
+            if (matchedCls && (matchedCls.code || '').trim().toUpperCase() === clsCode) {
+              classSchedule = sc;
+              break;
+            }
+          }
+        }
         if (!classSchedule && q.class_schedules) {
           for (const cid of myClassIds) {
             if (q.class_schedules[cid]) {
@@ -602,20 +620,9 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
               break;
             }
           }
-          if (!classSchedule && studentClass) {
-            // Đối chiếu theo mã lớp (ví dụ 'SCM201 E' hay 'SCM201 I')
-            const clsCode = (studentClass.code || '').trim().toUpperCase();
-            for (const [scId, sc] of Object.entries(q.class_schedules)) {
-              const matchedCls = db.classes.find((c) => c.id === scId);
-              if (matchedCls && (matchedCls.code || '').trim().toUpperCase() === clsCode) {
-                classSchedule = sc;
-                break;
-              }
-            }
-          }
-          if (!classSchedule) {
-            classSchedule = Object.values(q.class_schedules)[0];
-          }
+        }
+        if (!classSchedule && q.class_schedules) {
+          classSchedule = Object.values(q.class_schedules)[0];
         }
 
         let effectivePasscode = (classSchedule?.access_code && classSchedule.access_code.trim())
@@ -645,7 +652,7 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           end_at: endAt,
           requires_passcode: !!effectivePasscode,
           passcode_expires_at: q.passcode_expires_at,
-          class_name: studentClass?.name || studentClass?.code || 'Quản trị Chuỗi cung ứng - SCM201',
+          class_name: studentClass?.name || (studentClass?.code ? `Quản trị Chuỗi cung ứng - ${studentClass.code}` : 'Lớp học phần'),
           submitted: !!score?.submitted_at,
           score: q.show_results ? score?.total_score ?? null : null,
           show_results: q.show_results,
@@ -653,12 +660,11 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
       })
       .sort((a, b) => a.start_at.localeCompare(b.start_at));
 
-    // Khử trùng lặp đề thi (giữ 1 bản duy nhất cho mỗi tiêu đề đề thi)
-    const seenTitles = new Set<string>();
+    // Khử trùng lặp đề thi theo ID (giữ 1 bản duy nhất cho mỗi ID đề thi)
+    const seenIds = new Set<string>();
     const quizzes: DashboardQuiz[] = quizzesRaw.filter((q) => {
-      const key = q.title.trim().toLowerCase();
-      if (seenTitles.has(key)) return false;
-      seenTitles.add(key);
+      if (seenIds.has(q.id)) return false;
+      seenIds.add(q.id);
       return true;
     });
 

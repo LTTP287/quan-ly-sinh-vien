@@ -6,7 +6,7 @@ import {
   UserCheck, BookOpen, Clock, AlertTriangle, ArrowRight,
   LogOut, Sparkles, CheckCircle2, Lock, KeyRound, History, X,
 } from 'lucide-react';
-import { signOut, syncDemoQuizzesToServer } from '@/lib/data';
+import { signOut } from '@/lib/data';
 
 interface DashboardUser {
   id: string;
@@ -75,7 +75,6 @@ export default function StudentDashboard() {
     setLoading(true);
     setLoadError(null);
     try {
-      await syncDemoQuizzesToServer().catch(() => {});
       const res = await fetch('/api/student/dashboard', { cache: 'no-store' });
       if (res.status === 401) {
         // Phiên đã bị thay thế ở thiết bị khác (Single Session Lock) hoặc hết hạn
