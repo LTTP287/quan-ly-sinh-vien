@@ -58,12 +58,6 @@ export async function signInStudent(studentCode: string, dateOfBirth: string): P
     student_code: studentCode.trim(),
     date_of_birth: (dateOfBirth || '').trim(),
   };
-  if (!isRemote) {
-    body.demo_students = local.getAllStoredStudents();
-    body.demo_classes = local.getStoredClasses();
-    body.demo_enrollments = local.getAllStoredEnrollments();
-    body.demo_quizzes = local.getStoredQuizzes();
-  }
   return postLogin(body);
 }
 

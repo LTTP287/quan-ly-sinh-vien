@@ -164,6 +164,12 @@ function seed(): DemoDb {
 
   const defaultClasses = [
     {
+      id: 'class-scm201-c',
+      code: 'SCM201 C',
+      name: 'Quản trị Chuỗi cung ứng - SCM201 C',
+      semester: 'HKI (2026 - 2027)',
+    },
+    {
       id: 'class-scm201-i',
       code: 'SCM201 I',
       name: 'Quản trị Chuỗi cung ứng - SCM201 I',
@@ -395,6 +401,117 @@ function seed(): DemoDb {
     questions: chapter8Questions,
   };
 
+  const chapter4Questions: DemoQuestion[] = [
+    {
+      id: 'c4-q1',
+      quiz_id: 'quiz-06-scm',
+      question_text: 'Trong hoạt động Mua hàng và Cung ứng (Procurement), khái niệm TCO (Total Cost of Ownership) bao gồm những chi phí nào?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 0,
+      options: [
+        { id: 'c4-q1-a', question_id: 'c4-q1', option_text: 'Chi phí mua hàng, chi phí vận chuyển, chi phí lưu kho, bảo trì và chi phí thanh lý/thu hồi', is_correct: true, order_index: 0 },
+        { id: 'c4-q1-b', question_id: 'c4-q1', option_text: 'Chỉ tính riêng đơn giá ghi trên hóa đơn của nhà cung cấp', is_correct: false, order_index: 1 },
+        { id: 'c4-q1-c', question_id: 'c4-q1', option_text: 'Chỉ bao gồm phí thuế nhập khẩu và phí hải quan cảng biển', is_correct: false, order_index: 2 },
+        { id: 'c4-q1-d', question_id: 'c4-q1', option_text: 'Chi phí tiếp thị và quảng cáo sản phẩm ra thị trường', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c4-q2',
+      quiz_id: 'quiz-06-scm',
+      question_text: 'Chiến lược tìm nguồn cung ứng đơn lẻ (Single Sourcing) có ưu điểm lớn nhất là gì?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 1,
+      options: [
+        { id: 'c4-q2-a', question_id: 'c4-q2', option_text: 'Xây dựng mối quan hệ đối tác chiến lược sâu sắc và đạt được lợi thế kinh tế theo quy mô', is_correct: true, order_index: 0 },
+        { id: 'c4-q2-b', question_id: 'c4-q2', option_text: 'Hoàn toàn triệt tiêu rủi ro gián đoạn nguồn cung', is_correct: false, order_index: 1 },
+        { id: 'c4-q2-c', question_id: 'c4-q2', option_text: 'Luôn luôn mua được với giá rẻ nhất thị trường vào mọi thời điểm', is_correct: false, order_index: 2 },
+        { id: 'c4-q2-d', question_id: 'c4-q2', option_text: 'Không cần ký kết hợp đồng thương mại hay cam kết chất lượng', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c4-q3',
+      quiz_id: 'quiz-06-scm',
+      question_text: 'Trong ma trận Kraljic, các mặt hàng có rủi ro nguồn cung cao và tác động lợi nhuận lớn được xếp vào nhóm nào?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 2,
+      options: [
+        { id: 'c4-q3-a', question_id: 'c4-q3', option_text: 'Mặt hàng chiến lược (Strategic items)', is_correct: true, order_index: 0 },
+        { id: 'c4-q3-b', question_id: 'c4-q3', option_text: 'Mặt hàng đòn bẩy (Leverage items)', is_correct: false, order_index: 1 },
+        { id: 'c4-q3-c', question_id: 'c4-q3', option_text: 'Mặt hàng nút cổ chai (Bottleneck items)', is_correct: false, order_index: 2 },
+        { id: 'c4-q3-d', question_id: 'c4-q3', option_text: 'Mặt hàng thông thường (Non-critical items)', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c4-q4',
+      quiz_id: 'quiz-06-scm',
+      question_text: 'Quy trình Mua hàng P2P (Procure-to-Pay) kết thúc bằng bước nào sau đây?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 3,
+      options: [
+        { id: 'c4-q4-a', question_id: 'c4-q4', option_text: 'Đối soát hóa đơn và thực hiện thanh toán cho nhà cung cấp', is_correct: true, order_index: 0 },
+        { id: 'c4-q4-b', question_id: 'c4-q4', option_text: 'Gửi yêu cầu báo giá (RFQ) đến các nhà thầu', is_correct: false, order_index: 1 },
+        { id: 'c4-q4-c', question_id: 'c4-q4', option_text: 'Phát hành đơn đặt hàng PO (Purchase Order)', is_correct: false, order_index: 2 },
+        { id: 'c4-q4-d', question_id: 'c4-q4', option_text: 'Đánh giá năng lực nhà cung cấp ban đầu', is_correct: false, order_index: 3 },
+      ],
+    },
+    {
+      id: 'c4-q5',
+      quiz_id: 'quiz-06-scm',
+      question_text: 'Mục đích chính của chứng từ Purchase Order (PO) là gì?',
+      question_type: 'multiple_choice',
+      points: 2,
+      order_index: 4,
+      options: [
+        { id: 'c4-q5-a', question_id: 'c4-q5', option_text: 'Cam kết pháp lý chính thức từ người mua gửi người bán về chủng loại, số lượng và đơn giá hàng hóa', is_correct: true, order_index: 0 },
+        { id: 'c4-q5-b', question_id: 'c4-q5', option_text: 'Xác nhận người mua đã hoàn thành thanh toán tiền hàng', is_correct: false, order_index: 1 },
+        { id: 'c4-q5-c', question_id: 'c4-q5', option_text: 'Biên bản bàn giao và kiểm định chất lượng hàng hóa tại kho', is_correct: false, order_index: 2 },
+        { id: 'c4-q5-d', question_id: 'c4-q5', option_text: 'Tài liệu hướng dẫn vận hành thiết bị do nhà sản xuất cung cấp', is_correct: false, order_index: 3 },
+      ],
+    },
+  ];
+
+  const quiz06: DemoQuiz = {
+    id: 'quiz-06-scm',
+    title: 'Quiz 06',
+    description: 'Kiểm tra trắc nghiệm Quiz 06: Mua hàng & Quản trị nguồn cung (Procurement & Sourcing). Thời gian: 15 phút, 5 câu hỏi ngẫu nhiên.',
+    time_limit_minutes: 15,
+    is_published: true,
+    show_results: false,
+    passcode: 'QUIZ06',
+    passcode_expires_at: null,
+    class_ids: ['class-scm201-c'],
+    class_schedules: {
+      'class-scm201-c': {
+        class_id: 'class-scm201-c',
+        start_at: new Date(Date.now() - 3600000).toISOString(),
+        end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+        access_code: 'QUIZ06',
+        is_active: true,
+      },
+    },
+    start_at: new Date(Date.now() - 3600000).toISOString(),
+    end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+    is_active: true,
+    shuffle_questions: true,
+    shuffle_options: true,
+    prevent_previous: true,
+    questions_per_student: 5,
+    questions: chapter4Questions,
+  };
+
+  const studentC: DemoUser = {
+    id: 'st-scm201c-student',
+    student_code: '22120777',
+    full_name: 'Sinh Viên Lớp SCM201 C',
+    email: '22120777@student.university.edu.vn',
+    role: 'student',
+    date_of_birth: '2004-07-07',
+  };
+
   const midterm = createDefaultMidtermQuiz();
   const midtermQuiz: DemoQuiz = {
     id: 'midterm-scm-2026',
@@ -405,8 +522,15 @@ function seed(): DemoDb {
     show_results: false,
     passcode: 'LOG888',
     passcode_expires_at: null,
-    class_ids: ['class-scm201-i', 'class-scm201-e'],
+    class_ids: ['class-scm201-c', 'class-scm201-i', 'class-scm201-e'],
     class_schedules: {
+      'class-scm201-c': {
+        class_id: 'class-scm201-c',
+        start_at: '2026-09-13T17:59',
+        end_at: '2026-09-20T17:59',
+        access_code: 'LOG888',
+        is_active: true,
+      },
       'class-scm201-i': {
         class_id: 'class-scm201-i',
         start_at: '2026-09-13T17:59',
@@ -438,13 +562,14 @@ function seed(): DemoDb {
   };
 
   return {
-    users: [...lecturers, defaultStudent],
+    users: [...lecturers, defaultStudent, studentC],
     classes: defaultClasses,
     enrollments: [
+      { class_id: 'class-scm201-c', student_id: 'st-scm201c-student' },
       { class_id: 'class-scm201-i', student_id: 'st-123456789' },
       { class_id: 'class-scm201-e', student_id: 'st-123456789' },
     ],
-    quizzes: [defaultQuiz, quiz08, midtermQuiz],
+    quizzes: [defaultQuiz, quiz06, quiz08, midtermQuiz],
     sessions: [],
     scores: [],
   };
@@ -638,10 +763,21 @@ export function demoDb(): DemoDb {
     }
   }
 
-  // 3. Đảm bảo cả hai lớp SCM201 I và SCM201 E đều luôn có mặt
+  // 3. Đảm bảo cả ba lớp SCM201 C, SCM201 I và SCM201 E đều luôn có mặt
+  const hasClassC = db.classes.some((c) => c.id === 'class-scm201-c' || (c.code || '').trim().toUpperCase() === 'SCM201 C');
+  if (!hasClassC) {
+    db.classes.unshift({
+      id: 'class-scm201-c',
+      code: 'SCM201 C',
+      name: 'Quản trị Chuỗi cung ứng - SCM201 C',
+      semester: 'HKI (2026 - 2027)',
+    });
+    modified = true;
+  }
+
   const hasClassI = db.classes.some((c) => c.id === 'class-scm201-i' || (c.code || '').trim().toUpperCase() === 'SCM201 I');
   if (!hasClassI) {
-    db.classes.unshift({
+    db.classes.push({
       id: 'class-scm201-i',
       code: 'SCM201 I',
       name: 'Quản trị Chuỗi cung ứng - SCM201 I',
@@ -661,6 +797,130 @@ export function demoDb(): DemoDb {
     modified = true;
   }
 
+  // Đảm bảo có sinh viên mẫu đại diện cho lớp SCM201 C
+  const hasStudentC = db.users.some((u) => u.id === 'st-scm201c-student' || (u.student_code || '').trim().toUpperCase() === '22120777');
+  if (!hasStudentC) {
+    db.users.push({
+      id: 'st-scm201c-student',
+      student_code: '22120777',
+      full_name: 'Sinh Viên Lớp SCM201 C',
+      email: '22120777@student.university.edu.vn',
+      role: 'student',
+      date_of_birth: '2004-07-07',
+    });
+    modified = true;
+  }
+  const stCUser = db.users.find((u) => u.id === 'st-scm201c-student' || (u.student_code || '').trim().toUpperCase() === '22120777');
+  if (stCUser && !db.enrollments.some((e) => e.class_id === 'class-scm201-c' && e.student_id === stCUser.id)) {
+    db.enrollments.push({ class_id: 'class-scm201-c', student_id: stCUser.id });
+    modified = true;
+  }
+
+  // Đảm bảo có đề thi Quiz 06 gán riêng cho lớp SCM201 C
+  const hasQuiz06 = db.quizzes.some((q) => q.id === 'quiz-06-scm' || (q.title || '').toLowerCase().includes('quiz 06'));
+  if (!hasQuiz06) {
+    db.quizzes.push({
+      id: 'quiz-06-scm',
+      title: 'Quiz 06',
+      description: 'Kiểm tra trắc nghiệm Quiz 06: Mua hàng & Quản trị nguồn cung (Procurement & Sourcing). Thời gian: 15 phút, 5 câu hỏi ngẫu nhiên.',
+      time_limit_minutes: 15,
+      is_published: true,
+      show_results: false,
+      passcode: 'QUIZ06',
+      passcode_expires_at: null,
+      class_ids: ['class-scm201-c'],
+      class_schedules: {
+        'class-scm201-c': {
+          class_id: 'class-scm201-c',
+          start_at: new Date(Date.now() - 3600000).toISOString(),
+          end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+          access_code: 'QUIZ06',
+          is_active: true,
+        },
+      },
+      start_at: new Date(Date.now() - 3600000).toISOString(),
+      end_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+      is_active: true,
+      shuffle_questions: true,
+      shuffle_options: true,
+      prevent_previous: true,
+      questions_per_student: 5,
+      questions: [
+        {
+          id: 'c4-q1',
+          quiz_id: 'quiz-06-scm',
+          question_text: 'Trong hoạt động Mua hàng và Cung ứng (Procurement), khái niệm TCO (Total Cost of Ownership) bao gồm những chi phí nào?',
+          question_type: 'multiple_choice',
+          points: 2,
+          order_index: 0,
+          options: [
+            { id: 'c4-q1-a', question_id: 'c4-q1', option_text: 'Chi phí mua hàng, chi phí vận chuyển, chi phí lưu kho, bảo trì và chi phí thanh lý/thu hồi', is_correct: true, order_index: 0 },
+            { id: 'c4-q1-b', question_id: 'c4-q1', option_text: 'Chỉ tính riêng đơn giá ghi trên hóa đơn của nhà cung cấp', is_correct: false, order_index: 1 },
+            { id: 'c4-q1-c', question_id: 'c4-q1', option_text: 'Chỉ bao gồm phí thuế nhập khẩu và phí hải quan cảng biển', is_correct: false, order_index: 2 },
+            { id: 'c4-q1-d', question_id: 'c4-q1', option_text: 'Chi phí tiếp thị và quảng cáo sản phẩm ra thị trường', is_correct: false, order_index: 3 },
+          ],
+        },
+        {
+          id: 'c4-q2',
+          quiz_id: 'quiz-06-scm',
+          question_text: 'Chiến lược tìm nguồn cung ứng đơn lẻ (Single Sourcing) có ưu điểm lớn nhất là gì?',
+          question_type: 'multiple_choice',
+          points: 2,
+          order_index: 1,
+          options: [
+            { id: 'c4-q2-a', question_id: 'c4-q2', option_text: 'Xây dựng mối quan hệ đối tác chiến lược sâu sắc và đạt được lợi thế kinh tế theo quy mô', is_correct: true, order_index: 0 },
+            { id: 'c4-q2-b', question_id: 'c4-q2', option_text: 'Hoàn toàn triệt tiêu rủi ro gián đoạn nguồn cung', is_correct: false, order_index: 1 },
+            { id: 'c4-q2-c', question_id: 'c4-q2', option_text: 'Luôn luôn mua được với giá rẻ nhất thị trường vào mọi thời điểm', is_correct: false, order_index: 2 },
+            { id: 'c4-q2-d', question_id: 'c4-q2', option_text: 'Không cần ký kết hợp đồng thương mại hay cam kết chất lượng', is_correct: false, order_index: 3 },
+          ],
+        },
+        {
+          id: 'c4-q3',
+          quiz_id: 'quiz-06-scm',
+          question_text: 'Trong ma trận Kraljic, các mặt hàng có rủi ro nguồn cung cao và tác động lợi nhuận lớn được xếp vào nhóm nào?',
+          question_type: 'multiple_choice',
+          points: 2,
+          order_index: 2,
+          options: [
+            { id: 'c4-q3-a', question_id: 'c4-q3', option_text: 'Mặt hàng chiến lược (Strategic items)', is_correct: true, order_index: 0 },
+            { id: 'c4-q3-b', question_id: 'c4-q3', option_text: 'Mặt hàng đòn bẩy (Leverage items)', is_correct: false, order_index: 1 },
+            { id: 'c4-q3-c', question_id: 'c4-q3', option_text: 'Mặt hàng nút cổ chai (Bottleneck items)', is_correct: false, order_index: 2 },
+            { id: 'c4-q3-d', question_id: 'c4-q3', option_text: 'Mặt hàng thông thường (Non-critical items)', is_correct: false, order_index: 3 },
+          ],
+        },
+        {
+          id: 'c4-q4',
+          quiz_id: 'quiz-06-scm',
+          question_text: 'Quy trình Mua hàng P2P (Procure-to-Pay) kết thúc bằng bước nào sau đây?',
+          question_type: 'multiple_choice',
+          points: 2,
+          order_index: 3,
+          options: [
+            { id: 'c4-q4-a', question_id: 'c4-q4', option_text: 'Đối soát hóa đơn và thực hiện thanh toán cho nhà cung cấp', is_correct: true, order_index: 0 },
+            { id: 'c4-q4-b', question_id: 'c4-q4', option_text: 'Gửi yêu cầu báo giá (RFQ) đến các nhà thầu', is_correct: false, order_index: 1 },
+            { id: 'c4-q4-c', question_id: 'c4-q4', option_text: 'Phát hành đơn đặt hàng PO (Purchase Order)', is_correct: false, order_index: 2 },
+            { id: 'c4-q4-d', question_id: 'c4-q4', option_text: 'Đánh giá năng lực nhà cung cấp ban đầu', is_correct: false, order_index: 3 },
+          ],
+        },
+        {
+          id: 'c4-q5',
+          quiz_id: 'quiz-06-scm',
+          question_text: 'Mục đích chính của chứng từ Purchase Order (PO) là gì?',
+          question_type: 'multiple_choice',
+          points: 2,
+          order_index: 4,
+          options: [
+            { id: 'c4-q5-a', question_id: 'c4-q5', option_text: 'Cam kết pháp lý chính thức từ người mua gửi người bán về chủng loại, số lượng và đơn giá hàng hóa', is_correct: true, order_index: 0 },
+            { id: 'c4-q5-b', question_id: 'c4-q5', option_text: 'Xác nhận người mua đã hoàn thành thanh toán tiền hàng', is_correct: false, order_index: 1 },
+            { id: 'c4-q5-c', question_id: 'c4-q5', option_text: 'Biên bản bàn giao và kiểm định chất lượng hàng hóa tại kho', is_correct: false, order_index: 2 },
+            { id: 'c4-q5-d', question_id: 'c4-q5', option_text: 'Tài liệu hướng dẫn vận hành thiết bị do nhà sản xuất cung cấp', is_correct: false, order_index: 3 },
+          ],
+        },
+      ],
+    });
+    modified = true;
+  }
+
   // 4. Đảm bảo lịch thi (class_schedules) và mã phòng thi hợp lệ cho các lớp được phân công
   for (const q of db.quizzes) {
     if (!q.class_ids) q.class_ids = [];
@@ -670,9 +930,11 @@ export function demoDb(): DemoDb {
     if (q.class_ids.length === 0) {
       const titleLower = (q.title || '').toLowerCase();
       if (q.id === 'midterm-scm-2026' || titleLower.includes('midterm')) {
-        q.class_ids = ['class-scm201-i', 'class-scm201-e'];
+        q.class_ids = ['class-scm201-c', 'class-scm201-i', 'class-scm201-e'];
       } else if (q.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) {
         q.class_ids = ['class-scm201-e'];
+      } else if (q.id.includes('quiz-06') || titleLower.includes('quiz 06') || titleLower.includes('quiz - 06')) {
+        q.class_ids = ['class-scm201-c'];
       } else {
         q.class_ids = ['class-scm201-i'];
       }
@@ -687,6 +949,7 @@ export function demoDb(): DemoDb {
     if (!expectedCode) {
       if (q.id === 'midterm-scm-2026' || titleLower.includes('midterm')) expectedCode = 'LOG888';
       else if (q.id.includes('quiz-05') || titleLower.includes('quiz 05') || titleLower.includes('quiz - 05')) expectedCode = 'SCM201';
+      else if (q.id.includes('quiz-06') || titleLower.includes('quiz 06') || titleLower.includes('quiz - 06')) expectedCode = 'QUIZ06';
       else if (q.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) expectedCode = 'QUIZ08';
     }
 

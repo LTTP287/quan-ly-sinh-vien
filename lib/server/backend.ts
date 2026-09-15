@@ -136,8 +136,48 @@ export function normalizeDob(input: string): string {
 }
 
 // ====================================================================
-// XÁC THỰC
+// XÁC THỰC & PHÂN BỔ LỚP HỌC PHẦN
 // ====================================================================
+
+export function determineClassForStudent(
+  code: string,
+  fullName: string,
+  dbClasses: { id: string; code: string; name: string }[]
+): { id: string; code: string; name: string } {
+  const codeUpper = (code || '').trim().toUpperCase();
+  const nameUpper = (fullName || '').trim().toUpperCase();
+
+  // 1. Phân loại lớp SCM201 C
+  if (
+    codeUpper.includes('C') ||
+    nameUpper.includes('SCM201 C') ||
+    nameUpper.includes('LỚP C') ||
+    nameUpper.includes('HỌC PHẦN C') ||
+    codeUpper.startsWith('221207') ||
+    codeUpper.startsWith('221206') ||
+    codeUpper.startsWith('221209') ||
+    codeUpper.startsWith('221203')
+  ) {
+    const clsC = dbClasses.find((c) => (c.code || '').trim().toUpperCase() === 'SCM201 C' || c.id === 'class-scm201-c');
+    if (clsC) return clsC;
+  }
+
+  // 2. Phân loại lớp SCM201 E
+  if (
+    codeUpper.includes('E') ||
+    nameUpper.includes('SCM201 E') ||
+    nameUpper.includes('LỚP E') ||
+    nameUpper.includes('HỌC PHẦN E') ||
+    codeUpper.startsWith('221208')
+  ) {
+    const clsE = dbClasses.find((c) => (c.code || '').trim().toUpperCase() === 'SCM201 E' || c.id === 'class-scm201-e');
+    if (clsE) return clsE;
+  }
+
+  // 3. Mặc định lớp SCM201 I hoặc lớp đầu tiên
+  const clsI = dbClasses.find((c) => (c.code || '').trim().toUpperCase() === 'SCM201 I' || c.id === 'class-scm201-i');
+  return clsI || dbClasses[0];
+}
 
 export async function authenticateStudent(
   studentCode: string,
@@ -199,10 +239,10 @@ export async function authenticateStudent(
             db.enrollments.push({ class_id: me.class_id, student_id: user!.id });
           }
         }
-        // Nếu chưa có ghi danh nào, chỉ gán vào lớp mặc định thay vì tất cả các lớp
+        // Nếu chưa có ghi danh nào, phân loại lớp thông minh theo mã sinh viên / tên lớp
         if (!db.enrollments.some((e) => e.student_id === user!.id) && db.classes.length > 0) {
-          const defaultCls = db.classes.find((c) => (c.code || '').includes('SCM201 I')) || db.classes[0];
-          db.enrollments.push({ class_id: defaultCls.id, student_id: user!.id });
+          const targetCls = determineClassForStudent(code, user.full_name, db.classes);
+          db.enrollments.push({ class_id: targetCls.id, student_id: user!.id });
         }
         saveDemoDb();
       } else {
@@ -556,12 +596,12 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
       }
     }
 
-    // Nếu sinh viên chưa có lớp nào cụ thể, gán vào lớp mặc định SCM201 I hoặc lớp đầu tiên
+    // Nếu sinh viên chưa có lớp nào cụ thể, phân loại thông minh theo mã sinh viên / tên lớp
     if (myClassIds.length === 0 && db.classes.length > 0) {
-      const defaultCls = db.classes.find((c) => (c.code || '').includes('SCM201 I')) || db.classes[0];
-      myClassIds = [defaultCls.id];
-      if (!db.enrollments.some((e) => e.class_id === defaultCls.id && e.student_id === user.id)) {
-        db.enrollments.push({ class_id: defaultCls.id, student_id: user.id });
+      const targetCls = determineClassForStudent(user.student_code || '', user.full_name || '', db.classes);
+      myClassIds = [targetCls.id];
+      if (!db.enrollments.some((e) => e.class_id === targetCls.id && e.student_id === user.id)) {
+        db.enrollments.push({ class_id: targetCls.id, student_id: user.id });
       }
       const { saveDemoDb } = await import('@/lib/server/demoStore');
       saveDemoDb();
@@ -634,6 +674,8 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
             effectivePasscode = 'LOG888';
           } else if (q.id.includes('quiz-05') || titleLower.includes('quiz 05') || titleLower.includes('quiz - 05')) {
             effectivePasscode = 'SCM201';
+          } else if (q.id.includes('quiz-06') || titleLower.includes('quiz 06') || titleLower.includes('quiz - 06')) {
+            effectivePasscode = 'QUIZ06';
           } else if (q.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) {
             effectivePasscode = 'QUIZ08';
           }
@@ -909,6 +951,8 @@ export async function checkQuizPasscode(
         expectedPasscode = 'LOG888';
       } else if (quiz.id.includes('quiz-05') || titleLower.includes('quiz 05') || titleLower.includes('quiz - 05')) {
         expectedPasscode = 'SCM201';
+      } else if (quiz.id.includes('quiz-06') || titleLower.includes('quiz 06') || titleLower.includes('quiz - 06')) {
+        expectedPasscode = 'QUIZ06';
       } else if (quiz.id.includes('quiz-08') || titleLower.includes('quiz 08') || titleLower.includes('quiz - 08')) {
         expectedPasscode = 'QUIZ08';
       }
