@@ -787,9 +787,23 @@ export async function listSubmissions(quizId: string): Promise<Submission[]> {
         if (Array.isArray(json.submissions)) {
           const serverSubs = json.submissions as Submission[];
           const localSubs = local.getSubmissionsByQuiz(quizId);
+          const getStudentKey = (s: any) => {
+            const code = (s.student?.student_code || s.student_code || '').trim().toUpperCase();
+            if (code) return code;
+            return (s.student_id || '').replace(/^st-/, '').trim().toUpperCase();
+          };
+
           const map = new Map<string, Submission>();
-          localSubs.forEach((s) => map.set(s.student_id, s));
-          serverSubs.forEach((s) => map.set(s.student_id, s));
+          localSubs.forEach((s) => map.set(getStudentKey(s), s));
+          // Bài nộp trên máy chủ là nguồn sự thật: ghi đè lên bài lưu cục bộ
+          serverSubs.forEach((s) => {
+            const key = getStudentKey(s);
+            map.set(key, s);
+            try {
+              local.saveStoredSubmission(s);
+            } catch {}
+          });
+
           return Array.from(map.values()).sort((a, b) =>
             (b.submitted_at || '').localeCompare(a.submitted_at || '')
           );

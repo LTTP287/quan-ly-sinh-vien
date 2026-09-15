@@ -44,23 +44,38 @@ export async function POST(request: Request) {
   if (!useRemote) {
     const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
     const db = demoDb();
-    const userCode = studentId.replace(/^st-/, '').trim().toUpperCase();
 
-    let score = db.scores.find((s) => {
-      if (s.quiz_id !== quizId) return false;
-      if (s.student_id === studentId) return true;
-      if (userCode) {
-        if (s.student_id === `st-${userCode.toLowerCase()}` || s.student_id === `st-${userCode}` || s.student_id === userCode) return true;
-        const u = db.users.find((x) => x.id === s.student_id);
-        if (u && (u.student_code || '').trim().toUpperCase() === userCode) return true;
+    // Tìm hồ sơ sinh viên tương ứng để lấy mã sinh viên (MSSV) chuẩn
+    const targetUser = db.users.find(
+      (u) =>
+        u.id === studentId ||
+        (u.student_code && u.student_code.trim().toUpperCase() === studentId.replace(/^st-/, '').trim().toUpperCase())
+    );
+    const studentCode = (targetUser?.student_code || studentId.replace(/^st-/, '')).trim().toUpperCase();
+    const canonicalStudentId = targetUser?.id || (studentCode ? `st-${studentCode.toLowerCase()}` : studentId);
+
+    const isStudentMatch = (sId: string) => {
+      if (sId === studentId || sId === canonicalStudentId) return true;
+      if (targetUser && sId === targetUser.id) return true;
+      if (studentCode) {
+        if (sId === studentCode || sId === `st-${studentCode}` || sId === `st-${studentCode.toLowerCase()}`) return true;
+        const u = db.users.find((x) => x.id === sId);
+        if (u && (u.student_code || '').trim().toUpperCase() === studentCode) return true;
       }
       return false;
-    });
+    };
+
+    // Tìm tất cả bài nộp của sinh viên này cho đề thi (lọc bỏ bản ghi trùng lặp)
+    const matchingScores = db.scores.filter((s) => s.quiz_id === quizId && isStudentMatch(s.student_id));
+    let score = matchingScores.find((s) => (s.answers && s.answers.length > 0) || s.submitted_at) || matchingScores[0];
+
+    // Xóa tất cả bản ghi trùng lặp của sinh viên này trong db.scores để chỉ giữ đúng 1 bản duy nhất
+    db.scores = db.scores.filter((s) => !(s.quiz_id === quizId && isStudentMatch(s.student_id)));
 
     if (!score) {
       score = {
         quiz_id: quizId,
-        student_id: studentId,
+        student_id: canonicalStudentId,
         total_score: 0,
         submitted_at: new Date().toISOString(),
         status: 'submitted',
@@ -68,8 +83,12 @@ export async function POST(request: Request) {
         warning_history: [],
         answers: [],
       };
-      db.scores.push(score);
+    } else {
+      score.student_id = canonicalStudentId;
+      score.status = 'submitted';
+      if (!score.submitted_at) score.submitted_at = new Date().toISOString();
     }
+    db.scores.push(score);
 
     if (!Array.isArray(score.answers)) {
       score.answers = [];
@@ -154,6 +173,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       total_score: totalScore,
+      student_id: canonicalStudentId,
+      student_code: studentCode,
       message: `Đã lưu điểm chấm thành công (${totalScore}/10 điểm).`,
     });
   }

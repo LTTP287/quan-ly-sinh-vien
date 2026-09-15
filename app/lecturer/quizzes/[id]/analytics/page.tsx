@@ -134,6 +134,9 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
       if (!res.ok) throw new Error(resData.error || 'Không thể lưu điểm chấm.');
 
       const newScore = resData.total_score;
+      const targetStudentId = resData.student_id || selectedStudentSubmission.student.id;
+      const targetStudentCode = (resData.student_code || selectedStudentSubmission.student.student_code || targetStudentId.replace(/^st-/, '')).trim().toUpperCase();
+
       setGradeSuccessMsg(`Đã lưu điểm chấm thành công! Tổng điểm mới của sinh viên: ${newScore}/10 điểm.`);
 
       setSelectedStudentSubmission((prev: any) => {
@@ -149,12 +152,34 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
 
       setSubmissions((prev) =>
         prev.map((s) => {
-          if (s.student_id === selectedStudentSubmission.student.id || s.student?.id === selectedStudentSubmission.student.id) {
+          const sCode = (s.student?.student_code || (s as any).student_code || s.student_id.replace(/^st-/, '')).trim().toUpperCase();
+          if (
+            s.student_id === targetStudentId ||
+            s.student?.id === targetStudentId ||
+            s.student_id === selectedStudentSubmission.student.id ||
+            s.student?.id === selectedStudentSubmission.student.id ||
+            (targetStudentCode && sCode === targetStudentCode)
+          ) {
             return { ...s, total_score: newScore };
           }
           return s;
         })
       );
+
+      // Đồng bộ ngay điểm mới vào classStore (localStorage) để Bảng Điểm Tổng Kết Học Phần cập nhật tức thì
+      try {
+        const { getSubmissionsByQuiz, saveStoredSubmission } = await import('@/lib/classStore');
+        const localList = getSubmissionsByQuiz(params.id);
+        const target = localList.find((ls: any) => {
+          if (ls.student_id === targetStudentId || ls.student_id === selectedStudentSubmission.student.id) return true;
+          const lsCode = (ls.student?.student_code || ls.student_code || ls.student_id.replace(/^st-/, '')).trim().toUpperCase();
+          return targetStudentCode && lsCode === targetStudentCode;
+        });
+        if (target) {
+          target.total_score = newScore;
+          saveStoredSubmission(target);
+        }
+      } catch {}
     } catch (err: any) {
       alert(err.message || 'Lỗi khi lưu điểm');
     } finally {
@@ -187,11 +212,21 @@ export default function QuizAnalyticsPage({ params }: { params: { id: string } }
       setSubmissions((prev) =>
         prev.filter((s) => {
           if (s.student_id === studentId) return false;
-          const sc = s.student?.student_code ? s.student.student_code.trim().toUpperCase() : '';
+          const sc = (s.student?.student_code || (s as any).student_code || s.student_id.replace(/^st-/, '')).trim().toUpperCase();
           if (cleanCode && (sc === cleanCode || s.student_id.includes(cleanCode))) return false;
           return true;
         })
       );
+
+      // Xóa cả trong classStore (localStorage)
+      try {
+        const { deleteStoredSubmission } = await import('@/lib/classStore');
+        deleteStoredSubmission(params.id, studentId);
+        if (cleanCode) {
+          deleteStoredSubmission(params.id, `st-${cleanCode.toLowerCase()}`);
+          deleteStoredSubmission(params.id, cleanCode);
+        }
+      } catch {}
 
       // Nếu đang mở modal của sinh viên này thì đóng lại
       if (selectedStudentSubmission && (selectedStudentSubmission.student.id === studentId || selectedStudentSubmission.student.student_code === cleanCode)) {

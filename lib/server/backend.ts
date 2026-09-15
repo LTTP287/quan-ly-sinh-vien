@@ -630,7 +630,7 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
     const quizzesRaw: DashboardQuiz[] = db.quizzes
       .filter((q) => isQuizForStudent(q, myClassIds, db.classes))
       .map((q) => {
-        const score = db.scores.find((s) => {
+        const matchingScores = db.scores.filter((s) => {
           if (s.quiz_id !== q.id) return false;
           if (s.student_id === user.id) return true;
           if (myStudentCode) {
@@ -642,6 +642,11 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           }
           return false;
         });
+
+        // Ưu tiên bài nộp đã hoàn thành hoặc có điểm số
+        const submittedScore = matchingScores.find((s) => s.status === 'submitted' || !!s.submitted_at || s.total_score !== null);
+        const score = submittedScore || matchingScores[0];
+        const isSubmitted = !!(submittedScore || (score && (score.status === 'submitted' || !!score.submitted_at || score.total_score !== null)));
 
         // Tìm lớp của sinh viên tương ứng với đề thi này (chỉ từ danh sách các lớp sinh viên thực sự tham gia)
         let studentClass = classes.find((c) => q.class_ids.includes(c.id));
@@ -710,7 +715,7 @@ export async function getStudentDashboard(user: AuthUser): Promise<StudentDashbo
           requires_passcode: !!effectivePasscode,
           passcode_expires_at: q.passcode_expires_at,
           class_name: studentClass?.name || (studentClass?.code ? `Quản trị Chuỗi cung ứng - ${studentClass.code}` : 'Lớp học phần'),
-          submitted: !!score?.submitted_at,
+          submitted: isSubmitted,
           score: q.show_results ? score?.total_score ?? null : null,
           show_results: q.show_results,
         };
@@ -865,18 +870,30 @@ export async function checkQuizPasscode(
     if (!quiz) return { ok: false, reason: 'NOT_FOUND' };
     if (!quiz.is_published) return { ok: false, reason: 'NOT_PUBLISHED' };
 
-    // Kiểm tra sinh viên đã nộp bài này trước đó chưa (bằng studentId hoặc MSSV)
-    const u = db.users.find((x) => x.id === studentId);
-    const studentCode = u?.student_code ? u.student_code.trim().toUpperCase() : studentId.replace(/^st-/, '').trim().toUpperCase();
-    const existingScore = db.scores.find((s) => {
-      if (s.quiz_id !== quizId || !s.submitted_at) return false;
-      if (s.student_id === studentId) return true;
+    // Kiểm tra sinh viên đã nộp bài này trước đó chưa (đối chiếu mọi bí danh ID và MSSV)
+    const cleanId = studentId.replace(/^st-/, '').trim().toUpperCase();
+    const u = db.users.find(
+      (x) =>
+        x.id === studentId ||
+        (x.student_code && x.student_code.trim().toUpperCase() === cleanId)
+    );
+    const studentCode = (u?.student_code || cleanId).trim().toUpperCase();
+
+    const isStudentMatch = (sId: string) => {
+      if (sId === studentId) return true;
+      if (u && sId === u.id) return true;
       if (studentCode) {
-        if (s.student_id === `st-${studentCode.toLowerCase()}` || s.student_id === `st-${studentCode}` || s.student_id === studentCode) return true;
-        const scUser = db.users.find((x) => x.id === s.student_id);
-        if (scUser && (scUser.student_code || '').trim().toUpperCase() === studentCode) {
-          return true;
-        }
+        if (sId === studentCode || sId === `st-${studentCode}` || sId === `st-${studentCode.toLowerCase()}`) return true;
+        const scUser = db.users.find((x) => x.id === sId);
+        if (scUser && (scUser.student_code || '').trim().toUpperCase() === studentCode) return true;
+      }
+      return false;
+    };
+
+    const existingScore = db.scores.find((s) => {
+      if (s.quiz_id !== quizId) return false;
+      if (s.status === 'submitted' || !!s.submitted_at || s.total_score !== null) {
+        return isStudentMatch(s.student_id);
       }
       return false;
     });

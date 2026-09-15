@@ -31,19 +31,29 @@ export async function POST(request: Request) {
   if (!useRemote) {
     const { demoDb, saveDemoDb } = await import('@/lib/server/demoStore');
     const db = demoDb();
-    const cleanCode = studentId.replace(/^st-/, '').trim().toUpperCase();
+    const targetUser = db.users.find(
+      (u) =>
+        u.id === studentId ||
+        (u.student_code && u.student_code.trim().toUpperCase() === studentId.replace(/^st-/, '').trim().toUpperCase())
+    );
+    const studentCode = (targetUser?.student_code || studentId.replace(/^st-/, '')).trim().toUpperCase();
+
+    const isStudentMatch = (sId: string) => {
+      if (sId === studentId) return true;
+      if (targetUser && sId === targetUser.id) return true;
+      if (studentCode) {
+        if (sId === studentCode || sId === `st-${studentCode}` || sId === `st-${studentCode.toLowerCase()}`) return true;
+        const u = db.users.find((x) => x.id === sId);
+        if (u && (u.student_code || '').trim().toUpperCase() === studentCode) return true;
+      }
+      return false;
+    };
 
     // 1. Tìm và xóa bài nộp trong demoDb.scores
     const beforeCount = db.scores.length;
     db.scores = db.scores.filter((s) => {
       if (s.quiz_id !== quizId) return true;
-      if (s.student_id === studentId) return false;
-      if (cleanCode) {
-        if (s.student_id === `st-${cleanCode.toLowerCase()}` || s.student_id === `st-${cleanCode}` || s.student_id === cleanCode) return false;
-        const u = db.users.find((x) => x.id === s.student_id);
-        if (u && (u.student_code || '').trim().toUpperCase() === cleanCode) return false;
-      }
-      return true;
+      return !isStudentMatch(s.student_id);
     });
 
     saveDemoDb();

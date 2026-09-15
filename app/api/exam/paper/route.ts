@@ -63,19 +63,29 @@ export async function POST(request: Request) {
     const quiz = db.quizzes.find((q) => q.id === quizId);
 
     const myCode = auth.user.student_code ? auth.user.student_code.trim().toUpperCase() : auth.user.id.replace(/^st-/, '').trim().toUpperCase();
+    const myUser = db.users.find((u) => u.id === auth.user.id || (u.student_code && u.student_code.trim().toUpperCase() === myCode));
+    const studentCode = (myUser?.student_code || myCode).trim().toUpperCase();
+
+    const isStudentMatch = (sId: string) => {
+      if (sId === auth.user.id) return true;
+      if (myUser && sId === myUser.id) return true;
+      if (studentCode) {
+        if (sId === studentCode || sId === `st-${studentCode}` || sId === `st-${studentCode.toLowerCase()}`) return true;
+        const scUser = db.users.find((x) => x.id === sId);
+        if (scUser && (scUser.student_code || '').trim().toUpperCase() === studentCode) return true;
+      }
+      return false;
+    };
+
     const existingScore = db.scores.find((s) => {
-      if (s.quiz_id !== quizId || !s.submitted_at) return false;
-      if (s.student_id === auth.user.id) return true;
-      if (myCode) {
-        if (s.student_id === `st-${myCode.toLowerCase()}` || s.student_id === `st-${myCode}` || s.student_id === myCode) return true;
-        const scUser = db.users.find((x) => x.id === s.student_id);
-        if (scUser && (scUser.student_code || '').trim().toUpperCase() === myCode) {
-          return true;
-        }
+      if (s.quiz_id !== quizId) return false;
+      if (s.status === 'submitted' || !!s.submitted_at || s.total_score !== null) {
+        return isStudentMatch(s.student_id);
       }
       return false;
     });
-    if (existingScore?.submitted_at) {
+
+    if (existingScore) {
       return NextResponse.json({ error: 'Bạn đã nộp bài thi này rồi và không thể làm lại.', reason: 'ALREADY_SUBMITTED' }, { status: 409 });
     }
 
@@ -189,7 +199,7 @@ export async function POST(request: Request) {
         show_results: !!quiz?.show_results,
       },
       questions: sanitizedQuestions,
-      tab_violations_count: existingScore?.tab_violations_count || 0,
+      tab_violations_count: 0,
     };
 
     return NextResponse.json({ mode: 'remote', ticket_ok: true, paper });

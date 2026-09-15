@@ -45,7 +45,10 @@ export async function GET(request: Request) {
       });
     }
 
-    const result = scores.map((s) => {
+    // Khử trùng lặp: mỗi sinh viên chỉ hiển thị đúng 1 dòng bài nộp duy nhất cho mỗi bài quiz
+    const subMap = new Map<string, any>();
+
+    for (const s of scores) {
       const studentCodeFallback = s.student_id.replace(/^st-/, '').trim().toUpperCase();
       const studentUser = db.users.find((u) => {
         if (u.id === s.student_id) return true;
@@ -54,7 +57,9 @@ export async function GET(request: Request) {
       });
       const studentCode = studentUser?.student_code || studentCodeFallback;
       const quiz = db.quizzes.find((q) => q.id === s.quiz_id);
-      return {
+      const studentKey = `${s.quiz_id}_${studentCode || s.student_id}`;
+
+      const item = {
         id: `sub-${s.quiz_id}-${s.student_id}`,
         quiz_id: s.quiz_id,
         student_id: s.student_id,
@@ -75,7 +80,21 @@ export async function GET(request: Request) {
           time_limit_minutes: quiz?.time_limit_minutes || 5,
         },
       };
-    }).sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || ''));
+
+      const existing = subMap.get(studentKey);
+      if (!existing) {
+        subMap.set(studentKey, item);
+      } else {
+        // Ưu tiên bản ghi đã được chấm điểm hoặc có điểm số cao hơn/mới hơn
+        const existingScore = existing.total_score !== null && existing.total_score !== undefined ? Number(existing.total_score) : -1;
+        const currentScore = item.total_score !== null && item.total_score !== undefined ? Number(item.total_score) : -1;
+        if (currentScore > existingScore || (currentScore === existingScore && (item.submitted_at || '') > (existing.submitted_at || ''))) {
+          subMap.set(studentKey, item);
+        }
+      }
+    }
+
+    const result = Array.from(subMap.values()).sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || ''));
 
     return NextResponse.json({ ok: true, submissions: result });
   }

@@ -1494,8 +1494,9 @@
       "token_hash": "7cfacea54177d245c4a699ad021984f3e918a36fc92ecd9ccec6e0fdadf9ada2",
       "issued_at": "2026-09-15T06:34:27.547Z",
       "expires_at": "2026-09-15T14:34:27.547Z",
-      "revoked_at": null,
-      "user_agent": "node"
+      "revoked_at": "2026-09-15T07:49:53.467Z",
+      "user_agent": "node",
+      "revoked_reason": "SUPERSEDED"
     },
     {
       "id": "sess-1789454067575-8y6cci",
@@ -1513,8 +1514,9 @@
       "token_hash": "80e26a05122064ff67bdfb4fa832806c6957b172c12cc6ed85a0d37a1048983c",
       "issued_at": "2026-09-15T07:01:21.516Z",
       "expires_at": "2026-09-15T15:01:21.516Z",
-      "revoked_at": null,
-      "user_agent": null
+      "revoked_at": "2026-09-15T07:49:07.577Z",
+      "user_agent": null,
+      "revoked_reason": "SUPERSEDED"
     },
     {
       "id": "sess-1789455681552-4qoost",
@@ -1531,8 +1533,9 @@
       "token_hash": "59f9c6ee8a2b9f9279cae8907fa41d3226a9f5ccef2b1d322ba7e41342d351b0",
       "issued_at": "2026-09-15T07:01:21.582Z",
       "expires_at": "2026-09-15T15:01:21.582Z",
-      "revoked_at": null,
-      "user_agent": null
+      "revoked_at": "2026-09-15T07:49:53.360Z",
+      "user_agent": null,
+      "revoked_reason": "SUPERSEDED"
     },
     {
       "id": "sess-1789455681599-pcihb4",
@@ -1551,6 +1554,33 @@
       "expires_at": "2026-09-15T15:01:21.620Z",
       "revoked_at": null,
       "user_agent": null
+    },
+    {
+      "id": "sess-1789458547577-kuv4h0",
+      "user_id": "st-scm201c-student",
+      "token_hash": "a10ccc034c1b9786a33640e67aaaccdc147d0f32d5cafaf8e3591c2ce7721368",
+      "issued_at": "2026-09-15T07:49:07.577Z",
+      "expires_at": "2026-09-15T15:49:07.577Z",
+      "revoked_at": null,
+      "user_agent": "node"
+    },
+    {
+      "id": "sess-1789458593360-5cz5mg",
+      "user_id": "st-22120555",
+      "token_hash": "eca6f7a98aed31dce513bde325a851e197198a25ec38dc61f2bc6812cbf62fef",
+      "issued_at": "2026-09-15T07:49:53.360Z",
+      "expires_at": "2026-09-15T15:49:53.360Z",
+      "revoked_at": null,
+      "user_agent": "node"
+    },
+    {
+      "id": "sess-1789458593467-tls3k2",
+      "user_id": "lecturer-phuong-master",
+      "token_hash": "04eca729ad5d802c01f45eb26b996158c4a504a15da4e72d57a342c9e14401e2",
+      "issued_at": "2026-09-15T07:49:53.467Z",
+      "expires_at": "2026-09-15T15:49:53.467Z",
+      "revoked_at": null,
+      "user_agent": "node"
     }
   ],
   "scores": [
@@ -1559,6 +1589,16 @@
       "student_id": "st-123456789",
       "total_score": 0,
       "submitted_at": "2026-09-11T17:09:13.598Z",
+      "status": "submitted",
+      "tab_violations_count": 0,
+      "warning_history": [],
+      "answers": []
+    },
+    {
+      "quiz_id": "quiz-05-scm",
+      "student_id": "st-scm201c-student",
+      "total_score": 0,
+      "submitted_at": "2026-09-15T07:49:07.665Z",
       "status": "submitted",
       "tab_violations_count": 0,
       "warning_history": [],

@@ -71,6 +71,7 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
                 if (code) {
                   subsMap[q.id][code] = scoreVal;
                   subsMap[q.id][`st-${code}`] = scoreVal;
+                  subsMap[q.id][`st-${code.toLowerCase()}`] = scoreVal;
                 }
               }
             });
@@ -112,8 +113,12 @@ export default function ClassGradesPage({ params }: { params: { id: string } }) 
         s = qSubs[stCode];
       } else if (stCode && qSubs[`st-${stCode}`] !== undefined) {
         s = qSubs[`st-${stCode}`];
+      } else if (stCode && qSubs[`st-${stCode.toLowerCase()}`] !== undefined) {
+        s = qSubs[`st-${stCode.toLowerCase()}`];
       } else if (rawIdCode && qSubs[rawIdCode] !== undefined) {
         s = qSubs[rawIdCode];
+      } else if (rawIdCode && qSubs[`st-${rawIdCode.toLowerCase()}`] !== undefined) {
+        s = qSubs[`st-${rawIdCode.toLowerCase()}`];
       }
 
       scores[q.id] = s !== undefined ? s : null;

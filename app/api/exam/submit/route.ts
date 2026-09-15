@@ -23,16 +23,21 @@ export async function POST(request: Request) {
     const db = demoDb();
     const userCode = (auth.user.student_code || '').trim().toUpperCase() || auth.user.id.replace(/^st-/, '').trim().toUpperCase();
 
-    let score = db.scores.find((s) => {
-      if (s.quiz_id !== quizId) return false;
-      if (s.student_id === auth.user.id) return true;
+    const isStudentMatch = (sId: string) => {
+      if (sId === auth.user.id) return true;
       if (userCode) {
-        if (s.student_id === `st-${userCode.toLowerCase()}` || s.student_id === `st-${userCode}` || s.student_id === userCode) return true;
-        const u = db.users.find((x) => x.id === s.student_id);
+        if (sId === `st-${userCode.toLowerCase()}` || sId === `st-${userCode}` || sId === userCode) return true;
+        const u = db.users.find((x) => x.id === sId);
         if (u && (u.student_code || '').trim().toUpperCase() === userCode) return true;
       }
       return false;
-    });
+    };
+
+    const matchingScores = db.scores.filter((s) => s.quiz_id === quizId && isStudentMatch(s.student_id));
+    let score = matchingScores.find((s) => s.submitted_at || (s.answers && s.answers.length > 0)) || matchingScores[0];
+
+    // Xóa tất cả các bản ghi trùng lặp của sinh viên này trong db.scores
+    db.scores = db.scores.filter((s) => !(s.quiz_id === quizId && isStudentMatch(s.student_id)));
 
     if (!score) {
       score = {
@@ -44,11 +49,10 @@ export async function POST(request: Request) {
         tab_violations_count: 0,
         warning_history: [],
       };
-      db.scores.push(score);
     } else {
-      // Đảm bảo student_id khớp với user.id hiện tại
       score.student_id = auth.user.id;
     }
+    db.scores.push(score);
 
     // Đảm bảo thông tin sinh viên có trong db.users để giảng viên đối soát tên/MSSV
     const existingUser = db.users.find((u) => u.id === auth.user.id || (userCode && (u.student_code || '').trim().toUpperCase() === userCode));
